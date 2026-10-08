@@ -1,0 +1,12 @@
+.table { width: 1100px; display: flex; flex-direction: column; gap: 8px; }
+.header, .row { display: grid; grid-template-columns: 380px repeat(6,120px); }
+.header { border-radius: 32px; background: var(--gray-50); color: #5e677a; }
+.header > div, .row > div { height: 64px; padding-inline: 16px; display: flex; align-items: center; }
+.rows { display: flex; flex-direction: column; gap: 8px; padding-block: 8px; border-radius: 32px; background: var(--gray-50); }
+.name { width: 282px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.divider { height: 0; position: relative; width: 100%; }
+.divider::after { content: ''; position: absolute; top: -1px; height: 1px; width: 100%; background: var(--gray-200); }
+.refund { padding: 4px 8px; border-radius: 16px; background: var(--red-500); color: white; }
+.refund:disabled { background: var(--gray-400); }
+.periodKind { display: block; }
+.quote { white-space: pre-wrap; }

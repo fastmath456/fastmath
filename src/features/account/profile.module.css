@@ -1,0 +1,16 @@
+.content { width: 640px; align-self: center; display: flex; flex-direction: column; gap: 40px; }
+.form { width: 100%; display: flex; flex-direction: column; gap: 32px; }
+.fields { width: 100%; display: flex; flex-direction: column; gap: 16px; }
+.imageField { display: flex; flex-direction: column; gap: 8px; }
+.imageBox { width: 108px; height: 108px; position: relative; display: flex; align-items: center; justify-content: center; }
+.choose { padding: 0; width: 108px; height: 108px; border-radius: 16px; overflow: hidden; background: var(--gray-100); display: flex; align-items: center; justify-content: center; }
+.choose > img { object-fit: cover; }
+.upload { border: 1px dashed var(--gray-200); }
+.imageTag { position: absolute; display: flex; align-items: center; border-radius: 16px; background: rgba(255,255,255,.5); backdrop-filter: blur(5px); padding: 2px 8px; }
+.imageTag button { padding: 0; background: transparent; color: inherit; }
+.marketing { display: flex; flex-direction: column; gap: 8px; }
+.marketing strong { font-weight: 600; }
+.marketing > div { height: 52px; padding-inline: 20px; display: flex; align-items: center; justify-content: space-between; background: var(--gray-100); border-radius: 16px; }
+.marketing a { font-size: 12px; line-height: 16px; letter-spacing: -.6px; color: var(--gray-400); }
+.submit { height: 52px; border-radius: 16px; padding-inline: 16px; font-weight: 600; background: var(--brand-500); }
+.error { color: var(--red-500); }
