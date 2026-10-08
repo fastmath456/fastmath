@@ -1,0 +1,7 @@
+.dialog { width: 350px; border: 0; border-radius: 16px; padding: 20px; background: white; filter: drop-shadow(0 10px 5px rgba(0,0,0,.04)); }
+.dialog[open] { display: flex; flex-direction: column; gap: 18px; align-items: flex-end; justify-content: center; }
+.text { width: 100%; color: #262c3a; font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: -.35px; }
+.actions { display: flex; gap: 8px; }
+.actions button { height: 48px; padding-inline: 16px; border-radius: 16px; color: #3c3b28; font-weight: 600; }
+.outlined { border: 1px solid var(--gray-200); background: white; }
+.primary { background: var(--brand-500); }

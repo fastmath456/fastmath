@@ -1,0 +1,39 @@
+.header { height: 52px; padding-inline: 280px; display: flex; align-items: center; justify-content: space-between; background: white; }
+.headerLeft { display: flex; align-items: center; gap: 32px; font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -.8px; }
+.headerRight { display: flex; align-items: center; gap: 16px; font-weight: 600; }
+.classroomLink { background: var(--brand-500); color: #3c3b28; border-radius: 16px; height: 32px; padding-inline: 16px; display: flex; align-items: center; justify-content: center; }
+.profileLink { display: flex; gap: 8px; align-items: center; }
+.profileImage { border-radius: 50%; object-fit: cover; }
+.logo { width: 84px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.logoInner { width: 82.04px; height: 22.571px; position: relative; }
+.logoShadow { position: absolute; left: 1.64px; top: 2px; width: 80.4px; height: 20.571px; }
+.logoFront { position: absolute; left: -.86px; top: -.857px; width: 82.12px; height: 22.286px; }
+.largeLogo { width: 168px; height: 48px; }
+.largeLogo .logoInner { width: 164.081px; height: 45.153px; }
+.largeLogo .logoShadow { left: 3.28px; top: 4.01px; width: 160.801px; height: 41.143px; }
+.largeLogo .logoFront { left: -1.72px; top: -1.715px; width: 164.242px; height: 44.574px; }
+.footer { position: relative; background: var(--gray-50); padding: 52px 20px; display: flex; flex-direction: column; gap: 16px; font-size: 12px; line-height: 16px; letter-spacing: -.6px; }
+.footer::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: var(--gray-200); }
+.footerRule { width: 100%; height: 0; position: relative; }
+.footerRule::after { content: ''; position: absolute; width: 100%; top: -.5px; height: 1px; background: var(--gray-200); }
+.footerLinks { display: flex; flex-direction: column; gap: 16px; }
+.footerGroup { display: flex; flex-direction: column; gap: 4px; }
+.privacy { font-weight: 800; }
+.field { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.input { width: 100%; height: 52px; padding: 16px; border: 0; border-radius: 16px; background: var(--gray-100); }
+.input::placeholder { color: var(--gray-400); opacity: 1; }
+.input[aria-invalid='true'] { border: 1px solid var(--red-500); }
+.input:read-only { background: var(--gray-200); color: #727262; }
+.error { color: var(--red-500); }
+.button { height: 52px; display: flex; align-items: center; justify-content: center; padding-inline: 16px; border-radius: 16px; background: var(--brand-500); font-weight: 600; }
+.secondary { background: var(--gray-100); }
+.result { width: 480px; margin-inline: auto; padding-block: 144px; display: flex; flex-direction: column; align-items: center; gap: 32px; }
+.resultText { display: flex; flex-direction: column; gap: 8px; text-align: center; }
+.title { font-size: 20px; line-height: 30px; font-weight: 600; letter-spacing: -1px; }
+.resultActions { display: flex; gap: 8px; }
+.resultActions .button { width: 120px; }
+.checkLabel { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.checkbox { appearance: none; width: 20px; height: 20px; flex-shrink: 0; margin: 0; background: var(--gray-400) url('/assets/signup-imgCheck01.svg') center / 16px no-repeat; border: 0; border-radius: 16px; }
+.checkbox:checked { background-color: var(--brand-500); }
+
+.activeCourses { font-weight: 800; }
