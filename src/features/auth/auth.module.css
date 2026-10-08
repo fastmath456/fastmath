@@ -1,0 +1,18 @@
+.main { width: 480px; margin-inline: auto; padding-block: 144px; display: flex; flex-direction: column; align-items: center; gap: 32px; }
+.signup { padding-block: 32px; }
+.brand { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; text-align: center; }
+.title { font-size: 20px; line-height: 30px; font-weight: 600; letter-spacing: -1px; }
+.form { display: flex; flex-direction: column; gap: 32px; width: 100%; }
+.fields { display: flex; flex-direction: column; gap: 16px; }
+.button { width: 100%; height: 52px; border-radius: 16px; padding-inline: 16px; background: var(--brand-500); font-weight: 600; }
+.loginBottom { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+.links { display: flex; gap: 6px; font-weight: 600; color: var(--gray-700); }
+.terms { display: flex; flex-direction: column; gap: 8px; }
+.termsTitle { font-weight: 600; }
+.termsBox { padding: 20px; background: var(--gray-100); border-radius: 16px; display: flex; flex-direction: column; gap: 16px; }
+.termsRule { width: 100%; height: 0; position: relative; }
+.termsRule::after { content: ''; position: absolute; width: 100%; height: 1px; top: -.5px; background: var(--gray-200); }
+.termsRow { display: flex; justify-content: space-between; align-items: center; }
+.termsRow a { font-size: 12px; line-height: 16px; letter-spacing: -.6px; color: var(--gray-400); }
+.error { color: var(--red-500); }
+.shell { border: 1px solid rgba(0, 0, 0, .1); }
