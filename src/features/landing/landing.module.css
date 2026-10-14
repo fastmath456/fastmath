@@ -1,0 +1,911 @@
+.page {
+  background: var(--gray-00);
+  color: var(--gray-800);
+}
+
+:global(html):has(.page) {
+  scrollbar-width: none;
+}
+
+:global(html):has(.page)::-webkit-scrollbar {
+  display: none;
+}
+
+.header {
+  height: 52px;
+  background: var(--gray-00);
+}
+
+.header > header:first-child {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding-inline: max(20px, calc((100% - 1360px) / 2));
+}
+
+.container {
+  width: min(1360px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+.hero {
+  padding-block: 52px;
+}
+
+.heroLayout {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 24px 0 32px;
+}
+
+.heroTitle {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 52px;
+  letter-spacing: -2.2px;
+}
+
+.heroDescription {
+  width: 560px;
+  max-width: 100%;
+  margin-top: 28px;
+  color: #727262;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.9px;
+}
+
+.mobBreak {
+  display: none;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.action,
+.darkAction {
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 16px;
+  background: var(--brand-500);
+  color: var(--gray-800);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.7px;
+  white-space: nowrap;
+}
+
+.darkAction {
+  background: var(--gray-800);
+  color: var(--brand-500);
+}
+
+.action img,
+.darkAction img,
+.philosophyLink img {
+  width: 20px;
+  height: 20px;
+}
+
+.philosophyLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray-800);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.7px;
+  white-space: nowrap;
+}
+
+.heroImage {
+  aspect-ratio: 670 / 565;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 64px;
+}
+
+.heroImage img,
+.boardImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.statistics {
+  padding-block: 32px;
+}
+
+.statisticsLayout {
+  width: min(1360px, calc(100% - 40px));
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin-inline: auto;
+}
+
+.statisticsHeading {
+  flex: 0 1 270px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: -1px;
+}
+
+.metrics {
+  flex: 0 1 938px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metricValue {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 56px;
+  letter-spacing: -2px;
+  white-space: nowrap;
+}
+
+.metricLabel {
+  color: #727262;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.7px;
+}
+
+.metricRule {
+  flex: 0 0 1px;
+  width: 1px;
+  height: 64px;
+  background: var(--gray-200);
+}
+
+.philosophy {
+  padding-block: 104px;
+}
+
+.philosophyContent {
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+}
+
+.philosophyIntro {
+  display: flex;
+  align-items: center;
+  gap: 80px;
+  padding-top: 28px;
+}
+
+.why {
+  width: 260px;
+  height: 180px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 4px 0 0 5px;
+}
+
+.why img {
+  width: 247px;
+  height: 140px;
+  object-fit: contain;
+}
+
+.philosophyCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sectionTitle {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 44px;
+  letter-spacing: -1.6px;
+}
+
+.bodyCopy {
+  color: #727262;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: -0.8px;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stepRule {
+  width: 100%;
+  height: 0;
+}
+
+.stepRule img {
+  display: block;
+  width: 100%;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.stepContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.stepNumber {
+  width: 28px;
+  flex: 0 0 28px;
+  color: var(--brand-500);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: -0.8px;
+}
+
+.stepCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stepTitle {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: -1px;
+}
+
+.stepDescription {
+  color: #727262;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: -0.8px;
+}
+
+.teaching {
+  padding-block: 104px;
+  background: var(--gray-800);
+  color: var(--gray-00);
+}
+
+.teachingInner {
+  display: flex;
+  flex-direction: column;
+  gap: 52px;
+}
+
+.teachingLead {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.teachingHeader,
+.panelCopy,
+.board,
+.boardCopy,
+.reviewsHeading,
+.reviewBody,
+.closingCopy {
+  display: flex;
+  flex-direction: column;
+}
+
+.teachingHeader {
+  gap: 8px;
+}
+
+.teachingHeader .sectionTitle,
+.panelCopy .sectionTitle {
+  color: var(--gray-00);
+}
+
+.teachingHeader .bodyCopy,
+.panelCopy .bodyCopy {
+  color: var(--gray-400);
+}
+
+.tabs {
+  display: flex;
+  gap: 20px;
+}
+
+.tab {
+  flex: 1;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 32px;
+  border: 1px solid var(--brand-500);
+  border-radius: 32px;
+  background: transparent;
+  color: var(--brand-500);
+  text-align: left;
+  font-weight: 600;
+}
+
+.tab[aria-selected='true'] {
+  height: 118px;
+  border: 0;
+  background: var(--brand-500);
+  color: var(--gray-800);
+}
+
+.tabNumber {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.7px;
+}
+
+.tabTitle {
+  font-size: 20px;
+  line-height: 30px;
+  letter-spacing: -1px;
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-items: center;
+  gap: 20px;
+  min-height: 407px;
+}
+
+.panelCopy {
+  gap: 8px;
+}
+
+.board {
+  width: 100%;
+  gap: 32px;
+}
+
+.board[aria-hidden='true'] {
+  visibility: hidden;
+}
+
+.boardCopy {
+  gap: 4px;
+}
+
+.boardCopy h3 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: -1px;
+}
+
+.boardCopy p {
+  color: var(--gray-200);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: -0.8px;
+}
+
+.boardImage {
+  aspect-ratio: 670 / 317;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 64px;
+}
+
+.reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding-block: 104px;
+}
+
+.reviewsHeading {
+  gap: 8px;
+}
+
+.reviewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.reviewCard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 32px;
+  border-radius: 32px;
+  background: var(--gray-100);
+}
+
+.reviewSource {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.youtubeBadge {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-inline: 12px;
+  border: 1px solid #efefef;
+  border-radius: 24px;
+  background: var(--gray-00);
+  color: #222;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: -0.6px;
+}
+
+.youtubeIcon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.youtubeIcon img {
+  width: 20px;
+  height: 13.844px;
+  object-fit: contain;
+}
+
+.sourceLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.7px;
+}
+
+.reviewBody {
+  gap: 8px;
+}
+
+.reviewPreview {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.7px;
+}
+
+.reviewMeta,
+.reviewActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.author {
+  color: var(--gray-700);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.7px;
+}
+
+.reviewLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  color: #727262;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.7px;
+}
+
+.reviewLink img {
+  width: 16px;
+  height: 16px;
+}
+
+.videoPrompt {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: -1px;
+}
+
+.closing {
+  padding-block: 104px;
+}
+
+.closingBanner {
+  padding: 64px 80px;
+  border-radius: 64px;
+  background: var(--brand-500);
+}
+
+.closingContent {
+  display: flex;
+  align-items: center;
+}
+
+.closingCopy {
+  flex: 1;
+  gap: 8px;
+}
+
+.closingTitle {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 44px;
+  letter-spacing: -1.6px;
+}
+
+.closingDescription {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 30px;
+  letter-spacing: -1px;
+}
+
+.dialog {
+  width: 480px;
+  max-width: calc(100% - 40px);
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 20px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--gray-00);
+  filter: drop-shadow(0 10px 5px rgba(0, 0, 0, 0.04));
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dialogTitle {
+  color: #262c3a;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: -0.8px;
+}
+
+.dialogBody {
+  flex: 1 1 auto;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.dialogBody::-webkit-scrollbar {
+  display: none;
+}
+
+.reviewOriginal {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.reviewOriginal img {
+  width: 100%;
+  height: auto;
+}
+
+.dialogRule {
+  width: 100%;
+  height: 0;
+  position: relative;
+  background: var(--gray-200);
+}
+
+.dialogRule img {
+  position: relative;
+  top: -.5px;
+  display: block;
+  width: 100%;
+  height: 1px;
+}
+
+.dialogFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dialogNotice {
+  max-width: calc(100% - 56px);
+  color: #727262;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: -0.6px;
+}
+
+.closeButton {
+  height: 48px;
+  flex: 0 0 auto;
+  padding-inline: 16px;
+  border-radius: 16px;
+  background: var(--brand-500);
+  color: #3c3b28;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.7px;
+  white-space: nowrap;
+}
+
+@media (width < 768px) {
+  .container {
+    width: calc(100% - 40px);
+  }
+
+  .hero {
+    padding: 32px 0 52px;
+  }
+
+  .heroLayout {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 52px;
+  }
+
+  .heroCopy {
+    padding: 0;
+  }
+
+  .heroTitle {
+    font-size: 32px;
+    line-height: 44px;
+    letter-spacing: -1.6px;
+  }
+
+  .heroDescription {
+    width: 100%;
+    margin-top: 24px;
+    font-size: 16px;
+    line-height: 24px;
+    letter-spacing: -0.8px;
+  }
+
+  .mobBreak {
+    display: block;
+  }
+
+  .heroActions {
+    margin-top: 24px;
+  }
+
+  .heroImage {
+    aspect-ratio: 350 / 295;
+    border-radius: 32px;
+  }
+
+  .statistics {
+    padding-block: 52px;
+  }
+
+  .statisticsLayout {
+    width: calc(100% - 40px);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .statisticsHeading,
+  .metrics {
+    flex: initial;
+  }
+
+  .metrics {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .metric {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .metricRule {
+    display: none;
+  }
+
+  .philosophy {
+    padding: 52px 0 72px;
+  }
+
+  .philosophyContent {
+    gap: 44px;
+  }
+
+  .philosophyIntro {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+    padding-top: 28px;
+  }
+
+  .why {
+    width: 195px;
+    height: 140px;
+    padding: 6px 0 0 3px;
+  }
+
+  .why img {
+    width: 185px;
+    height: 105px;
+  }
+
+  .philosophyCopy {
+    gap: 24px;
+  }
+
+  .sectionTitle {
+    font-size: 28px;
+    line-height: 40px;
+    letter-spacing: -1.4px;
+  }
+
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .step {
+    gap: 24px;
+  }
+
+  .stepRule {
+    display: block;
+  }
+
+  .step:first-child .stepRule {
+    visibility: hidden;
+  }
+
+  .teaching {
+    padding-block: 72px;
+  }
+
+  .teachingInner {
+    gap: 52px;
+  }
+
+  .teachingLead {
+    gap: 20px;
+  }
+
+  .tabs {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tab {
+    height: 120px;
+    flex: 0 0 auto;
+    padding: 32px;
+  }
+
+  .tab[aria-selected='true'] {
+    height: 118px;
+  }
+
+  .panel {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    min-height: 460px;
+  }
+
+  .board {
+    gap: 32px;
+  }
+
+  .boardImage {
+    aspect-ratio: 350 / 166;
+    border-radius: 32px;
+  }
+
+  .reviews {
+    gap: 32px;
+    padding: 72px 0 52px;
+  }
+
+  .reviewGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .reviewActions {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .reviewLink {
+    align-self: auto;
+  }
+
+  .closing {
+    padding-block: 52px;
+  }
+
+  .closingBanner {
+    padding: 32px;
+    border-radius: 32px;
+  }
+
+  .closingContent {
+    flex-direction: column;
+    gap: 32px;
+    text-align: center;
+  }
+
+  .closingCopy {
+    align-items: center;
+  }
+
+  .closingTitle {
+    font-size: 28px;
+    line-height: 40px;
+    letter-spacing: -1.4px;
+  }
+
+}

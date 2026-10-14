@@ -1,7 +1,5 @@
+import { LandingScreen } from '@/features/landing/landing-screen';
+
 export default function Home() {
-  return (
-    <main>
-      <div>Hello world!</div>
-    </main>
-  );
+  return <LandingScreen />;
 }
