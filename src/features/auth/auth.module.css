@@ -16,3 +16,10 @@
 .termsRow a { font-size: 12px; line-height: 16px; letter-spacing: -.6px; color: var(--gray-400); }
 .error { color: var(--red-500); }
 .shell { border: 1px solid rgba(0, 0, 0, .1); }
+
+:global(html):has(.responsiveMain) { scrollbar-width: none; }
+:global(html):has(.responsiveMain)::-webkit-scrollbar { display: none; }
+
+@media (width < 768px) {
+  .responsiveMain { width: 100%; padding: 104px 20px; }
+}

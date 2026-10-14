@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Checkbox, FormField, Logo, SiteFooter, SiteHeader } from '@/components/site';
@@ -18,6 +19,7 @@ const terms = [
 const titles = { login: '로그인', signup: '회원가입', recovery: '비밀번호 찾기', reset: '비밀번호 재설정' };
 
 export function AuthForm({ kind, scenario = '' }: { kind: AuthKind; scenario?: string }) {
+  const router = useRouter();
   const [values, setValues] = useState(emptyValues);
   const [errors, setErrors] = useState<Partial<Record<AuthField, string>>>({});
   const [agreements, setAgreements] = useState([false, false, false, false]);
@@ -57,8 +59,8 @@ export function AuthForm({ kind, scenario = '' }: { kind: AuthKind; scenario?: s
   const form = <form className={styles.form} noValidate onSubmit={submit}><div className={styles.fields}>
     {fields.map(field => <FormField key={field} id={field} name={field} label={fieldLabels[field]} placeholder={placeholders[field]} value={values[field]} type={field === 'password' || field === 'confirmation' ? 'password' : 'text'} inputMode={field === 'birthday' || field === 'phone' ? 'numeric' : field === 'email' ? 'email' : undefined} autoComplete={field === 'confirmation' ? 'new-password' : field === 'password' ? kind === 'login' ? 'current-password' : 'new-password' : field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : field} onChange={event => change(field, event.target.value)} onBlur={() => { if (errors[field]) setErrors(current => ({ ...current, [field]: validateField(field, values) })); }} error={errors[field] || (displayedState?.field === field ? displayedState.message : undefined)} />)}
     {kind === 'signup' && <div className={styles.terms}><p className={styles.termsTitle}>약관 동의</p><div className={styles.termsBox}><strong><Checkbox checked={agreements.every(Boolean)} onChange={() => toggle()}>전체 동의</Checkbox></strong><div className={styles.termsRule} />{terms.map((term, index) => <div className={styles.termsRow} key={term.href}><Checkbox id={`agreement-${index}`} checked={agreements[index]} onChange={() => toggle(index)}>{term.label}</Checkbox><Link href={term.href} target="_blank" rel="noreferrer">보기</Link></div>)}</div>{termsError && <p className={styles.error}>필수 약관에 동의해주세요.</p>}</div>}
-  </div>{displayedState && !displayedState.field && <p className={styles.error}>{displayedState.message}</p>}<button className={styles.button} type="submit">{kind === 'recovery' ? '비밀번호 재설정' : titles[kind]}</button></form>;
-  return <div className={styles.shell}><SiteHeader /><main className={`${styles.main} ${kind === 'signup' ? styles.signup : ''}`}>
+  </div>{displayedState && !displayedState.field && <p className={styles.error}>{displayedState.message}</p>}<button className={styles.button} type="submit">{titles[kind]}</button></form>;
+  return <div className={styles.shell}><SiteHeader mobile={kind === 'signup' ? undefined : { title: '로그인', onBack: () => router.back() }} /><main className={`${styles.main} ${kind === 'signup' ? styles.signup : styles.responsiveMain}`}>
     {kind === 'signup' ? <h1 className={styles.title}>회원가입</h1> : <div className={styles.brand}><Logo large />{kind === 'login' ? <div><p>1문제 넘게 틀려본 적 없는 수학 극상위권 연대 수학강사</p><p>여러분의 수학 공부 시간을 1초라도 줄여드리고 싶어서 만들었습니다</p></div> : <h1>{titles[kind]}</h1>}</div>}
     {kind === 'login' ? <div className={styles.loginBottom}>{form}<div className={styles.links}><Link href="/signup">회원가입</Link><span>·</span><Link href="/reset-password">비밀번호 찾기</Link></div></div> : form}
   </main><SiteFooter /></div>;

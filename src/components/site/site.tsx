@@ -10,10 +10,10 @@ export function Logo({ large = false }: { large?: boolean }) {
   </span></span>;
 }
 
-export function SiteHeader({ profile, activeCourses = false }: { profile?: { name: string; image: string }; activeCourses?: boolean }) {
-  return <header className={styles.header}><nav className={styles.headerLeft} aria-label="주 메뉴"><Link href="/" aria-label="빠른수학 홈"><Logo /></Link><Link href="/">홈</Link><Link href="/courses" className={activeCourses ? styles.activeCourses : undefined}>강의·교재 목록</Link></nav>
+export function SiteHeader({ profile, activeCourses = false, mobile }: { profile?: { name: string; image: string }; activeCourses?: boolean; mobile?: { title: string; onBack: () => void } }) {
+  return <><header className={`${styles.header} ${mobile ? styles.responsiveHeader : ''}`}><nav className={styles.headerLeft} aria-label="주 메뉴"><Link href="/" aria-label="빠른수학 홈"><Logo /></Link><Link href="/">홈</Link><Link href="/courses" className={activeCourses ? styles.activeCourses : undefined}>강의·교재 목록</Link></nav>
     <div className={styles.headerRight}>{profile ? <Link href="/profile" className={styles.profileLink}><Image unoptimized className={styles.profileImage} src={profile.image} width={24} height={24} alt="" />{profile.name}님</Link> : <Link href="/login">로그인/회원가입</Link>}<Link href={profile ? '/classroom' : '/login'} className={styles.classroomLink}>내 강의실</Link></div>
-  </header>;
+  </header>{mobile && <header className={styles.mobileHeader}><button className={styles.backButton} type="button" aria-label="뒤로가기" onClick={mobile.onBack}><Image unoptimized src="/assets/login-imgArrowLeft.svg" width={24} height={24} alt="" /></button><p className={styles.mobileTitle}>{mobile.title}</p><span className={styles.mobileHeaderSpacer} aria-hidden="true" /></header>}</>;
 }
 
 export function SiteFooter() {
