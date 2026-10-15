@@ -3,6 +3,7 @@ import './globals.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://quick-math-tawny.vercel.app'),
   title: "빠른수학",
   description: "여러분의 수학 공부 시간을 1초라도 줄여드리고 싶어서 만들었습니다",
 };
