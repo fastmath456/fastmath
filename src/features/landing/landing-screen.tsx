@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Fragment, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { Fragment, useState, type MouseEvent } from 'react';
 import { SiteFooter, SiteHeader } from '@/components/site';
 import { useProfile } from '@/features/account';
 import { landingFacts, landingReviews, philosophySteps, teachingPoints, type SourceReview } from './landing-content';
@@ -22,23 +22,8 @@ function LandingHeader() {
 }
 
 function TeachingPoints() {
-  const [selected, setSelected] = useState(0);
-  const point = teachingPoints[selected];
-  const board = point.board ?? teachingPoints[0].board;
-
-  function selectWithKeyboard(event: KeyboardEvent<HTMLButtonElement>) {
-    let next: number;
-    switch (event.key) {
-      case 'ArrowRight': next = (selected + 1) % teachingPoints.length; break;
-      case 'ArrowLeft': next = (selected + teachingPoints.length - 1) % teachingPoints.length; break;
-      case 'Home': next = 0; break;
-      case 'End': next = teachingPoints.length - 1; break;
-      default: return;
-    }
-    event.preventDefault();
-    setSelected(next);
-    document.getElementById(`teaching-tab-${next}`)?.focus({ preventScroll: true });
-  }
+  const point = teachingPoints[0];
+  const board = point.board;
 
   return <section className={styles.teaching} aria-labelledby="teaching-title">
     <div className={`${styles.container} ${styles.teachingInner}`}>
@@ -47,16 +32,16 @@ function TeachingPoints() {
           <h2 id="teaching-title" className={styles.sectionTitle}>풀이보다 먼저,<br />생각하는 방법을 배웁니다.</h2>
           <p className={styles.bodyCopy}>어디서 시작할지, 무엇을 볼지, 어떻게 확인할지.<br />문제를 풀어내는 사고과정을 전합니다.</p>
         </div>
-        <div role="tablist" aria-label="세 가지 강의 포인트" className={styles.tabs}>
-          {teachingPoints.map((item, index) => <button key={item.number} id={`teaching-tab-${index}`} type="button" role="tab" aria-selected={selected === index} aria-controls="teaching-panel" tabIndex={selected === index ? 0 : -1} className={styles.tab} onClick={() => setSelected(index)} onKeyDown={selectWithKeyboard}>
+        <div role="list" aria-label="세 가지 강의 포인트" className={styles.tabs}>
+          {teachingPoints.map(item => <div key={item.number} role="listitem" className={styles.tab}>
             <span className={styles.tabNumber}>{item.number}</span><span className={styles.tabTitle}>{item.label}</span>
-          </button>)}
+          </div>)}
         </div>
       </div>
-      <div id="teaching-panel" role="tabpanel" aria-labelledby={`teaching-tab-${selected}`} className={styles.panel}>
+      <div className={styles.panel}>
         <div className={styles.panelCopy}>
           <h3 className={styles.sectionTitle}>{point.title[0]}<br />{point.title[1]}</h3>
-          <p className={styles.bodyCopy}>{selected === 0 ? <>근호 안의 조건과 오른쪽의 부호를<br />함께 확인합니다. 계산에 앞서 원래 식이 요구하는 조건부터 읽습니다.</> : point.description}</p>
+          <p className={styles.bodyCopy}>근호 안의 조건과 오른쪽의 부호를<br />함께 확인합니다. 계산에 앞서 원래 식이 요구하는 조건부터 읽습니다.</p>
         </div>
         {board && <div className={styles.board} aria-hidden={!point.board}>
           <div className={styles.boardCopy}><h3>{board.title}</h3><p>{board.description}</p></div>

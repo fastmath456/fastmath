@@ -368,7 +368,7 @@
   font-weight: 600;
 }
 
-.tab[aria-selected='true'] {
+.tab:first-child {
   height: 118px;
   border: 0;
   background: var(--brand-500);
@@ -844,7 +844,7 @@
     padding: 32px;
   }
 
-  .tab[aria-selected='true'] {
+  .tab:first-child {
     height: 118px;
   }
 
