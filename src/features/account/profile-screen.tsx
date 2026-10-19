@@ -2,6 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
+import { isMockMode, mutate, requestFailure } from '@/lib/http';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Checkbox, ConfirmationDialog, FormField, isTermsPath, useTermsDraft } from '@/components/site';
@@ -21,7 +23,7 @@ function profileValues(profile: Profile): AuthValues {
   return { email:profile.email, name:profile.name, birthday:profile.birthday, phone:profile.phone, password:'', confirmation:'' };
 }
 function ProfileForm({ profile }: { profile: Profile }) {
-  const router = useRouter();
+  const router = useRouter(), client = useQueryClient();
   const [{ values, marketing, baseline, selectedFile, imageChanged }, setDraft] = useTermsDraft<ProfileDraft>(`profile:${profile.email}`, {
     values: profileValues(profile), marketing: profile.marketing, baseline: profile, imageChanged: false,
   });
@@ -75,7 +77,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
     if (leaving.key && navigation) void navigation.traverseTo(leaving.key).finished.catch(() => { allowLeave.current = false; });
     else router.push(leaving.url);
   }
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const next: Partial<Record<AuthField,string>> = {};
     editable.forEach(field => { const error = validateField(field,values); if (error) next[field] = error; });
@@ -83,7 +85,13 @@ function ProfileForm({ profile }: { profile: Profile }) {
     const first = editable.find(field => next[field]);
     if (first) event.currentTarget.querySelector<HTMLInputElement>(`#profile-${first}`)?.focus();
     else if (!changed) setMessage('변경된 정보가 없습니다.');
-    // ponytail: changed values remain local until the real profile save API is connected.
+    if (first || !changed || isMockMode) return;
+    try {
+      let path = currentImage ? profile.imagePath : '';
+      if(selectedFile) { const form = new FormData(); form.set('file',await (await fetch(selectedFile.preview)).blob(),selectedFile.name); path=(await mutate<{path:string}>('profile/image',form)).path; }
+      const saved = await mutate<Profile>('profile',{name:values.name,birthday:values.birthday,phone:values.phone,marketing,imagePath:path,revision:baseline.revision},'PATCH'); setDraft(current => ({ ...current, baseline: saved }));
+      await client.invalidateQueries({queryKey:['profile']}); setDraft(current => ({ ...current, imageChanged: false, selectedFile: undefined }));
+    } catch { setMessage(requestFailure); }
   }
   async function choose(file: File | undefined) {
     if (!file) return;
@@ -114,5 +122,5 @@ function ProfileForm({ profile }: { profile: Profile }) {
 }
 export function ProfileScreen({ state = '' }: { state?: string }) {
   const query = useProfile(state);
-  return <AccountShell profile={query.data} section="profile"><div className={styles.content}><div><h1 className={accountStyles.title}>내 정보</h1><p className={accountStyles.subtitle}>내 정보를 확인하고 수정하세요.</p></div>{query.isError ? <div className={accountStyles.error}><p>내 정보를 불러오지 못했습니다. 다시 시도해주세요.</p><button onClick={() => query.refetch()}>다시 시도</button></div> : query.data && <ProfileForm key={state} profile={query.data} />}</div></AccountShell>;
+  return <AccountShell profile={query.data} section="profile"><div className={styles.content}><div><h1 className={accountStyles.title}>내 정보</h1><p className={accountStyles.subtitle}>내 정보를 확인하고 수정하세요.</p></div>{query.isError ? <div className={accountStyles.error}><p>내 정보를 불러오지 못했습니다. 다시 시도해주세요.</p><button onClick={() => query.refetch()}>다시 시도</button></div> : query.data && <ProfileForm key={state+query.data.email} profile={query.data} />}</div></AccountShell>;
 }

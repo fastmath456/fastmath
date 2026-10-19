@@ -10,7 +10,7 @@ export function ConfirmationDialog({ children, label, actions, onCancel }: { chi
     returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const dialog = ref.current;
     dialog?.showModal();
-    return () => dialog?.close();
+    return () => { dialog?.close(); returnFocus.current?.focus(); };
   }, []);
   function cancel() {
     ref.current?.close();
@@ -19,8 +19,8 @@ export function ConfirmationDialog({ children, label, actions, onCancel }: { chi
   }
   return <dialog ref={ref} className={styles.dialog} aria-label={label} onCancel={event => { event.preventDefault(); cancel(); }} onKeyDown={event => {
     if (event.key !== 'Tab') return;
-    const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not([disabled])');
-    const first = buttons[0], last = buttons[buttons.length - 1];
+    const controls = event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), a[href]');
+    const first = controls[0], last = controls[controls.length - 1];
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   }}><div className={styles.text}>{children}</div><div className={styles.actions}>{actions.map((action,index) => <button key={action.label} type="button" className={index === 0 ? styles.outlined : styles.primary} onClick={action.cancel ? cancel : action.onClick}>{action.label}</button>)}</div></dialog>;

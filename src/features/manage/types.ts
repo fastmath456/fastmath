@@ -1,0 +1,10 @@
+export type AssetSlot = 'thumbnail' | 'detailImage' | 'material';
+export type CourseAsset = { id: string; name: string; url: string; size: number; type: string; checksum?: string; status?: 'uploading' | 'error'; error?: string };
+export type CourseVideo = { url: string; embedUrl: string; durationSeconds: number };
+export type CourseLesson = { id: string; title: string; inputUrl: string; video: CourseVideo | null; videoError?: string };
+export type CourseChapter = { id: string; title: string; lessons: CourseLesson[] };
+export type CourseBasic = { title: string; basePrice: string; price: string; licenseDays: string; thumbnail: CourseAsset | null; detailImage: CourseAsset | null; materials: CourseAsset[] };
+export type CourseDocument = { basic: CourseBasic; chapters: CourseChapter[]; step: 1 | 2; selectedLessonId: string | null };
+export type CourseDraft = { id: string; revision: number; courseId: string | null; slug: string | null; published: boolean; savedAt: string; document: CourseDocument };
+export type DraftSummary = Pick<CourseDraft, 'id' | 'savedAt' | 'published' | 'slug'> & { title: string; step: 1 | 2 };
+export type BasicErrors = Partial<Record<keyof CourseBasic, string>>;

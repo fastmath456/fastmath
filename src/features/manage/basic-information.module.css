@@ -1,0 +1,29 @@
+.content { width: 640px; display: flex; flex-direction: column; gap: 16px; }
+.field { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.assetHeading { display: flex; flex-direction: column; }
+.label { color: var(--gray-800); font-weight: 600; line-height: 20px; }
+.required { color: var(--red-500); }
+.helper { color: var(--gray-800); font-family: Pretendard, SUIT, sans-serif; font-size: 12px; line-height: 18px; letter-spacing: -.18px; }
+.fileInput { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.assetUpload { width: 164px; height: 164px; padding: 10px; overflow: hidden; border: 1px dashed var(--gray-200); border-radius: 16px; background: var(--gray-100); display: flex; align-items: center; justify-content: center; }
+.uploadPrompt { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--gray-800); font-size: 12px; line-height: 16px; letter-spacing: -.6px; }
+.imageIcon { width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+.assetPreview { width: 100%; height: 100%; object-fit: contain; }
+.input, .periodField, .materialUpload { width: 100%; height: 52px; border: 1px solid #efefef; border-radius: 16px; background: var(--gray-00); }
+.input { padding-inline: 16px; font-weight: 600; line-height: 20px; letter-spacing: -.7px; }
+.input::placeholder, .periodField input::placeholder, .materialUpload { color: var(--gray-400); opacity: 1; }
+.message { color: var(--red-500); font-size: 12px; line-height: 16px; letter-spacing: -.6px; }
+.status { color: var(--gray-700); font-size: 12px; line-height: 16px; letter-spacing: -.6px; }
+.materialUpload { padding-inline: 16px; display: flex; align-items: center; justify-content: space-between; font-weight: 600; line-height: 20px; letter-spacing: -.7px; text-align: left; }
+.materials { width: 100%; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; list-style: none; }
+.material { padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; background: var(--gray-100); border-radius: 16px; font-size: 12px; line-height: 16px; letter-spacing: -.6px; }
+.materialMain, .materialActions { display: flex; align-items: center; }
+.materialMain { justify-content: space-between; gap: 8px; }
+.materialMain > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.materialActions { flex-shrink: 0; gap: 8px; }
+.material button { padding: 0; background: transparent; color: var(--gray-700); font: inherit; }
+.materialStatus { color: var(--red-500); }
+.periodField { padding-inline: 16px; display: flex; align-items: center; gap: 8px; color: var(--gray-800); font-family: Pretendard, SUIT, sans-serif; font-weight: 500; line-height: 21px; letter-spacing: -.21px; }
+.periodField input { flex: 1; width: 0; padding: 0; border: 0; background: transparent; font: inherit; color: inherit; }
+.periodField input::placeholder { font-family: SUIT, sans-serif; font-weight: 600; line-height: 20px; letter-spacing: -.7px; }
+.input[aria-invalid='true'], .periodField:has(input[aria-invalid='true']) { border-color: var(--red-500); }

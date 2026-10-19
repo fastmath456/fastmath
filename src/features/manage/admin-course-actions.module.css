@@ -1,0 +1,25 @@
+.actions {
+  position: fixed;
+  right: max(16px, calc((100vw - 1080px) / 2));
+  bottom: 24px;
+  display: flex;
+  gap: 8px;
+  filter: drop-shadow(0 10px 5px rgba(254,150,76,.08));
+}
+
+.actions button {
+  height: 32px;
+  padding-inline: 16px;
+  border-radius: 16px;
+  background: var(--brand-500);
+  color: #3c3b28;
+  font-weight: 600;
+}
+
+.actions button:first-child {
+  width: 130.5px;
+}
+
+.actions button:last-child {
+  width: 142px;
+}

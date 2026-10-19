@@ -1,0 +1,37 @@
+.editor { display: flex; align-items: flex-start; gap: 40px; width: 960px; }
+.curriculum { display: flex; flex-direction: column; gap: 16px; width: 280px; }
+.chapter { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.chapterHeader, .addChapterRow { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+.chapterTitle, .addChapterRow p { margin: 0; color: var(--gray-800); font-size: 12px; font-weight: 600; line-height: 16px; letter-spacing: -.6px; }
+.chapterActions { display: flex; align-items: center; gap: 4px; }
+.addLesson, .addChapter { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 24px; padding: 0; background: transparent; color: var(--brand-500); font-size: 12px; font-weight: 600; line-height: 16px; letter-spacing: -.6px; white-space: nowrap; }
+.addLesson img, .addChapter img { display: block; }
+.emptyCurriculum, .emptyChapter, .emptyVideo { margin: 0; color: var(--gray-400); font-size: 12px; font-weight: 600; line-height: 16px; letter-spacing: -.6px; }
+.emptyCurriculum { height: 40px; display: flex; align-items: center; padding-inline: 8px; border-radius: 8px; background: var(--gray-100); }
+.emptyChapter { height: 40px; display: flex; align-items: center; padding-inline: 8px; }
+.lessonRow { position: relative; display: flex; align-items: center; width: 100%; }
+.lesson { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 40px; padding: 0 8px; border-radius: 8px; background: transparent; color: var(--gray-800); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: -.6px; text-align: left; }
+.lesson.selected { background: var(--gray-100); font-weight: 600; }
+.lesson:disabled, .addLesson:disabled, .addChapter:disabled { opacity: 1; }
+.lessonTitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { flex: none; padding: 2px 6px; border-radius: 100px; color: var(--gray-700); background: var(--gray-100); font-size: 10px; font-weight: 600; line-height: 14px; letter-spacing: -.5px; white-space: nowrap; }
+.complete { color: var(--gray-800); background: var(--brand-500); }
+.pending { color: var(--gray-800); background: var(--brand-500); }
+.error { color: var(--red-500); background: var(--gray-100); }
+.manageMenu { position: relative; flex: none; }
+.manageMenu summary { display: flex; align-items: center; justify-content: center; width: 16px; height: 24px; padding: 0; color: var(--gray-800); font-size: 16px; line-height: 16px; list-style: none; cursor: pointer; }
+.manageMenu summary::-webkit-details-marker { display: none; }
+.menuItems { position: absolute; z-index: 1; right: 0; top: 28px; display: flex; flex-direction: column; width: 84px; padding: 4px; border: 1px solid var(--gray-200); border-radius: 8px; background: var(--gray-00); }
+.menuItems button { height: 32px; padding: 0 8px; background: transparent; color: var(--gray-800); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: -.6px; text-align: left; white-space: nowrap; }
+.videoEditor { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 640px; }
+.label { color: var(--gray-800); font-size: 14px; font-weight: 600; line-height: 20px; letter-spacing: -.7px; }
+.label span { color: var(--red-500); }
+.urlRow { display: flex; align-items: flex-start; gap: 8px; width: 100%; }
+.urlInput { flex: 1; min-width: 0; height: 52px; padding: 0 16px; border: 1px solid #efefef; border-radius: 16px; background: var(--gray-00); color: var(--gray-800); font-size: 14px; font-weight: 600; line-height: 20px; letter-spacing: -.7px; }
+.urlInput::placeholder { color: var(--gray-400); }
+.urlInput:disabled { background: var(--gray-100); color: var(--gray-400); }
+.verify { flex: none; height: 52px; padding: 8px 16px; border-radius: 16px; background: var(--brand-500); color: var(--gray-800); font-family: Pretendard, sans-serif; font-size: 14px; font-weight: 700; line-height: 21px; white-space: nowrap; }
+.verify:disabled { background: var(--gray-100); color: var(--gray-400); }
+.emptyVideo { margin-top: 4px; }
+.videoError { margin: 0; color: var(--red-500); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: -.6px; }
+.preview { display: block; width: 640px; height: 360px; border: 0; }

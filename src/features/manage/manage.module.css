@@ -1,0 +1,23 @@
+.main { width: 640px; margin-inline: auto; padding-block: 52px; display: flex; flex-direction: column; gap: 52px; }
+.details { width: 960px; }
+.heading { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.headingRow { display: flex; align-items: center; justify-content: space-between; }
+.heading h1 { color: #222; font-size: 20px; font-weight: 600; line-height: 30px; letter-spacing: -1px; }
+.steps { display: flex; align-items: center; gap: 12px; }
+.step { display: flex; align-items: center; gap: 4px; padding: 0; background: transparent; color: #727262; font-size: 14px; font-weight: 600; line-height: 20px; }
+.details .step:not(.current) { color: #666; font-family: Pretendard, sans-serif; font-weight: 500; line-height: 21px; letter-spacing: -.21px; }
+.chip { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--gray-200); border-radius: 100px; background: var(--gray-100); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: -.6px; }
+.current { color: var(--brand-500); }
+.current .chip { border: 0; background: var(--brand-500); color: white; }
+.fields { width: 100%; border: 0; padding: 0; margin: 0; min-inline-size: 0; }
+.actionGroup { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.actions { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; }
+.rightActions { display: flex; align-items: center; gap: 8px; }
+.outlined, .primary { height: 52px; padding: 8px 16px; border-radius: 16px; font-weight: 600; line-height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+.outlined { border: 1px solid var(--brand-500); color: var(--brand-500); background: white; }
+.primary { color: var(--gray-800); background: var(--brand-500); }
+.load { padding: 0; color: var(--brand-500); background: transparent; font-weight: 600; }
+.error { color: var(--red-500); font-size: 12px; line-height: 16px; }
+.dialogText, .summary, .draftList { display: flex; flex-direction: column; gap: 8px; }
+.draftItem { display: flex; flex-direction: column; gap: 4px; padding: 0; text-align: left; background: transparent; }
+.draftItem time { color: var(--gray-700); font-size: 12px; line-height: 16px; }

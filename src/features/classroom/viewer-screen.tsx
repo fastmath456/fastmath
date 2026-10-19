@@ -1,6 +1,8 @@
 'use client';
 
 import Image from 'next/image';
+import { isMockMode } from '@/lib/http';
+import { VideoPlayer } from './video-player';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -14,18 +16,19 @@ import styles from './classroom.module.css';
 export function ViewerScreen({ courseId, lessonId, state = '' }: { courseId: string; lessonId?: string; state?: string }) {
   const ready = useMockReady(), profile = useProfile(), router = useRouter();
   const query = useQuery({ queryKey: ['viewer',courseId,state], queryFn: () => getViewer(courseId,state), enabled: ready });
-  const [open, setOpen] = useState(['unit-1','unit-2']);
+  const [expanded, setOpen] = useState<string[] | null>(null);
+  const open = expanded ?? query.data?.chapters.slice(0,2).map(chapter => chapter.id) ?? [];
   const data = query.data, lessons = data?.chapters.flatMap(chapter => chapter.lessons) ?? [];
   const selected = lessonId ?? data?.recentLessonId ?? lessons[0]?.id;
   const index = lessons.findIndex(lesson => lesson.id === selected), lesson = lessons[index];
   function select(id: string) {
     if (id === selected) return;
     const chapter = data?.chapters.find(chapter => chapter.lessons.some(lesson => lesson.id === id));
-    if (chapter && !open.includes(chapter.id)) setOpen(current => [...current,chapter.id]);
+    if (chapter && !open.includes(chapter.id)) setOpen([...open,chapter.id]);
     router.push(`/classroom/courses/${courseId}?lesson=${encodeURIComponent(id)}`);
   }
-  return <><SiteHeader profile={profile.data ? {name:profile.data.name,image:profile.data.avatar} : undefined} /><main className={styles.viewer}><aside className={styles.curriculum}><h2>커리큘럼</h2><div className={styles.units}>{data?.chapters.map(chapter => <section className={styles.unit} key={chapter.id}><button type="button" className={styles.unitButton} aria-expanded={open.includes(chapter.id)} aria-controls={`unit-${chapter.id}`} onClick={() => setOpen(current => current.includes(chapter.id) ? current.filter(id => id !== chapter.id) : [...current,chapter.id])}>{chapter.title}<Image unoptimized src="/assets/viewer-imgChevronDown1.svg" width={16} height={16} alt="" className={open.includes(chapter.id) ? styles.chevronUp : undefined} /></button>{open.includes(chapter.id) && <div id={`unit-${chapter.id}`} className={styles.unitLessons}>{chapter.lessons.map(item => <button type="button" key={item.id} className={styles.lessonButton} aria-current={selected === item.id ? 'true' : undefined} onClick={() => select(item.id)}>{item.title}</button>)}</div>}</section>)}</div></aside><div className={styles.videoContent}><div className={styles.videoHeading}><div><h1>{lesson?.title}</h1><p>{data?.title}</p></div><div className={styles.protection}><Image unoptimized src="/assets/viewer-imgAlertCircle.svg" width={20} height={20} alt="" />해당 콘텐츠는 보호되고 있습니다.</div></div><div className={styles.videoGroup}>
-      {query.isError ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={() => query.refetch()}>다시 시도</button></div></div> : data && (lessons.length === 0 ? <div className={styles.videoEmpty}>아직 공개된 강의가 없습니다.</div> : !lesson ? <div className={styles.videoEmpty}>강의를 찾을 수 없습니다.</div> : <Image unoptimized loading="eager" className={styles.poster} src={data.poster} width={1100} height={619} alt="강의 영상 포스터" />)}
+  return <><SiteHeader profile={profile.data ? {name:profile.data.name,image:profile.data.avatar} : undefined} /><main className={styles.viewer}><aside className={styles.curriculum}><h2>커리큘럼</h2><div className={styles.units}>{data?.chapters.map(chapter => <section className={styles.unit} key={chapter.id}><button type="button" className={styles.unitButton} aria-expanded={open.includes(chapter.id)} aria-controls={`unit-${chapter.id}`} onClick={() => setOpen(open.includes(chapter.id) ? open.filter(id => id !== chapter.id) : [...open, chapter.id])}>{chapter.title}<Image unoptimized src="/assets/viewer-imgChevronDown1.svg" width={16} height={16} alt="" className={open.includes(chapter.id) ? styles.chevronUp : undefined} /></button>{open.includes(chapter.id) && <div id={`unit-${chapter.id}`} className={styles.unitLessons}>{chapter.lessons.map(item => <button type="button" key={item.id} className={styles.lessonButton} aria-current={selected === item.id ? 'true' : undefined} onClick={() => select(item.id)}>{item.title}</button>)}</div>}</section>)}</div></aside><div className={styles.videoContent}><div className={styles.videoHeading}><div><h1>{lesson?.title}</h1><p>{data?.title}</p></div><div className={styles.protection}><Image unoptimized src="/assets/viewer-imgAlertCircle.svg" width={20} height={20} alt="" />해당 콘텐츠는 보호되고 있습니다.</div></div><div className={styles.videoGroup}>
+      {query.isError ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={() => query.refetch()}>다시 시도</button></div></div> : data && (lessons.length === 0 ? <div className={styles.videoEmpty}>아직 공개된 강의가 없습니다.</div> : !lesson ? <div className={styles.videoEmpty}>강의를 찾을 수 없습니다.</div> : !isMockMode && data.orderId ? <VideoPlayer key={lesson.id} orderId={data.orderId} lessonId={lesson.id} /> : <Image unoptimized loading="eager" className={styles.poster} src={data.poster} width={1100} height={619} alt="강의 영상 포스터" />)}
       <div className={styles.videoActions}><Link href="/classroom">나가기</Link><div><button type="button" disabled={index <= 0} onClick={() => select(lessons[index-1].id)}>이전 강의</button><button type="button" disabled={index < 0 || index === lessons.length-1} onClick={() => select(lessons[index+1].id)}>다음 강의</button></div></div>
     </div></div></main><SiteFooter /></>;
 }
