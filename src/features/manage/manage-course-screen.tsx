@@ -165,7 +165,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
         setConfirm({ label: '클래스 등록 완료', text: '클래스가 등록되었습니다.', cancel: '확인', accept: '', onAccept: go });
       } else {
         setNotice('임시저장되었습니다.');
-        void getDrafts().then(listing => { if (mounted.current) setDrafts(listing.items); }).catch(() => {});
+        void getDrafts().then(listing => { if (mounted.current) setDrafts(listing.items); }).catch(error => { if (mounted.current) handleAuthError(error); });
       }
     } catch (error) {
       if (!handleAuthError(error)) setMessage(publishing ? '클래스를 등록하지 못했습니다. 다시 시도해주세요.' : '임시저장하지 못했습니다. 다시 시도해주세요.');

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { mutate } from '@/lib/http';
+import { useLoginRedirect } from '@/features/auth';
 import styles from './classroom.module.css';
 type PlayerEvent={seconds:number};
 type Player={on:(event:string,fn:(data:PlayerEvent)=>void)=>void;destroy:()=>Promise<void>};
@@ -15,6 +16,7 @@ function loadVimeo() {
 }
 export function VideoPlayer({orderId,lessonId}:{orderId:string;lessonId:string}) {
   const container=useRef<HTMLDivElement>(null),[failed,setFailed]=useState(false);
+  const { redirectIfUnauthorized } = useLoginRedirect();
   useEffect(()=>{
     let active=true,player:Player|undefined,playing=false,seeking=false,sequence=0,lastSent=0,queue=Promise.resolve();
     async function start() {
@@ -24,7 +26,7 @@ export function VideoPlayer({orderId,lessonId}:{orderId:string;lessonId:string})
       function send(seconds:number,count:boolean) {
         if(!active) return;
         const input={sessionId:session.sessionId,sequence:++sequence,position:Math.floor(seconds),playing:count};lastSent=performance.now();
-        queue=queue.then(async()=> { if(active) await mutate('playback/progress',input); }).catch(()=>{if(active){active=false;setFailed(true);}});
+        queue=queue.then(async()=> { if(active) await mutate('playback/progress',input); }).catch(error=>{if(active){active=false;if(!redirectIfUnauthorized(error)) setFailed(true);}});
       }
       player.on('playing',()=>{playing=true;});
       player.on('seeking',()=>{seeking=true;});
@@ -34,8 +36,8 @@ export function VideoPlayer({orderId,lessonId}:{orderId:string;lessonId:string})
       player.on('ended',e=>{send(e.seconds,playing&&!seeking);playing=false;});
       player.on('error',()=>{if(active) setFailed(true);});
     }
-    void start().catch(()=>{if(active) setFailed(true);});
+    void start().catch(error=>{if(active && !redirectIfUnauthorized(error)) setFailed(true);});
     return ()=>{active=false;void player?.destroy();};
-  },[orderId,lessonId]);
+  },[orderId,lessonId,redirectIfUnauthorized]);
   return failed ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={()=>location.reload()}>다시 시도</button></div></div> : <div ref={container} className={styles.poster} />;
 }

@@ -11,12 +11,14 @@ import { useQuery } from '@tanstack/react-query';
 import { SiteFooter, SiteHeader } from '@/components/site';
 import { useMockReady } from '@/app/providers';
 import { AdminCourseActions } from '@/features/manage';
+import { useLoginRedirect } from '@/features/auth';
 import { discountPercent, getProduct } from './api';
 import { refundEmphasis, refundIntro, refundSections } from './refund-copy';
 import styles from './catalog.module.css';
 
 export function ProductDetailScreen({ slug, kind, state = '', view = '' }: { slug: string; kind: 'vod' | 'pdf'; state?: string; view?: string }) {
   const ready = useMockReady(), router = useRouter();
+  const { redirectIfUnauthorized } = useLoginRedirect();
   const requestKey = useRef(''), purchase = useRef<Promise<void> | null>(null);
   const query = useQuery({ queryKey: ['product', slug, kind, state, view], queryFn: () => getProduct(slug, kind, state, view), enabled: ready });
   const [openChapter, setOpenChapter] = useState<string | null>('chapter-1');
@@ -41,7 +43,7 @@ export function ProductDetailScreen({ slug, kind, state = '', view = '' }: { slu
     if (purchase.current) return;
     requestKey.current ||= crypto.randomUUID();
     purchase.current = checkout(product.id, requestKey.current)
-      .catch(() => { router.push(`/payments/failure?kind=${kind}`); })
+      .catch(error => { if (!redirectIfUnauthorized(error)) router.push(`/payments/failure?kind=${kind}`); })
       .finally(() => { purchase.current = null; });
   };
   const discounted = product && product.basePrice !== undefined && product.basePrice > product.price;

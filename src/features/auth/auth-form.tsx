@@ -9,6 +9,7 @@ import { useState, type FormEvent } from 'react';
 import { Checkbox, FormField, Logo, SiteFooter, SiteHeader, useTermsDraft } from '@/components/site';
 import { useMockReady } from '@/app/providers';
 import { fieldLabels, fieldsByKind, placeholders, validateField, type AuthField, type AuthKind, type AuthValues } from './validation';
+import { useLoginRedirect } from './use-login-redirect';
 import styles from './auth.module.css';
 
 const emptyValues: AuthValues = { email: '', password: '', confirmation: '', name: '', birthday: '', phone: '' };
@@ -22,6 +23,7 @@ const titles = { login: '로그인', signup: '회원가입', recovery: '비밀�
 
 export function AuthForm({ kind, scenario = '' }: { kind: AuthKind; scenario?: string }) {
   const router = useRouter(), client = useQueryClient();
+  const { redirectIfUnauthorized } = useLoginRedirect();
   const [remoteError,setRemoteError] = useState('');
   const [{ values, agreements }, setDraft] = useTermsDraft(`auth:${kind}:${scenario}`, { values: emptyValues, agreements: [false, false, false, false] });
   const [errors, setErrors] = useState<Partial<Record<AuthField, string>>>({});
@@ -54,6 +56,7 @@ export function AuthForm({ kind, scenario = '' }: { kind: AuthKind; scenario?: s
       else if (kind === 'signup') router.push('/signup/complete');
       else if (kind === 'reset') router.push('/login');
     } catch (error) {
+      if (kind === 'reset' && redirectIfUnauthorized(error)) return;
       if (error instanceof RequestError && error.code === 'invalid_credentials') setErrors({password:'이메일 또는 비밀번호를 확인해주세요.'});
       else setRemoteError(requestFailure);
     }
