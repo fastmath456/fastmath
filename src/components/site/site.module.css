@@ -45,9 +45,19 @@
 .mobileTitle { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -.4px; color: #262c3a; }
 .mobileHeaderSpacer { width: 24px; height: 24px; flex-shrink: 0; }
 
-.mobileMenu { position: absolute; top: 52px; inset-inline: 0; z-index: 2; background: var(--gray-00); padding: 20px; display: flex; flex-direction: column; }
+.mobileMenuBackdrop { position: absolute; top: 52px; inset-inline: 0; height: calc(100dvh - 52px); z-index: 1; background: rgba(0,0,0,.3); pointer-events: none; }
+.mobileMenu { position: absolute; top: 52px; inset-inline: 0; z-index: 2; background: var(--gray-00); padding: 20px; display: flex; flex-direction: column; animation: mobileMenuExpand 200ms ease-out; }
 .mobileMenu > a { height: 52px; padding-inline: 16px; display: flex; align-items: center; border-radius: 16px; font-weight: 600; text-decoration: none; }
 .mobileMenu > a[aria-current='page'] { background: rgba(255,203,17,.1); color: #fe964c; }
+
+@keyframes mobileMenuExpand {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobileMenu { animation: none; }
+}
 
 @media (width < 768px) {
   .header { display: none; }
