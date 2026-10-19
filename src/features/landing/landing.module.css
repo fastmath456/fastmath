@@ -12,6 +12,9 @@
 }
 
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   height: 52px;
   background: var(--gray-00);
 }
@@ -28,13 +31,17 @@
   margin-inline: auto;
 }
 
+.page > footer {
+  padding-inline: max(20px, calc((100% - 1360px) / 2));
+}
+
 .hero {
   padding-block: 52px;
 }
 
 .heroLayout {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
   gap: 20px;
 }

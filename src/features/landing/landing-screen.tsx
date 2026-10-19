@@ -7,6 +7,7 @@ import { SiteFooter, SiteHeader } from '@/components/site';
 import { useProfile } from '@/features/account';
 import { landingFacts, landingReviews, philosophySteps, teachingPoints, type SourceReview } from './landing-content';
 import { ReviewDialog } from './review-dialog';
+import { useStatisticsCount } from './use-statistics-count';
 import styles from './landing.module.css';
 
 function CoursesLink({ dark = false }: { dark?: boolean }) {
@@ -54,6 +55,7 @@ function TeachingPoints() {
 
 export function LandingScreen() {
   const [review, setReview] = useState<SourceReview | null>(null);
+  const { statisticsRef, progress } = useStatisticsCount();
 
   function goToPhilosophy(event: MouseEvent<HTMLAnchorElement>) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -75,12 +77,12 @@ export function LandingScreen() {
           <div className={styles.heroImage}><Image unoptimized loading="eager" src="/assets/landing/hero-desktop.png" width={1366} height={1152} alt="점 A(1,1)과 B(2,4)를 잇는 직선과 함수 f(x)=x²를 비교한 손글씨 그래프" /></div>
         </div>
       </section>
-      <section className={styles.statistics} aria-label="빠른수학 소개 정보">
+      <section ref={statisticsRef} className={styles.statistics} aria-label="빠른수학 소개 정보">
         <div className={styles.statisticsLayout}>
           <h2 className={styles.statisticsHeading}>수학을 바라보는 관점,<br />함께 나누고 있습니다.</h2>
           <div className={styles.metrics}>{landingFacts.map((fact, index) => <Fragment key={fact.value}>
             {index > 0 && <Image unoptimized className={styles.metricRule} src="/assets/landing/metric-rule.svg" width={1} height={64} alt="" />}
-            <div className={styles.metric}><p className={styles.metricValue}>{fact.value}</p><p className={styles.metricLabel}>{fact.label}</p></div>
+            <div className={styles.metric}><p className={styles.metricValue}>{fact.countTo === undefined ? fact.value : `${Math.floor(fact.countTo * progress * 10) / 10}만`}</p><p className={styles.metricLabel}>{fact.label}</p></div>
           </Fragment>)}</div>
         </div>
       </section>

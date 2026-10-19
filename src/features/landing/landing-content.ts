@@ -1,7 +1,7 @@
 export const landingFacts = [
-  { value: '1.7만', label: '유튜브 ‘빠른수학’ 구독자' },
+  { value: '1.7만', countTo: 1.7, label: '유튜브 ‘빠른수학’ 구독자' },
   { value: '연세대', label: '연세대 출신 수학 강사' },
-  { value: '17만', label: '‘극상위권 수학 공부법’ 조회수' },
+  { value: '17만', countTo: 17, label: '‘극상위권 수학 공부법’ 조회수' },
 ];
 
 export const philosophySteps = [
