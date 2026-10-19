@@ -19,7 +19,7 @@ export function SiteHeader({ profile, activeCourses = false, mobile }: { profile
 
 export function SiteFooter() {
   return <footer className={styles.footer}><Logo /><div className={styles.footerRule} /><div className={styles.footerLinks}>
-    <Link href="/terms" target="_blank" rel="noreferrer">이용약관</Link><Link className={styles.privacy} href="/privacy" target="_blank" rel="noreferrer">개인정보처리방침</Link>
+    <Link href="/term">이용약관</Link><Link className={styles.privacy} href="/privacy">개인정보처리방침</Link>
     <div className={styles.footerGroup}><p>고객센터</p><p>전화번호 : 000-0000-0000</p><p>평일 09:00 ~ 18:00 (점심시간 : 12시 ~ 13시, 주말 및 공휴일 제외)</p></div>
   </div><div className={styles.footerRule} /><div className={styles.footerGroup}><p>사업자등록증 상호명</p><p>사업자등록번호 : 000-00-000</p><p>대표 : 홍길동</p><p>개인정보처리담당자 : 홍길동</p><p>주소 : 경기도 고양시 덕양구 동축로 70, A동 901호 (동산동, 현대프리미어캠퍼스)</p><p>Copyright © 2026 빠른수학. All Rights Reserved.</p></div></footer>;
 }
