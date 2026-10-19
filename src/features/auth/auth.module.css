@@ -21,5 +21,6 @@
 :global(html):has(.responsiveMain)::-webkit-scrollbar { display: none; }
 
 @media (width < 768px) {
+  .signup { width: 100%; padding: 32px 20px 52px; align-items: flex-start; }
   .responsiveMain { width: 100%; padding: 104px 20px; }
 }

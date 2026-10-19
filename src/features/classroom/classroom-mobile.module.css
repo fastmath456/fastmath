@@ -1,0 +1,31 @@
+.list { composes: list from './classroom.module.css'; }
+.row { composes: row from './classroom.module.css'; }
+.rowContent { composes: rowContent from './classroom.module.css'; }
+.thumbnail { composes: thumbnail from './classroom.module.css'; }
+.type { composes: type from './classroom.module.css'; }
+.info { composes: info from './classroom.module.css'; }
+.infoHeading { composes: infoHeading from './classroom.module.css'; }
+.status { composes: status from './classroom.module.css'; }
+.productTitle { composes: productTitle from './classroom.module.css'; }
+.details { composes: details from './classroom.module.css'; }
+.detailRow { composes: detailRow from './classroom.module.css'; }
+.detailLabel { composes: detailLabel from './classroom.module.css'; }
+.actions { composes: actions from './classroom.module.css'; }
+.action { composes: action from './classroom.module.css'; }
+.expired { composes: expired from './classroom.module.css'; }
+
+@media (max-width: 767px) {
+  .row { width: 100%; }
+
+  .rowContent { flex-direction: column; align-items: flex-start; gap: 20px; padding: 16px; border-radius: 32px; }
+
+  .thumbnail { width: 100%; height: auto; aspect-ratio: 318 / 219; border-radius: 16px; }
+
+  .info { width: 100%; gap: 16px; }
+
+  .infoHeading, .productTitle { width: 100%; }
+
+  .actions { gap: 4px; }
+
+  .expired { border-radius: 32px; }
+}

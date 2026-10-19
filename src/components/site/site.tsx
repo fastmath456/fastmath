@@ -11,10 +11,10 @@ export function Logo({ large = false }: { large?: boolean }) {
   </span></span>;
 }
 
-export function SiteHeader({ profile, activeCourses = false, mobile }: { profile?: { name: string; image: string }; activeCourses?: boolean; mobile?: { title: string; onBack: () => void } }) {
-  return <><header className={`${styles.header} ${mobile ? styles.responsiveHeader : ''}`}><nav className={styles.headerLeft} aria-label="주 메뉴"><Link href="/" aria-label="빠른수학 홈"><Logo /></Link><Link href="/">홈</Link><Link href="/courses" className={activeCourses ? styles.activeCourses : undefined}>강의·교재 목록</Link></nav>
+export function SiteHeader({ profile, activeCourses = false, mobileAt1080 = false, mobile }: { profile?: { name: string; image: string }; activeCourses?: boolean; mobileAt1080?: boolean; mobile?: { title: string; onBack?: () => void; href?: string; menu?: boolean } }) {
+  return <><header className={`${styles.header} ${mobileAt1080 ? styles.mobileAt1080 : ''}`}><nav className={styles.headerLeft} aria-label="주 메뉴"><Link href="/" aria-label="빠른수학 홈"><Logo /></Link><Link href="/">홈</Link><Link href="/courses" className={activeCourses ? styles.activeCourses : undefined}>강의·교재 목록</Link></nav>
     <div className={styles.headerRight}>{profile ? <Link href="/profile" className={styles.profileLink}><Image unoptimized className={styles.profileImage} src={profile.image} width={24} height={24} alt="" />{profile.name}님</Link> : <Link href="/login">로그인/회원가입</Link>}<Link href={profile ? '/classroom' : '/login'} className={styles.classroomLink}>내 강의실</Link></div>
-  </header><header className={styles.mobileHeader}>{mobile ? <><button className={styles.backButton} type="button" aria-label="뒤로가기" onClick={mobile.onBack}><Image unoptimized src="/assets/login-imgArrowLeft.svg" width={24} height={24} alt="" /></button><p className={styles.mobileTitle}>{mobile.title}</p><span className={styles.mobileHeaderSpacer} aria-hidden="true" /></> : <><Link href="/" aria-label="빠른수학 홈"><Logo /></Link><MobileMenu profile={profile} /></>}</header></>;
+  </header><header className={`${styles.mobileHeader} ${mobileAt1080 ? styles.mobileAt1080 : ''}`}>{mobile ? <>{mobile.onBack ? <button className={styles.backButton} type="button" aria-label="뒤로가기" onClick={mobile.onBack}><Image unoptimized src="/assets/login-imgArrowLeft.svg" width={24} height={24} alt="" /></button> : <Link className={styles.backButton} href={mobile.href ?? '/courses'} aria-label="뒤로가기"><Image unoptimized src="/assets/login-imgArrowLeft.svg" width={24} height={24} alt="" /></Link>}<p className={styles.mobileTitle}>{mobile.title}</p>{mobile.menu ? <MobileMenu profile={profile} /> : <span className={styles.mobileHeaderSpacer} aria-hidden="true" />}</> : <><Link href="/" aria-label="빠른수학 홈"><Logo /></Link><MobileMenu profile={profile} /></>}</header></>;
 }
 
 export function SiteFooter() {
@@ -32,6 +32,16 @@ export function Checkbox({ children, ...props }: InputHTMLAttributes<HTMLInputEl
   return <label className={styles.checkLabel}><input {...props} type="checkbox" className={styles.checkbox} />{children}</label>;
 }
 
-export function ResultScreen({ title, lines, image, actions }: { title: string; lines: string[]; image: string; actions: { label: string; href?: string }[] }) {
-  return <><SiteHeader /><main className={styles.result}><Image unoptimized loading="eager" src={image} width={132} height={132} alt="" /><div className={styles.resultText}><h1 className={styles.title}>{title}</h1><div>{lines.map(line => <p key={line}>{line}</p>)}</div></div><div className={styles.resultActions}>{actions.map((action, i) => action.href ? <Link key={action.label} href={action.href} className={`${styles.button} ${i === 0 ? styles.secondary : ''}`}>{action.label}</Link> : <button key={action.label} type="button" className={`${styles.button} ${i === 0 ? styles.secondary : ''}`}>{action.label}</button>)}</div></main><SiteFooter /></>;
+type ResultContent = { title: string; lines: string[]; actions: { label: string; href?: string; variant?: 'primary' | 'outline' | 'secondary' }[] };
+
+function ResultBody({ title, lines, actions, className = '' }: ResultContent & { className?: string }) {
+  return <div className={`${styles.resultBody} ${className}`}><div className={styles.resultText}><h1 className={styles.title}>{title}</h1><div>{lines.map(line => <p key={line}>{line}</p>)}</div></div><div className={styles.resultActions}>{actions.map((action, i) => {
+    const variant = action.variant === 'outline' ? styles.outline : action.variant === 'secondary' || (!action.variant && i === 0) ? styles.secondary : '';
+    const actionClass = `${styles.button} ${variant}`;
+    return action.href ? <Link key={action.label} href={action.href} className={actionClass}>{action.label}</Link> : <button key={action.label} type="button" className={actionClass}>{action.label}</button>;
+  })}</div></div>;
+}
+
+export function ResultScreen({ title, lines, image, actions, mobileTitle, mobileBackHref, mobileContent, className = '' }: ResultContent & { image: string; mobileTitle?: string; mobileBackHref?: string; mobileContent?: ResultContent; className?: string }) {
+  return <><SiteHeader mobile={mobileTitle ? { title: mobileTitle, href: mobileBackHref } : undefined} /><main className={`${styles.result} ${mobileTitle ? styles.responsiveResult : ''} ${className}`}><Image unoptimized loading="eager" src={image} width={132} height={132} alt="" /><ResultBody title={title} lines={lines} actions={actions} className={mobileContent ? styles.desktopResultBody : ''} />{mobileContent && <ResultBody {...mobileContent} className={styles.mobileResultBody} />}</main><SiteFooter /></>;
 }

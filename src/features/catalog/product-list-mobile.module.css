@@ -1,0 +1,43 @@
+.listing { composes: listing from './catalog.module.css'; }
+.listingHeading { composes: listingHeading from './catalog.module.css'; }
+.title { composes: title from './catalog.module.css'; }
+.sort { composes: sort from './catalog.module.css'; }
+.sortControl { composes: sortControl from './catalog.module.css'; }
+.select { composes: select from './catalog.module.css'; }
+.sortIcon { composes: sortIcon from './catalog.module.css'; }
+.grid { composes: grid from './catalog.module.css'; }
+.card { composes: card from './catalog.module.css'; }
+.thumbnail { composes: thumbnail from './catalog.module.css'; }
+.cardInfo { composes: cardInfo from './catalog.module.css'; }
+.cardHeading { composes: cardHeading from './catalog.module.css'; }
+.tags { composes: tags from './catalog.module.css'; }
+.tag { composes: tag from './catalog.module.css'; }
+.cardTitle { composes: cardTitle from './catalog.module.css'; }
+.price { composes: price from './catalog.module.css'; }
+.empty { composes: empty from './catalog.module.css'; }
+.requestError { composes: requestError from './catalog.module.css'; }
+
+@media (width < 768px) {
+  .sort {
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    letter-spacing: -.7px;
+  }
+
+  .select {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    letter-spacing: -.7px;
+  }
+
+  .grid {
+    row-gap: 20px;
+  }
+
+  .thumbnail {
+    aspect-ratio: 350 / 234;
+  }
+}

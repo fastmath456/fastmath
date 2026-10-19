@@ -19,7 +19,7 @@ function CoursesLink({ dark = false }: { dark?: boolean }) {
 
 function LandingHeader() {
   const profile = useProfile();
-  return <div className={styles.header}><SiteHeader profile={profile.data ? { name: profile.data.name, image: profile.data.avatar } : undefined} /></div>;
+  return <SiteHeader profile={profile.data ? { name: profile.data.name, image: profile.data.avatar } : undefined} />;
 }
 
 function TeachingPoints() {

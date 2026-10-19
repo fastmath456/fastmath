@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { SiteFooter, SiteHeader } from '@/components/site';
 import { useMockReady } from '@/app/providers';
 import { getProducts, parseSort } from './api';
-import styles from './catalog.module.css';
+import styles from './product-list-mobile.module.css';
 
 export function ProductListScreen({ sortValue, state = '' }: { sortValue?: string; state?: string }) {
   const sort = parseSort(sortValue), ready = useMockReady(), router = useRouter();

@@ -14,3 +14,7 @@
 .marketing a { font-size: 12px; line-height: 16px; letter-spacing: -.6px; color: var(--gray-400); }
 .submit { height: 52px; border-radius: 16px; padding-inline: 16px; font-weight: 600; background: var(--brand-500); }
 .error { color: var(--red-500); }
+
+@media (width < 768px) {
+  .content { width: 100%; gap: 32px; }
+}
