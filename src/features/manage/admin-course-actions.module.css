@@ -14,6 +14,7 @@
   background: var(--brand-500);
   color: #3c3b28;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .actions button:first-child {
@@ -22,4 +23,17 @@
 
 .actions button:last-child {
   width: 142px;
+}
+
+@media (width <= 1080px) {
+  .actions {
+    position: static;
+    align-self: flex-end;
+  }
+}
+
+@media (width > 1080px) {
+  .actions {
+    z-index: 1;
+  }
 }

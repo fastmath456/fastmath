@@ -15,6 +15,6 @@
 .submit { height: 52px; border-radius: 16px; padding-inline: 16px; font-weight: 600; background: var(--brand-500); }
 .error { color: var(--red-500); }
 
-@media (width < 768px) {
+@media (width < 1360px) {
   .content { width: 100%; gap: 32px; }
 }

@@ -75,3 +75,8 @@
   .header.mobileAt1080 { display: none; }
   .mobileHeader.mobileAt1080 { display: flex; }
 }
+
+@media (width < 1360px) {
+  .header.mobileAt1360 { display: none; }
+  .mobileHeader.mobileAt1360 { display: flex; }
+}

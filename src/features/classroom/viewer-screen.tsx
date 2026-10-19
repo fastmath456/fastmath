@@ -33,6 +33,7 @@ export function ViewerScreen({ courseId, lessonId, state = '' }: { courseId: str
   if (requiresLogin) return null;
   return <>
     <SiteHeader
+      mobileAt1360
       profile={profile.data ? {name: profile.data.name, image: profile.data.avatar} : undefined}
       mobile={{ title: data?.title ?? '', onBack: () => router.back(), menu: true }}
     />
