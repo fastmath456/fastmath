@@ -675,7 +675,7 @@
   white-space: nowrap;
 }
 
-@media (width < 768px) {
+@media (width <= 1080px) {
   .container {
     width: calc(100% - 40px);
   }
@@ -896,4 +896,54 @@
     letter-spacing: -1.4px;
   }
 
+}
+
+@media (768px <= width <= 1080px) {
+  .page > header {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .heroCopy {
+    gap: 24px;
+  }
+
+  .heroDescription,
+  .heroActions {
+    margin-top: 0;
+  }
+
+  .mobBreak,
+  .heroTitle br,
+  .statisticsHeading br,
+  .philosophyCopy .sectionTitle br,
+  .panelCopy br {
+    display: none;
+  }
+
+  .heroImage {
+    aspect-ratio: 1366 / 1152;
+  }
+
+  .metrics {
+    flex-direction: row;
+  }
+
+  .metric {
+    width: auto;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .panel {
+    min-height: 0;
+  }
+
+  .boardImage {
+    aspect-ratio: 1823 / 863;
+  }
+
+  .closingCopy {
+    flex: initial;
+    width: 278px;
+  }
 }

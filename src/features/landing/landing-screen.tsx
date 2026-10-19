@@ -19,7 +19,7 @@ function CoursesLink({ dark = false }: { dark?: boolean }) {
 
 function LandingHeader() {
   const profile = useProfile();
-  return <SiteHeader profile={profile.data ? { name: profile.data.name, image: profile.data.avatar } : undefined} />;
+  return <SiteHeader profile={profile.data ? { name: profile.data.name, image: profile.data.avatar } : undefined} mobileAt1080 />;
 }
 
 function TeachingPoints() {
@@ -41,8 +41,8 @@ function TeachingPoints() {
       </div>
       <div className={styles.panel}>
         <div className={styles.panelCopy}>
-          <h3 className={styles.sectionTitle}>{point.title[0]}<br />{point.title[1]}</h3>
-          <p className={styles.bodyCopy}>근호 안의 조건과 오른쪽의 부호를<br />함께 확인합니다. 계산에 앞서 원래 식이 요구하는 조건부터 읽습니다.</p>
+          <h3 className={styles.sectionTitle}>{point.title[0]}<br />{' '}{point.title[1]}</h3>
+          <p className={styles.bodyCopy}>근호 안의 조건과 오른쪽의 부호를<br /> 함께 확인합니다. 계산에 앞서 원래 식이 요구하는 조건부터 읽습니다.</p>
         </div>
         {board && <div className={styles.board} aria-hidden={!point.board}>
           <div className={styles.boardCopy}><h3>{board.title}</h3><p>{board.description}</p></div>
@@ -70,7 +70,7 @@ export function LandingScreen() {
       <section className={styles.hero} aria-labelledby="landing-title">
         <div className={`${styles.container} ${styles.heroLayout}`}>
           <div className={styles.heroCopy}>
-            <h1 id="landing-title" className={styles.heroTitle}>빠른 풀이는,<br />깊은 이해에서.</h1>
+            <h1 id="landing-title" className={styles.heroTitle}>빠른 풀이는,<br /> 깊은 이해에서.</h1>
             <p className={styles.heroDescription}>정의를 정확히 이해하고,<br className={styles.mobBreak} /> 스스로 ‘왜?’를 설명할 수 있을 때까지.<br />극상위권의 사고과정으로 수학을 다시 봅니다.</p>
             <div className={styles.heroActions}><CoursesLink /><Link href="/#philosophy" scroll={false} className={styles.philosophyLink} onClick={goToPhilosophy}>강의 철학 알아보기<Image unoptimized src="/assets/landing/arrow.svg" width={20} height={20} alt="" /></Link></div>
           </div>
@@ -79,7 +79,7 @@ export function LandingScreen() {
       </section>
       <section ref={statisticsRef} className={styles.statistics} aria-label="빠른수학 소개 정보">
         <div className={styles.statisticsLayout}>
-          <h2 className={styles.statisticsHeading}>수학을 바라보는 관점,<br />함께 나누고 있습니다.</h2>
+          <h2 className={styles.statisticsHeading}>수학을 바라보는 관점,<br /> 함께 나누고 있습니다.</h2>
           <div className={styles.metrics}>{landingFacts.map((fact, index) => <Fragment key={fact.value}>
             {index > 0 && <Image unoptimized className={styles.metricRule} src="/assets/landing/metric-rule.svg" width={1} height={64} alt="" />}
             <div className={styles.metric}><p className={styles.metricValue}>{fact.countTo === undefined ? fact.value : `${Math.floor(fact.countTo * progress * 10) / 10}만`}</p><p className={styles.metricLabel}>{fact.label}</p></div>
@@ -89,14 +89,14 @@ export function LandingScreen() {
       <section id="philosophy" className={styles.philosophy} aria-labelledby="philosophy-title">
         <div className={`${styles.container} ${styles.philosophyContent}`}>
           <div className={styles.philosophyIntro}>
-            <div className={styles.why}><picture><source media="(width < 768px)" srcSet="/assets/landing/why-mobile.png" /><Image unoptimized src="/assets/landing/why-desktop.png" width={247} height={140} alt="왜?" /></picture></div>
+            <div className={styles.why}><picture><source media="(width <= 1080px)" srcSet="/assets/landing/why-mobile.png" /><Image unoptimized src="/assets/landing/why-desktop.png" width={247} height={140} alt="왜?" /></picture></div>
             <div className={styles.philosophyCopy}>
-              <h2 id="philosophy-title" className={styles.sectionTitle}>공식 뒤에 있는 이유까지.<br />한 문제를 풀어도, 깊이.</h2>
+              <h2 id="philosophy-title" className={styles.sectionTitle}>공식 뒤에 있는 이유까지.<br /> 한 문제를 풀어도, 깊이.</h2>
               <p className={styles.bodyCopy}>수학은 문제를 많이 푸는 것만큼, 한 문제를<br className={styles.mobBreak} /> 오래 고민하는 시간도 중요합니다.<br />정의와 원리를 정확하게 이해하고,<br className={styles.mobBreak} /> 스스로 ‘왜?’를 설명할 수 있을 때까지.<br />빠른수학은 그 생각의 과정을 함께합니다.</p>
             </div>
           </div>
           <div className={styles.steps}>{philosophySteps.map(step => <div className={styles.step} key={step.number}>
-            <div className={styles.stepRule}><picture><source media="(width < 768px)" srcSet="/assets/landing/step-rule-mobile.svg" /><Image unoptimized loading="eager" src="/assets/landing/step-rule-desktop.svg" width={427} height={1} alt="" /></picture></div>
+            <div className={styles.stepRule}><picture><source media="(768px <= width <= 1080px)" srcSet="/assets/landing/step-rule-tablet.svg" /><source media="(width < 768px)" srcSet="/assets/landing/step-rule-mobile.svg" /><Image unoptimized loading="eager" src="/assets/landing/step-rule-desktop.svg" width={427} height={1} alt="" /></picture></div>
             <div className={styles.stepContent}><span className={styles.stepNumber}>{step.number}</span><div className={styles.stepCopy}><h3 className={styles.stepTitle}>{step.title}</h3><p className={styles.stepDescription}>{step.description}</p></div></div>
           </div>)}</div>
         </div>
