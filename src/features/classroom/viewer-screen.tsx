@@ -6,7 +6,7 @@ import { VideoPlayer } from './video-player';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ConfirmationDialog, SiteFooter, SiteHeader } from '@/components/site';
 import { useProfile } from '@/features/account';
 import { checkout } from '@/features/catalog';
@@ -22,11 +22,30 @@ export function ViewerScreen({ courseId, lessonId, state = '', preview = false }
   const { requiresLogin, redirectIfUnauthorized } = useLoginRedirect(preview ? undefined : profile.error, query.error);
   const requestKey = useRef(''), purchase = useRef<Promise<void> | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [menuState, setMenuState] = useState<'closed' | 'open' | 'closing'>('closed');
+  const menuRef = useRef<HTMLDialogElement>(null);
+  const menuId = useId(), menuVisible = menuState !== 'closed';
   const [expanded, setOpen] = useState<string[] | null>(null);
   const open = expanded ?? query.data?.chapters.slice(0,2).map(chapter => chapter.id) ?? [];
   const data = query.data, lessons = data?.chapters.flatMap(chapter => chapter.lessons) ?? [];
   const selected = lessonId ?? data?.recentLessonId ?? lessons[0]?.id;
   const index = lessons.findIndex(lesson => lesson.id === selected), lesson = lessons[index];
+  useEffect(() => {
+    const dialog = menuRef.current;
+    if (!menuVisible || !dialog) return;
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const desktop = window.matchMedia('(width >= 1360px)');
+    const closeOnDesktop = () => { if (desktop.matches) dialog.close(); };
+    dialog.showModal();
+    closeOnDesktop();
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => { desktop.removeEventListener('change', closeOnDesktop); dialog.close(); returnFocus?.focus(); };
+  }, [menuVisible]);
+  useEffect(() => {
+    if (menuState !== 'closing') return;
+    const timer = window.setTimeout(() => setMenuState('closed'), window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 200);
+    return () => window.clearTimeout(timer);
+  }, [menuState]);
   function select(id: string) {
     if (id === selected) return;
     if (preview && !lessons.find(item => item.id === id)?.preview) { setPaymentOpen(true); return; }
@@ -45,22 +64,29 @@ export function ViewerScreen({ courseId, lessonId, state = '', preview = false }
   }
   if (requiresLogin) return null;
   if (query.isPending) return <ViewerLoading />;
+  const curriculum = (scope: string) => <>
+    <h2 id={`${scope}-title`}>커리큘럼</h2>
+    <div className={styles.units}>{data?.chapters.map(chapter => <section className={styles.unit} key={chapter.id}>
+      <button type="button" className={styles.unitButton} aria-expanded={open.includes(chapter.id)} aria-controls={`${scope}-unit-${chapter.id}`} onClick={() => setOpen(open.includes(chapter.id) ? open.filter(id => id !== chapter.id) : [...open, chapter.id])}>
+        {chapter.title}<Image unoptimized src="/assets/viewer-imgChevronDown1.svg" width={16} height={16} alt="" className={open.includes(chapter.id) ? styles.chevronUp : undefined} />
+      </button>
+      {open.includes(chapter.id) && <div id={`${scope}-unit-${chapter.id}`} className={styles.unitLessons}>{chapter.lessons.map(item => <button type="button" key={item.id} className={styles.lessonButton} aria-current={selected === item.id ? 'true' : undefined} onClick={() => select(item.id)}>{item.title}</button>)}</div>}
+    </section>)}</div>
+  </>;
   return <>
     <SiteHeader
       mobileAt1360
       profileLoading={profile.isPending}
       profile={profile.data ? {name: profile.data.name, image: profile.data.avatar} : undefined}
-      mobile={{ title: data?.title ?? '', onBack: () => router.back(), menu: true }}
+      mobile={{ title: data?.title ?? '', onBack: () => router.back(), menu: <button className={mobileStyles.menuButton} type="button" aria-label="커리큘럼 메뉴" aria-expanded={menuVisible} aria-controls={menuId} onClick={() => setMenuState('open')}><Image unoptimized src="/assets/mobile-menu.svg" width={24} height={24} alt="" /></button> }}
     />
+    {menuVisible && <dialog ref={menuRef} id={menuId} className={mobileStyles.menuDialog} data-closing={menuState === 'closing'} aria-labelledby={`${menuId}-title`} onClose={() => setMenuState('closed')} onCancel={event => { event.preventDefault(); setMenuState('closing'); }}>
+      <SiteHeader mobileAt1360 mobile={{ title: data?.title ?? '', onBack: () => router.back(), backIcon: '/assets/viewer-menu-back.svg', menu: <button className={mobileStyles.menuButton} type="button" aria-label="커리큘럼 닫기" onClick={() => setMenuState('closing')}><Image unoptimized src="/assets/viewer-menu-close.svg" width={24} height={24} alt="" /></button> }} />
+      <aside className={`${styles.curriculum} ${mobileStyles.menuPanel}`}>{curriculum(menuId)}</aside>
+    </dialog>}
     <main className={`${styles.viewer} ${mobileStyles.viewer}`}>
       <aside className={`${styles.curriculum} ${mobileStyles.curriculum}`}>
-        <h2>커리큘럼</h2>
-        <div className={styles.units}>{data?.chapters.map(chapter => <section className={styles.unit} key={chapter.id}>
-          <button type="button" className={styles.unitButton} aria-expanded={open.includes(chapter.id)} aria-controls={`unit-${chapter.id}`} onClick={() => setOpen(open.includes(chapter.id) ? open.filter(id => id !== chapter.id) : [...open, chapter.id])}>
-            {chapter.title}<Image unoptimized src="/assets/viewer-imgChevronDown1.svg" width={16} height={16} alt="" className={open.includes(chapter.id) ? styles.chevronUp : undefined} />
-          </button>
-          {open.includes(chapter.id) && <div id={`unit-${chapter.id}`} className={styles.unitLessons}>{chapter.lessons.map(item => <button type="button" key={item.id} className={styles.lessonButton} aria-current={selected === item.id ? 'true' : undefined} onClick={() => select(item.id)}>{item.title}</button>)}</div>}
-        </section>)}</div>
+        {curriculum(`${menuId}-desktop`)}
       </aside>
       <div className={`${styles.videoContent} ${mobileStyles.videoContent}`}>
         <div className={`${styles.videoHeading} ${mobileStyles.videoHeading}`}>

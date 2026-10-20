@@ -44,3 +44,40 @@
   }
 }
 
+.menuButton { composes: backButton from '../../components/site/site.module.css'; }
+.menuDialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  animation: curriculumFadeIn 200ms ease-out;
+}
+.menuDialog[open] { display: flex; flex-direction: column; }
+.menuDialog > header { flex-shrink: 0; }
+.menuDialog::backdrop { background: rgb(0 0 0 / 60%); animation: curriculumFadeIn 200ms ease-out; }
+.menuDialog[data-closing='true'], .menuDialog[data-closing='true']::backdrop { animation: curriculumFadeOut 200ms ease-out forwards; }
+.menuPanel {
+  width: min(320px, 100%);
+  flex: 1;
+  margin-left: auto;
+  padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  background: var(--gray-00);
+  color: #262c3a;
+}
+.menuPanel::-webkit-scrollbar { display: none; }
+.menuPanel button { width: 100%; }
+@keyframes curriculumFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes curriculumFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .menuDialog, .menuDialog::backdrop { animation: none; }
+}
