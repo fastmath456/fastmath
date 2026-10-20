@@ -17,17 +17,18 @@ export async function products(ctx: Context) {
 export async function productDetail(ctx: Context) {
   const db=adminDb(); const {data,error}=await db.from('products').select(detailColumns).eq('slug',ctx.params.slug).maybeSingle(); dbError(error); if(!data) throw new ApiError(404,'not_found');
   const user=await ctx.optionalUser();
-  const [chapters,lessons,reviews,ownership,role,profile,assets]=await Promise.all([
+  const [chapters,lessons,reviews,ownership,role,account,assets]=await Promise.all([
     db.from('chapters').select('id,title,position').eq('product_id',data.id).eq('active',true).order('position'),
     db.from('lessons').select('id,title,chapter_id,duration_seconds,preview,position').eq('product_id',data.id).eq('active',true).order('position'),
     db.from('reviews').select('body,author,created_at,rating').eq('product_id',data.id).order('created_at',{ascending:false}),
     user?db.from('entitlements').select('id').eq('user_id',user.id).eq('product_id',data.id).eq('revoked',false).limit(1):Promise.resolve({data:[],error:null}),
     user?db.from('user_roles').select('role').eq('user_id',user.id).maybeSingle():Promise.resolve({data:null,error:null}),
-    user?db.from('profiles').select('name').eq('user_id',user.id).single():Promise.resolve({data:null,error:null}),
+    user?profile(ctx):Promise.resolve(null),
     db.from('product_assets').select('role,position,asset_id,admin_course_assets!inner(id,name,size_bytes,content_type,width,height)').eq('product_id',data.id).order('position'),
-  ]); [chapters,lessons,reviews,ownership,role,profile].forEach(r=>dbError(r.error));
+  ]); [chapters,lessons,reviews,ownership,role].forEach(r=>dbError(r.error));
   dbError(assets.error);
-  const curriculum:Chapter[]=chapters.data!.map(c=>({id:c.id,title:c.title,lessons:lessons.data!.filter(l=>l.chapter_id===c.id).map(l=>({id:l.id,title:l.title,preview:l.preview,duration:new Date(l.duration_seconds*1000).toISOString().slice(11,19)}))}));
+  const firstLesson=chapters.data!.flatMap(c=>lessons.data!.filter(l=>l.chapter_id===c.id))[0]?.id;
+  const curriculum:Chapter[]=chapters.data!.map(c=>({id:c.id,title:c.title,lessons:lessons.data!.filter(l=>l.chapter_id===c.id).map(l=>({id:l.id,title:l.title,preview:l.id===firstLesson,duration:new Date(l.duration_seconds*1000).toISOString().slice(11,19)}))}));
   const productAssets=(assets.data as unknown as ProductAssetRow[]).flatMap(row=>{
     const asset=Array.isArray(row.admin_course_assets)?row.admin_course_assets[0]:row.admin_course_assets;
     return asset?[{role:row.role,id:asset.id,name:asset.name,size:asset.size_bytes,type:asset.content_type,width:asset.width,height:asset.height}]:[];
@@ -36,7 +37,7 @@ export async function productDetail(ctx: Context) {
   const detailImage=detailAsset?{id:detailAsset.id,name:detailAsset.name,size:detailAsset.size,type:detailAsset.type,width:detailAsset.width,height:detailAsset.height,url:'/api/course-assets/'+detailAsset.id}:null;
   const materials=productAssets.filter(asset=>asset.role==='material').map(asset=>({id:asset.id,name:asset.name,size:asset.size,type:asset.type,width:asset.width,height:asset.height}));
   const licenseDays=Number.isSafeInteger(data.license_days)&&data.license_days>0?data.license_days:60;
-  return {...product(data as DetailRow),chapters:curriculum,reviews:reviews.data!.map(r=>({body:r.body,author:r.author,date:date(r.created_at),rating:Number(r.rating)})),selling:data.selling,ownership:ownership.data?.length?'owned':'none',admin:role.data?.role==='admin',licenseDays,detailImage,materials,...(profile.data?{profile:{name:profile.data.name,image:'/assets/profile-imgRectangle2.png'}}:{})};
+  return {...product(data as DetailRow),chapters:curriculum,reviews:reviews.data!.map(r=>({body:r.body,author:r.author,date:date(r.created_at),rating:Number(r.rating)})),selling:data.selling,ownership:ownership.data?.length?'owned':'none',admin:role.data?.role==='admin',licenseDays,detailImage,materials,...(account?{profile:{name:account.name,image:account.avatar}}:{})};
 }
 export async function manageProduct(ctx: Context) {
   await requireAdmin(ctx); const input=await body(ctx.request);

@@ -33,6 +33,8 @@ function ProfileForm({ profile }: { profile: Profile }) {
   const input = useRef<HTMLInputElement>(null), selection = useRef(0);
   const allowLeave = useRef(false);
   const visitingTerms = useRef(false);
+  const accountRequest = useRef(false);
+  const [withdrawConfirm, setWithdrawConfirm] = useState(false);
   const currentImage = imageChanged ? selectedFile?.preview ?? '' : profile.image;
   const changed = values.name.trim() !== baseline.name || values.birthday !== baseline.birthday || values.phone.replace(/[-\s]/g,'') !== baseline.phone || imageChanged || marketing !== baseline.marketing;
   useEffect(() => () => { selection.current += 1; }, []);
@@ -68,6 +70,20 @@ function ProfileForm({ profile }: { profile: Profile }) {
     return () => { document.removeEventListener('click',intercept,true); navigation?.removeEventListener('navigate',historyNavigation); window.removeEventListener('beforeunload',beforeUnload); };
   }, [changed, values, marketing, imageChanged, selectedFile]);
   function change(field: typeof editable[number], value: string) { setDraft(current => ({...current,values:{...current.values,[field]:value}})); setMessage(''); }
+  async function endAccount(action: 'logout' | 'withdraw') {
+    if (accountRequest.current || isMockMode) return;
+    accountRequest.current = true; setMessage('');
+    try {
+      await mutate(`auth/${action}`);
+      allowLeave.current = true;
+      await client.cancelQueries(); client.clear();
+      router.replace('/login'); router.refresh();
+    } catch (error) {
+      if (!redirectIfUnauthorized(error)) setMessage(requestFailure);
+    } finally {
+      accountRequest.current = false; setWithdrawConfirm(false);
+    }
+  }
   function leave() {
     if (!leaving) return;
     allowLeave.current = true;
@@ -119,7 +135,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
     <FormField id="profile-email" label="이메일" value={profile.email} readOnly type="text" autoComplete="email" />
     {editable.map(field => <FormField key={field} id={`profile-${field}`} label={fieldLabels[field]} value={values[field]} error={errors[field]} onChange={event => change(field,event.target.value)} onBlur={() => { if (errors[field]) setErrors(current => ({...current,[field]:validateField(field,values)})); }} inputMode={field === 'name' ? undefined : 'numeric'} autoComplete={field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : 'name'} />)}
     <div className={styles.marketing}><strong>마케팅 수신 동의</strong><div><Checkbox checked={marketing} onChange={event => { const marketing = event.target.checked; setDraft(current => ({ ...current, marketing })); setMessage(''); }}>[선택] 마케팅 정보 수신에 동의합니다.</Checkbox><Link href="/term/marketing">보기</Link></div></div>
-  </div>{message && <p role="status">{message}</p>}<button className={styles.submit} type="submit">정보수정</button>{leaving && <ConfirmationDialog label="저장 전 화면 이동 확인" onCancel={() => setLeaving(null)} actions={[{label:'계속 수정',cancel:true},{label:'나가기',onClick:leave}]}><p>수정한 내용을 저장하지 않고 나가시겠어요?</p></ConfirmationDialog>}</form>;
+  </div>{message && <p role="status">{message}</p>}<div className={styles.submitGroup}><button className={styles.submit} type="submit">정보수정</button><div className={styles.accountActions}><button type="button" onClick={() => { void endAccount('logout'); }}>로그아웃</button><button type="button" onClick={() => setWithdrawConfirm(true)}>회원탈퇴</button></div></div>{withdrawConfirm && <ConfirmationDialog label="회원탈퇴 확인" onCancel={() => { if (!accountRequest.current) setWithdrawConfirm(false); }} actions={[{label:'취소',cancel:true},{label:'회원탈퇴',onClick:() => { void endAccount('withdraw'); }}]}><p>회원탈퇴하시겠어요?</p><p>탈퇴하면 구매·수강권이 즉시 종료됩니다. 주문·결제 기록은 보존됩니다.</p></ConfirmationDialog>}{leaving && <ConfirmationDialog label="저장 전 화면 이동 확인" onCancel={() => setLeaving(null)} actions={[{label:'계속 수정',cancel:true},{label:'나가기',onClick:leave}]}><p>수정한 내용을 저장하지 않고 나가시겠어요?</p></ConfirmationDialog>}</form>;
 }
 export function ProfileScreen({ state = '' }: { state?: string }) {
   const query = useProfile(state);

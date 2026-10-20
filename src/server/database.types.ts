@@ -435,6 +435,10 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"withdrawal_ready":
+{ Args: Record<string, never>; Returns: boolean },
+"order_download":
+{ Args: { "p_order": string,"p_user": string }; Returns: Json },
 "record_download":
 { Args: { "p_order": string,"p_user": string }; Returns: string
                            },

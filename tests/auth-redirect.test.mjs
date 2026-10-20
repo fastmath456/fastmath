@@ -92,12 +92,12 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
   const modules = {
     react, 'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }), Fragment: 'fragment' },
     'next/navigation': { useRouter: () => router, usePathname: () => pathname }, 'next/image': 'image', 'next/link': 'link',
-    '@tanstack/react-query': { useQuery: options => options.queryKey[0] === 'refund-quote' ? { error: quoteError, isError: Boolean(quoteError), data: quote, refetch: () => refetches.push('quote') } : query, useQueryClient: () => ({ clear() {}, invalidateQueries: async () => {} }) },
-    '@/lib/http': { ...http, mutate: async path => { requests.push(path); if (path === 'playback' && mutateError === 'progress') return { sessionId: 'session', url: 'https://player.vimeo.com/video/test' }; throw mutateError === 'progress' ? unauthorized() : mutateError; } },
+    '@tanstack/react-query': { useQuery: options => options.queryKey[0] === 'refund-quote' ? { error: quoteError, isError: Boolean(quoteError), data: quote, refetch: () => refetches.push('quote') } : query, useQueryClient: () => ({ cancelQueries: async () => { writes.push('cancel-queries'); }, clear() { writes.push('clear-cache'); }, invalidateQueries: async () => {} }) },
+    '@/lib/http': { ...http, mutate: async path => { requests.push(path); if (mutateError === null) return { ok: true }; if (path === 'playback' && mutateError === 'progress') return { sessionId: 'session', url: 'https://player.vimeo.com/video/test' }; throw mutateError === 'progress' ? unauthorized() : mutateError; } },
     '@/features/auth': { ...validation, ...hook }, './use-login-redirect': hook, './validation': validation,
     '@/features/account': { useProfile: () => profile, AccountShell: 'account' }, './use-profile': { useProfile: () => profile }, './account-shell': { AccountShell: 'account' },
     '@/components/site': { SiteHeader: 'header', SiteFooter: 'footer', Logo: 'logo', FormField: 'field', Checkbox: 'checkbox', ConfirmationDialog: 'dialog', ResultScreen: 'result', useTermsDraft: (_key, initial) => [draft ? draft(initial) : initial, () => {}] },
-    '@/app/providers': { useMockReady: () => true }, './api': {}, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
+    '@/app/providers': { useMockReady: () => true }, './api': { downloadMaterials: async orderId => { requests.push(`orders/${orderId}/download`); throw mutateError; } }, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
     '@/features/manage': { AdminCourseActions: 'admin' }, './refund-copy': { refundSections: [] },
     './checkout': { checkout: async () => { requests.push('checkout'); throw mutateError; } },
     '@/features/catalog': { checkout: async () => { requests.push('checkout'); throw mutateError; } },
@@ -328,4 +328,29 @@ test('an anonymous preview visitor choosing payment goes to login without starti
   find(tree, node => node.type === 'dialog').props.actions[1].onClick();
   assert.deepEqual(context.routes, [['push', '/login']]);
   assert.deepEqual(context.requests, []);
+});
+
+test('logout sends one request, clears cached account data and replaces the route with login', async () => {
+  const context = runtime({ mutateError: null });
+  const screen = context.render('src/features/account/profile-screen.tsx', 'ProfileScreen');
+  const node = find(screen, item => typeof item.type === 'function');
+  const form = node.type(node.props); context.flush();
+  const action = find(form, item => item.props.children === '로그아웃');
+  action.props.onClick(); action.props.onClick(); await settle();
+  assert.deepEqual(context.requests, ['auth/logout']);
+  expectLogin(context);
+  assert.ok(context.writes.indexOf('cancel-queries') < context.writes.indexOf('clear-cache'));
+});
+
+test('withdrawal requires confirmation and submits only the signed-in account action', async () => {
+  const context = runtime({ mutateError: null, state: value => value === false ? true : value });
+  const screen = context.render('src/features/account/profile-screen.tsx', 'ProfileScreen');
+  const node = find(screen, item => typeof item.type === 'function');
+  const form = node.type(node.props); context.flush();
+  const dialog = find(form, item => item.type === 'dialog' && item.props.label === '회원탈퇴 확인');
+  assert.ok(dialog); assert.deepEqual(context.requests, []);
+  assert.equal(dialog.props.actions[0].cancel, true);
+  dialog.props.actions[1].onClick(); dialog.props.actions[1].onClick(); await settle();
+  assert.deepEqual(context.requests, ['auth/withdraw']); expectLogin(context);
+  assert.ok(context.writes.includes('clear-cache'));
 });

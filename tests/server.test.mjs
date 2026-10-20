@@ -14,7 +14,7 @@ import ts from 'typescript';
 import {NextRequest} from 'next/server.js';
 loadEnvConfig(process.cwd());
 assert.equal(process.env.SUPABASE_URL,'http://127.0.0.1:54331','tests require isolated local Supabase');
-const base='http://127.0.0.1:3000',run=Date.now().toString(),productId='test-'+run;
+const base=process.env.APP_ORIGIN ?? 'http://127.0.0.1:3000',run=Date.now().toString(),productId='test-'+run;
 const db=createClient(process.env.SUPABASE_URL,process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false}});
 const users=[],orders=[];
 const meta={name:'홍길동',birthday:'2014-02-22',phone:'01032428118',marketing:false,agreements:[true,true,true,false],testRun:run};
@@ -31,7 +31,7 @@ before(async()=>{
  a=await newUser('a');b=await newUser('b');
  const p=await db.from('products').insert({id:productId,slug:productId,kind:'vod',title:'검증용 강의',price:99000,image:'/assets/listing-imgRectangle3.png',selling:true});assert.equal(p.error,null);
  assert.equal((await db.from('chapters').insert({id:productId+'-chapter',product_id:productId,title:'검증 챕터',position:0})).error,null);
- assert.equal((await db.from('lessons').insert([{id:productId+'-lesson',product_id:productId,chapter_id:productId+'-chapter',title:'유료 강의',position:0,duration_seconds:36000,preview:false},{id:productId+'-preview',product_id:productId,chapter_id:productId+'-chapter',title:'무료 미리보기',position:1,duration_seconds:600,preview:true}])).error,null);
+ assert.equal((await db.from('lessons').insert([{id:productId+'-lesson',product_id:productId,chapter_id:productId+'-chapter',title:'유료 강의',position:1,duration_seconds:36000,preview:false},{id:productId+'-preview',product_id:productId,chapter_id:productId+'-chapter',title:'무료 미리보기',position:0,duration_seconds:600,preview:true}])).error,null);
  order=await rpc('create_order',{p_user:a.id,p_product:productId,p_key:randomUUID()});orders.push(order.id);
  await rpc('prepare_payment',{p_user:a.id,p_order:order.id,p_payment:'qa-'+run});
  await rpc('complete_payment',{p_order:order.id,p_payment:'qa-'+run,p_amount:99000,p_paid:new Date().toISOString()});

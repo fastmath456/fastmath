@@ -51,7 +51,7 @@ function server(tables) {
     if (typeof value !== 'string' || !value.length || value.length > max) throw new ApiError(400, 'invalid_field');
     return value;
   } };
-  return { ...load('src/server/learning.ts', { './http': http, './orders': {}, '../features/manage/validation': validation }), queries };
+  return { ...load('src/server/learning.ts', { './http': http, './orders': {}, '../features/manage/validation': validation, 'next/server': {}, './zip': {} }), queries };
 }
 function context(lesson = 'free') {
   return { params: { courseId: 'course' }, request: { nextUrl: new URL(`http://local.test/preview${lesson === null ? '' : `?lesson=${encodeURIComponent(lesson)}`}`) }, user: async () => { throw new ApiError(401, 'unauthorized'); } };
@@ -66,7 +66,7 @@ test('anonymous preview returns only the selected preview URL and public curricu
   assert.equal(result.chapters[0].lessons[1].preview, false);
   assert.ok(!JSON.stringify(result).includes('paidsecret'));
   assert.ok(!JSON.stringify(result).includes('othersecret'));
-  assert.ok(code.queries.at(-1).filters.some(([key, value]) => key === 'preview' && value === true));
+  assert.ok(code.queries.at(-1).filters.some(([key, value]) => key === 'id' && value === 'free'));
 });
 
 test('paid, cross-course and missing lesson IDs cannot bypass preview access', async () => {
@@ -95,4 +95,25 @@ test('default preview selection finds the first preview while the original viewe
   const code = server(fixture());
   assert.equal((await code.previewViewer(context(null))).recentLessonId, 'free');
   await assert.rejects(code.viewer(context()), error => error.status === 401);
+});
+
+test('only the first lesson is public even when stored preview flags say otherwise', async () => {
+  const tables = fixture();
+  tables.lessons[0].preview = false;
+  tables.lessons[1].preview = true;
+  const code = server(tables);
+  const result = await code.previewViewer(context());
+  assert.equal(result.chapters[0].lessons[0].preview, true);
+  assert.equal(result.chapters[0].lessons[1].preview, false);
+  await assert.rejects(code.previewViewer(context('paid')), error => error.status === 403);
+});
+
+test('first lesson follows chapter order, skips empty chapters, and ignores hidden lessons', async () => {
+  const tables = fixture();
+  tables.chapters.unshift({ id: 'empty', product_id: 'course', title: '빈 챕터', active: true, position: 0 });
+  tables.chapters.push({ id: 'second', product_id: 'course', title: '다음 챕터', active: true, position: 2 });
+  tables.lessons.unshift({ id: 'later', product_id: 'course', chapter_id: 'second', title: '다음 챕터 첫 차시', active: true, preview: true, position: 0 });
+  const result = await server(tables).previewViewer(context(null));
+  assert.equal(result.recentLessonId, 'free');
+  await assert.rejects(server(tables).previewViewer(context('later')), error => error.status === 403);
 });

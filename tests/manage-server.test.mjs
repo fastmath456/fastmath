@@ -8,7 +8,7 @@ import nextEnv from '@next/env';
 const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
 assert.equal(process.env.SUPABASE_URL,'http://127.0.0.1:54331','tests require isolated local Supabase');
-const base='http://127.0.0.1:3000';
+const base=process.env.APP_ORIGIN ?? 'http://127.0.0.1:3000';
 const db=createClient(process.env.SUPABASE_URL,process.env.SUPABASE_SECRET_KEY,{auth:{persistSession:false}});
 const users=[];
 const metadata={name:'관리자 테스트',birthday:'2014-02-22',phone:'01032428118',marketing:false,agreements:[true,true,true,false]};
@@ -150,6 +150,7 @@ after(async()=>{
     await db.from('orders').delete().in('id',orderIds);
   }
   if(publishedCourse) {
+    await db.from('course_drafts').delete().eq('course_id',publishedCourse);
     await db.from('product_assets').delete().eq('product_id',publishedCourse);
     await db.from('lessons').delete().eq('product_id',publishedCourse);
     await db.from('chapters').delete().eq('product_id',publishedCourse);

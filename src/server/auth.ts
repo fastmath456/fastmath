@@ -1,10 +1,21 @@
 import { NextResponse } from 'next/server';
 import { validateField, type AuthValues, type AuthField } from '../features/auth';
-import { ApiError, body, string, limit, setting, type Context } from './http';
+import { adminDb, ApiError, body, dbError, string, limit, setting, type Context } from './http';
 
 export async function authenticate(ctx: Context) {
   const action = ctx.params.action;
-  if (!['login','signup','logout','recovery','reset'].includes(action)) throw new ApiError(404,'not_found');
+  if (!['login','signup','logout','withdraw','recovery','reset'].includes(action)) throw new ApiError(404,'not_found');
+  if (action === 'withdraw') {
+    const user = await ctx.user();
+    const admin = adminDb();
+    const ready = await admin.rpc('withdrawal_ready'); dbError(ready.error);
+    if (!ready.data) throw new ApiError(503, 'configuration_missing');
+    const { error } = await admin.auth.admin.deleteUser(user.id, true);
+    if (error) throw new ApiError(503, 'auth_unavailable');
+    // Soft deletion retains the UUID referenced by payment records. Its DB trigger revokes access atomically.
+    await ctx.db.auth.signOut();
+    return { ok: true };
+  }
   if (action === 'logout') { await ctx.user(); const {error} = await ctx.db.auth.signOut(); if(error) throw new ApiError(503,'auth_unavailable'); return {ok:true}; }
   const input = await body(ctx.request);
   const fields: AuthField[] = action === 'signup' ? ['email','password','confirmation','name','birthday','phone'] : action === 'login' ? ['email','password'] : action === 'reset' ? ['password','confirmation'] : ['email','name','phone'];
