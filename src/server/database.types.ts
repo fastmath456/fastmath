@@ -5,6 +5,12 @@ export type Database = {
   
   "public": {
           Tables: {
+            "landing_reviews": {
+              Row: { id: string; position: number; author: string; body: string; image: Json; image_path: string | null }
+              Insert: { id?: string; position?: never; author: string; body: string; image: Json; image_path?: string | null }
+              Update: { id?: string; position?: never; author?: string; body?: string; image?: Json; image_path?: string | null }
+              Relationships: []
+            },
             "chapters": {
                   Row: {
                     "active": boolean,"id": string,"position": number,"product_id": string,"title": string

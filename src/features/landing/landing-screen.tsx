@@ -2,11 +2,11 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Fragment, useState, type MouseEvent } from 'react';
+import { Fragment, type MouseEvent } from 'react';
 import { SiteFooter, SiteHeader } from '@/components/site';
 import { useProfile } from '@/features/account';
-import { landingFacts, landingReviews, philosophySteps, teachingPoints, type SourceReview } from './landing-content';
-import { ReviewDialog } from './review-dialog';
+import { landingFacts, philosophySteps, teachingPoints } from './landing-content';
+import { ReviewsSection } from './reviews-section';
 import { useStatisticsCount } from './use-statistics-count';
 import styles from './landing.module.css';
 
@@ -54,7 +54,6 @@ function TeachingPoints() {
 }
 
 export function LandingScreen() {
-  const [review, setReview] = useState<SourceReview | null>(null);
   const { statisticsRef, progress } = useStatisticsCount();
 
   function goToPhilosophy(event: MouseEvent<HTMLAnchorElement>) {
@@ -102,19 +101,11 @@ export function LandingScreen() {
         </div>
       </section>
       <TeachingPoints />
-      <section className={`${styles.container} ${styles.reviews}`} aria-labelledby="reviews-title">
-        <div className={styles.reviewsHeading}><h2 id="reviews-title" className={styles.sectionTitle}>관점이 바뀌면,<br className={styles.mobBreak} /> 공부가 달라지니까.</h2><p className={styles.bodyCopy}>빠른수학 유튜브 영상을 보고 시청자가 직접 남긴<br className={styles.mobBreak} /> 이야기입니다.</p></div>
-        <div className={styles.reviewGrid}>{landingReviews.map((item, index) => <article className={styles.reviewCard} key={`${item.id}-${index}`}>
-          <div className={styles.reviewSource}><span className={styles.youtubeBadge}><span className={styles.youtubeIcon}><Image unoptimized src="/assets/landing/youtube.png" width={640} height={443} alt="" /></span>유튜브</span><span className={styles.sourceLabel}>시청자 댓글<span>中</span></span></div>
-          <div className={styles.reviewBody}><p className={styles.reviewPreview}>{item.text}</p><div className={styles.reviewMeta}><span className={styles.author}>{item.author}</span><button type="button" className={styles.reviewLink} onClick={() => setReview(item)}>원문 보기<Image unoptimized src="/assets/landing/up-right.svg" width={16} height={16} alt="" /></button></div></div>
-        </article>)}</div>
-        <div className={styles.reviewActions}><p className={styles.videoPrompt}>영상으로 먼저 만나보세요.</p><a href="https://www.youtube.com/@fastermaths" target="_blank" rel="noreferrer" className={styles.action}>빠른수학 유튜브<Image unoptimized src="/assets/landing/arrow.svg" width={20} height={20} alt="" /></a></div>
-      </section>
+      <ReviewsSection />
       <section className={`${styles.container} ${styles.closing}`} aria-labelledby="closing-title"><div className={styles.closingBanner}><div className={styles.closingContent}>
         <div className={styles.closingCopy}><h2 id="closing-title" className={styles.closingTitle}>여러분의 수학 공부 시간을,<br />1초라도 더 가치 있게.</h2><p className={styles.closingDescription}>빠른수학의 강의와 PDF 전자책으로 이어가 보세요.</p></div><CoursesLink dark />
       </div></div></section>
     </main>
     <SiteFooter />
-    {review && <ReviewDialog review={review} onClose={() => setReview(null)} />}
   </div>;
 }

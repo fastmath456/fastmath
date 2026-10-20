@@ -1,4 +1,5 @@
 export { api } from './http';
+export { publicLandingReviews, saveLandingReview } from './landing-reviews';
 export { authenticate, authCallback } from './auth';
 export { profile, saveProfile, uploadProfile } from './profile';
 export { products, productDetail, manageProduct, manageCurriculum, manageFile } from './catalog';

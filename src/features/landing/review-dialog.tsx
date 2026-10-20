@@ -2,8 +2,9 @@
 
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import type { SourceReview } from './landing-content';
+import type { SourceReview } from './reviews';
 import styles from './landing.module.css';
+import { ReviewImage } from './review-image';
 
 export function ReviewDialog({ review, onClose }: { review: SourceReview; onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -42,7 +43,7 @@ export function ReviewDialog({ review, onClose }: { review: SourceReview; onClos
     <h2 id="review-dialog-title" className={styles.dialogTitle}>시청자 댓글 원문</h2>
     <div className={styles.dialogBody} tabIndex={0} aria-busy={!failed && loaded < review.images.length}>
       {failed ? <p role="alert">원문 이미지를 불러오지 못했습니다.</p> : loaded < review.images.length && <p role="status">원문 이미지를 불러오는 중입니다.</p>}
-      {!failed && <div className={styles.reviewOriginal}>{review.images.map((part, index) => <Image unoptimized loading="eager" key={part.src} src={part.src} width={part.width} height={part.height} alt={index === 0 ? `${review.author} 시청자 댓글 원문 캡처` : `원문 이미지 ${index + 1}번째 부분`} onLoad={() => setLoaded(count => count + 1)} onError={() => setFailed(true)} />)}</div>}
+      {!failed && <div className={styles.reviewOriginal}>{review.images.map((part, index) => <ReviewImage key={part.src} part={part} alt={index === 0 ? `${review.author} 시청자 댓글 원문 캡처` : `원문 이미지 ${index + 1}번째 부분`} onLoad={() => setLoaded(count => count + 1)} onError={() => setFailed(true)} />)}</div>}
     </div>
     <div className={styles.dialogRule}><Image unoptimized src="/assets/landing/review-rule.svg" width={440} height={1} alt="" /></div>
     <div className={styles.dialogFooter}><p className={styles.dialogNotice}>사용자가 제공한 유튜브 댓글 이미지입니다.<br />이미지 안의 계정·상대적 작성 시점은 캡처 당시 표시를 그대로 담고 있습니다.</p><button type="button" className={styles.closeButton} onClick={close}>닫기</button></div>

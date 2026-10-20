@@ -433,13 +433,63 @@
   gap: 8px;
 }
 
-.reviewGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.reviewsHeadingRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 20px;
 }
 
+.reviewManageButton {
+  width: fit-content;
+  height: 32px;
+  padding-inline: 16px;
+  border-radius: 16px;
+  background: var(--brand-500);
+  color: #3c3b28;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reviewBanner {
+  width: 100vw;
+  overflow: hidden;
+}
+
+.reviewTrack {
+  display: flex;
+  width: max-content;
+  animation: rollReviews 138s linear infinite;
+}
+
+.reviewGroup {
+  display: flex;
+  gap: 20px;
+  padding-right: 20px;
+}
+
+.reviewBanner[data-paused='true'] .reviewTrack {
+  animation-play-state: paused;
+}
+
+@media (hover: hover) {
+  .reviewBanner:hover .reviewTrack { animation-play-state: paused; }
+}
+
+@keyframes rollReviews {
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reviewTrack { animation: none; }
+  .reviewBanner { overflow-x: auto; }
+  .reviewGroup[aria-hidden='true'] { display: none; }
+}
+
 .reviewCard {
+  flex: 0 0 440px;
+  width: 440px;
+  height: 244px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -496,6 +546,8 @@
 }
 
 .reviewBody {
+  flex: 1;
+  justify-content: space-between;
   gap: 8px;
 }
 
@@ -518,6 +570,9 @@
 }
 
 .author {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--gray-700);
   font-size: 14px;
   font-weight: 500;
@@ -526,6 +581,7 @@
 }
 
 .reviewLink {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -626,9 +682,19 @@
   flex-direction: column;
 }
 
-.reviewOriginal img {
+.reviewImage {
+  position: relative;
   width: 100%;
-  height: auto;
+  overflow: hidden;
+}
+
+.reviewImage img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .dialogRule {
@@ -856,9 +922,17 @@
     padding: 72px 0 52px;
   }
 
-  .reviewGrid {
-    grid-template-columns: 1fr;
-    gap: 20px;
+  .reviewsHeadingRow {
+    flex-direction: column;
+  }
+
+  .reviewsHeadingRow > button {
+    align-self: flex-end;
+  }
+
+  .reviewCard {
+    flex-basis: min(350px, calc(100vw - 40px));
+    width: min(350px, calc(100vw - 40px));
   }
 
   .reviewActions {
