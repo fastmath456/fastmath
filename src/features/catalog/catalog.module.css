@@ -61,7 +61,7 @@
 .chapterButton { padding: 0; background: transparent; display: flex; gap: 16px; align-items: center; justify-content: space-between; text-align: left; width: 100%; font-size: 18px; line-height: 28px; letter-spacing: -.9px; font-weight: 600; }
 .lessons { display: flex; flex-direction: column; gap: 8px; }
 .lesson { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
-.lessonName { display: flex; gap: 8px; align-items: flex-start; }
+.lessonName { display: flex; gap: 8px; align-items: flex-start; padding: 0; background: transparent; text-align: left; }
 .lessonTitle { font-family: Pretendard, SUIT, sans-serif; color: #222; line-height: 21px; letter-spacing: -.21px; }
 .lesson:nth-child(2) .lessonTitle { font-family: SUIT, sans-serif; font-weight: 600; line-height: 20px; letter-spacing: -.7px; }
 .duration { color: #727262; font-weight: 600; white-space: nowrap; }

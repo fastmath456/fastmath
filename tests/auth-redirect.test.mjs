@@ -72,7 +72,7 @@ test('mutations preserve the error without retrying or changing the request cont
 
 // Render component functions with isolated hooks and requests; no browser, payment SDK, or live account is used.
 function runtime({ error = null, profileError = null, quoteError = null, data, quote, pathname = '/classroom', mutateError = unauthorized(), draft, state } = {}) {
-  const routes = [], effects = [], cleanups = [], writes = [], requests = [], refetches = [], events = {};
+  const routes = [], effects = [], cleanups = [], writes = [], requests = [], refetches = [], events = {}, players = [];
   const router = { replace: path => routes.push(['replace', path]), push: path => routes.push(['push', path]), refresh() {} };
   const react = {
     useEffect: effect => effects.push(effect), useCallback: callback => callback, useRef: value => ({ current: value }),
@@ -81,7 +81,7 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
   };
   const globals = {
     location: { hash: '', replace: path => routes.push(['location', path]) },
-    window: { addEventListener() {}, removeEventListener() {}, Vimeo: { Player: class { on(name, callback) { events[name] = callback; } async destroy() {} } } },
+    window: { addEventListener() {}, removeEventListener() {}, Vimeo: { Player: class { constructor(_container, options) { players.push(options); } on(name, callback) { events[name] = callback; } async destroy() {} } } },
     document: { addEventListener() {}, removeEventListener() {}, getElementById: () => null, createElement: () => ({}), head: { append: script => queueMicrotask(() => script.onload()) } },
     performance: { now: () => 6000 }, crypto: { randomUUID: () => 'test-request-key' },
     fetch: async () => new Response('image'),
@@ -100,9 +100,10 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     '@/app/providers': { useMockReady: () => true }, './api': {}, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
     '@/features/manage': { AdminCourseActions: 'admin' }, './refund-copy': { refundSections: [] },
     './checkout': { checkout: async () => { requests.push('checkout'); throw mutateError; } },
+    '@/features/catalog': { checkout: async () => { requests.push('checkout'); throw mutateError; } },
   };
   return {
-    routes, writes, requests, refetches, events, hook,
+    routes, writes, requests, refetches, events, players, hook,
     render(file, name, props = {}) { return load(file, modules, globals)[name](props); },
     flush() { for (const effect of effects.splice(0)) { const cleanup = effect(); if (cleanup) cleanups.push(cleanup); } },
     unmount() { for (const cleanup of cleanups.splice(0)) cleanup(); },
@@ -234,4 +235,97 @@ test('playback start and progress handle session expiry without turning it into 
     assert.ok(!context.writes.includes(true));
     context.unmount();
   }
+});
+
+const previewCourse = {
+  id: 'course-id', title: '강의', price: 100, tags: [], reviews: [], selling: true, ownership: 'none',
+  chapters: [{ id: 'generated-chapter-id', title: '첫 번째 챕터', lessons: [
+    { id: 'free', title: '미리보기 강의', duration: '00:01:00', preview: true },
+    { id: 'paid', title: '유료 강의', duration: '00:02:00', preview: false },
+  ] }],
+};
+const isPaidLesson = node => node.type === 'button' && find(node.props.children, child => child.type === 'span' && child.props.children === '유료 강의');
+
+test('product detail defaults to the first chapter and toggles chapters independently on desktop and mobile', () => {
+  const data = { ...previewCourse, chapters: [...previewCourse.chapters, { id: 'second-chapter', title: '두 번째 챕터', lessons: [] }] };
+  for (const viewport of ['desktop', 'mobile']) {
+    let expanded = null;
+    for (const [click, expected] of [[null, [true, false]], [1, [true, true]], [0, [false, true]], [1, [false, false]], [0, [true, false]]]) {
+      let context = runtime({ data, state: value => value === null ? expanded : value });
+      let tree = context.render('src/features/catalog/product-detail.tsx', 'ProductDetailScreen', { slug: 'course-slug', kind: 'vod' });
+      if (click !== null) {
+        find(tree, node => node.props['aria-controls'] === `${viewport}-content-${data.chapters[click].id}`).props.onClick();
+        expanded = context.writes.at(-1);
+        context = runtime({ data, state: value => value === null ? expanded : value });
+        tree = context.render('src/features/catalog/product-detail.tsx', 'ProductDetailScreen', { slug: 'course-slug', kind: 'vod' });
+      }
+      data.chapters.forEach((chapter, index) => {
+        const id = `${viewport}-content-${chapter.id}`;
+        assert.equal(find(tree, node => node.props['aria-controls'] === id).props['aria-expanded'], expected[index]);
+        assert.equal(Boolean(find(tree, node => node.props.id === id)), expected[index]);
+      });
+    }
+  }
+});
+
+test('preview opens the selected lesson, unpaid lessons prompt, and owned lessons retain paid viewing', () => {
+  for (const action of ['preview', 'unpaid', 'owned']) {
+    const context = runtime({ data: { ...previewCourse, ownership: action === 'owned' ? 'owned' : 'none' } });
+    const tree = context.render('src/features/catalog/product-detail.tsx', 'ProductDetailScreen', { slug: 'course-slug', kind: 'vod' });
+    const button = action === 'preview' ? find(tree, node => node.props.children === '미리보기') : find(tree, isPaidLesson);
+    button.props.onClick();
+    if (action === 'unpaid') {
+      assert.deepEqual(context.routes, []);
+      assert.ok(context.writes.includes(true));
+    } else assert.deepEqual(context.routes, [['push', `/classroom/courses/course-id?lesson=${action === 'preview' ? 'free&preview=1' : 'paid'}`]]);
+  }
+});
+
+test('anonymous preview viewing remains available and paid selection keeps the preview in place', () => {
+  const context = runtime({ profileError: unauthorized(), data: { ...previewCourse, courseId: 'course-id', recentLessonId: 'free', previewUrl: 'https://player.vimeo.com/video/123456' } });
+  const tree = context.render('src/features/classroom/viewer-screen.tsx', 'ViewerScreen', { courseId: 'course-id', lessonId: 'free', preview: true });
+  context.flush();
+  assert.ok(tree);
+  assert.deepEqual(context.routes, []);
+  assert.equal(find(tree, node => node.type === 'video').props.previewUrl, 'https://player.vimeo.com/video/123456');
+  find(tree, node => node.type === 'button' && node.props.children === '유료 강의').props.onClick();
+  assert.ok(context.writes.includes(true));
+  assert.deepEqual(context.routes, []);
+});
+
+test('preview payment prompt preserves the supplied copy and routes an expired checkout to login', async () => {
+  const context = runtime({ data: { ...previewCourse, courseId: 'course-id', recentLessonId: 'free' }, state: value => value === false ? true : value });
+  const tree = context.render('src/features/classroom/viewer-screen.tsx', 'ViewerScreen', { courseId: 'course-id', lessonId: 'free', preview: true });
+  context.flush();
+  const dialog = find(tree, node => node.type === 'dialog');
+  assert.equal(dialog.props.label, '결제가 필요한 강의입니다.');
+  assert.deepEqual(Array.from(dialog.props.children, child => child.props.children), ['결제가 필요한 강의입니다.', '다음 영상을 확인하시러면 결제가 필요합니다. 결제하시겠습니까?']);
+  assert.deepEqual(Array.from(dialog.props.actions, action => action.label), ['취소', '결제']);
+  dialog.props.onCancel();
+  assert.ok(context.writes.includes(false));
+  dialog.props.actions[1].onClick();
+  await settle();
+  expectLogin(context);
+  assert.deepEqual(context.requests, ['checkout']);
+});
+
+test('preview player embeds its permitted video without creating paid playback or progress', async () => {
+  const context = runtime();
+  const url = 'https://player.vimeo.com/video/123456?h=unlistedhash&autoplay=0';
+  const tree = context.render('src/features/classroom/video-player.tsx', 'VideoPlayer', { lessonId: 'free', previewUrl: url });
+  tree.props.ref.current = {};
+  context.flush();
+  await settle();
+  assert.equal(context.players[0].url, url);
+  assert.deepEqual(context.requests, []);
+  assert.equal(context.events.timeupdate, undefined);
+  context.unmount();
+});
+
+test('an anonymous preview visitor choosing payment goes to login without starting checkout', () => {
+  const context = runtime({ profileError: unauthorized(), data: { ...previewCourse, courseId: 'course-id', recentLessonId: 'free' }, state: value => value === false ? true : value });
+  const tree = context.render('src/features/classroom/viewer-screen.tsx', 'ViewerScreen', { courseId: 'course-id', lessonId: 'free', preview: true });
+  find(tree, node => node.type === 'dialog').props.actions[1].onClick();
+  assert.deepEqual(context.routes, [['push', '/login']]);
+  assert.deepEqual(context.requests, []);
 });

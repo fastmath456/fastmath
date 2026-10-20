@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { authStates, profile } from './fixtures';
 import { classroomItems, viewer } from './classroom-fixtures';
-import { exampleDetails, products, productDetail, sortProducts } from './catalog-fixtures';
+import { detailChapters, exampleDetails, products, productDetail, sortProducts } from './catalog-fixtures';
 import { parseSort } from '../features/catalog/api';
 import { orders, refundQuote } from './order-fixtures';
 
@@ -34,6 +34,15 @@ export const handlers = [
     if (params.courseId === viewer.courseId) return HttpResponse.json({ ...viewer, chapters: state === 'empty' ? [] : viewer.chapters });
     if (params.courseId === 'trigonometry-concepts') return HttpResponse.json({ ...viewer, courseId: params.courseId, title: '삼각함수 개념부터 실전까지', chapters: [] });
     return new HttpResponse(null, { status: 404 });
+  }),
+  http.get('/__mock/courses/:courseId/preview', ({ request, params }) => {
+    const product=exampleDetails.find(item=>item.id===params.courseId && item.kind==='vod');
+    if(!product) return new HttpResponse(null,{status:404});
+    const requested=new URL(request.url).searchParams.get('lesson');
+    const lessons=detailChapters.flatMap(chapter=>chapter.lessons);
+    const lesson=requested ? lessons.find(item=>item.id===requested) : lessons.find(item=>item.preview);
+    if(!lesson?.preview) return HttpResponse.json({error:{code:'no_access'}},{status:403});
+    return HttpResponse.json({courseId:product.id,title:product.title,poster:viewer.poster,recentLessonId:lesson.id,chapters:detailChapters});
   }),
   http.get('/__mock/products', ({ request }) => {
     const url = new URL(request.url), state = url.searchParams.get('state');

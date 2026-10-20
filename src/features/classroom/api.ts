@@ -7,8 +7,9 @@ export async function getClassroom(state: string): Promise<Classroom> {
   if (!Array.isArray(data.items) || !Number.isInteger(data.count)) throw new Error('Invalid classroom response');
   return data;
 }
-export async function getViewer(courseId: string, state: string): Promise<Viewer> {
-  const response = await fetch(dataPath(`/__mock/courses/${encodeURIComponent(courseId)}?state=${encodeURIComponent(state)}`,`/api/classroom/courses/${encodeURIComponent(courseId)}`));
+export async function getViewer(courseId: string, state: string, preview = false, lessonId?: string): Promise<Viewer> {
+  const suffix = preview ? `/preview${lessonId ? `?lesson=${encodeURIComponent(lessonId)}` : ''}` : '';
+  const response = await fetch(dataPath(`/__mock/courses/${encodeURIComponent(courseId)}${suffix}${suffix.includes('?') ? '&' : '?'}state=${encodeURIComponent(state)}`,`/api/classroom/courses/${encodeURIComponent(courseId)}${suffix}`));
   const data = await readResponse<Viewer>(response);
   if (!Array.isArray(data.chapters) || typeof data.title !== 'string') throw new Error('Invalid viewer response');
   return data;

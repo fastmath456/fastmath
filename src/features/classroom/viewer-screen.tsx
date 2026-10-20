@@ -1,24 +1,27 @@
 'use client';
 
 import Image from 'next/image';
-import { isMockMode } from '@/lib/http';
+import { isMockMode, isUnauthorized } from '@/lib/http';
 import { VideoPlayer } from './video-player';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { SiteFooter, SiteHeader } from '@/components/site';
+import { useRef, useState } from 'react';
+import { ConfirmationDialog, SiteFooter, SiteHeader } from '@/components/site';
 import { useProfile } from '@/features/account';
+import { checkout } from '@/features/catalog';
 import { useLoginRedirect } from '@/features/auth';
 import { useMockReady } from '@/app/providers';
 import { getViewer } from './api';
 import styles from './classroom.module.css';
 import mobileStyles from './viewer-mobile.module.css';
 
-export function ViewerScreen({ courseId, lessonId, state = '' }: { courseId: string; lessonId?: string; state?: string }) {
+export function ViewerScreen({ courseId, lessonId, state = '', preview = false }: { courseId: string; lessonId?: string; state?: string; preview?: boolean }) {
   const ready = useMockReady(), profile = useProfile(), router = useRouter();
-  const query = useQuery({ queryKey: ['viewer',courseId,state], queryFn: () => getViewer(courseId,state), enabled: ready });
-  const { requiresLogin } = useLoginRedirect(profile.error, query.error);
+  const query = useQuery({ queryKey: ['viewer',courseId,state,preview,preview ? lessonId : undefined], queryFn: () => getViewer(courseId,state,preview,lessonId), enabled: ready });
+  const { requiresLogin, redirectIfUnauthorized } = useLoginRedirect(preview ? undefined : profile.error, query.error);
+  const requestKey = useRef(''), purchase = useRef<Promise<void> | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [expanded, setOpen] = useState<string[] | null>(null);
   const open = expanded ?? query.data?.chapters.slice(0,2).map(chapter => chapter.id) ?? [];
   const data = query.data, lessons = data?.chapters.flatMap(chapter => chapter.lessons) ?? [];
@@ -26,9 +29,19 @@ export function ViewerScreen({ courseId, lessonId, state = '' }: { courseId: str
   const index = lessons.findIndex(lesson => lesson.id === selected), lesson = lessons[index];
   function select(id: string) {
     if (id === selected) return;
+    if (preview && !lessons.find(item => item.id === id)?.preview) { setPaymentOpen(true); return; }
     const chapter = data?.chapters.find(chapter => chapter.lessons.some(lesson => lesson.id === id));
     if (chapter && !open.includes(chapter.id)) setOpen([...open,chapter.id]);
-    router.push(`/classroom/courses/${courseId}?lesson=${encodeURIComponent(id)}`);
+    router.push(`/classroom/courses/${encodeURIComponent(courseId)}?lesson=${encodeURIComponent(id)}${preview ? '&preview=1' : ''}`);
+  }
+  function handlePurchase() {
+    setPaymentOpen(false);
+    if (isMockMode || isUnauthorized(profile.error)) { router.push('/login'); return; }
+    if (purchase.current) return;
+    requestKey.current ||= crypto.randomUUID();
+    purchase.current = checkout(courseId, requestKey.current)
+      .catch(error => { if (!redirectIfUnauthorized(error)) router.push('/payments/failure?kind=vod'); })
+      .finally(() => { purchase.current = null; });
   }
   if (requiresLogin) return null;
   return <>
@@ -54,7 +67,7 @@ export function ViewerScreen({ courseId, lessonId, state = '' }: { courseId: str
         </div>
         <div className={styles.videoGroup}>
           <div className={mobileStyles.media}>
-            {query.isError ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={() => query.refetch()}>다시 시도</button></div></div> : data && (lessons.length === 0 ? <div className={styles.videoEmpty}>아직 공개된 강의가 없습니다.</div> : !lesson ? <div className={styles.videoEmpty}>강의를 찾을 수 없습니다.</div> : !isMockMode && data.orderId ? <VideoPlayer key={lesson.id} orderId={data.orderId} lessonId={lesson.id} /> : <div className={mobileStyles.mockPlayer}>
+            {query.isError ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={() => query.refetch()}>다시 시도</button></div></div> : data && (lessons.length === 0 ? <div className={styles.videoEmpty}>아직 공개된 강의가 없습니다.</div> : !lesson ? <div className={styles.videoEmpty}>강의를 찾을 수 없습니다.</div> : !isMockMode && (data.orderId || data.previewUrl) ? (data.orderId ? <VideoPlayer key={lesson.id} orderId={data.orderId} lessonId={lesson.id} /> : <VideoPlayer key={lesson.id} previewUrl={data.previewUrl!} lessonId={lesson.id} />) : <div className={mobileStyles.mockPlayer}>
               <Image unoptimized loading="eager" className={styles.poster} src={data.poster} width={1100} height={619} alt="강의 영상 포스터" />
               <div className={mobileStyles.mockControls} aria-hidden="true">
                 <div className={mobileStyles.progress}><span className={mobileStyles.progressTrack} /><span className={mobileStyles.progressValue} /><Image unoptimized className={mobileStyles.progressHandle} src="/assets/viewer-imgEllipse5.svg" width={10} height={10} alt="" /></div>
@@ -70,5 +83,6 @@ export function ViewerScreen({ courseId, lessonId, state = '' }: { courseId: str
       </div>
     </main>
     <SiteFooter />
+    {paymentOpen && <ConfirmationDialog label="결제가 필요한 강의입니다." onCancel={() => setPaymentOpen(false)} actions={[{label:'취소',cancel:true},{label:'결제',onClick:handlePurchase}]}><p>결제가 필요한 강의입니다.</p><p>다음 영상을 확인하시러면 결제가 필요합니다. 결제하시겠습니까?</p></ConfirmationDialog>}
   </>;
 }

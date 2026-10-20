@@ -30,6 +30,25 @@ export async function viewer(ctx:Context) {
   const product=ent.data.products as unknown as {title:string;poster:string};
   return {courseId:ctx.params.courseId,title:product.title,poster:product.poster,orderId:ent.data.order_id,recentLessonId:progress.data?.[0]?.lesson_id??lessons.data?.[0]?.id??'',chapters:chapters.data!.map(c=>({...c,lessons:lessons.data!.filter(l=>l.chapter_id===c.id).map(l=>({id:l.id,title:l.title}))}))};
 }
+export async function previewViewer(ctx:Context) {
+  const db=adminDb(),courseId=string(ctx.params.courseId,'courseId',100);
+  const product=await db.from('products').select('id,title,poster').eq('id',courseId).eq('kind','vod').maybeSingle(); dbError(product.error);
+  if(!product.data) throw new ApiError(404,'not_found');
+  const [chapters,lessons]=await Promise.all([
+    db.from('chapters').select('id,title,position').eq('product_id',courseId).eq('active',true).order('position'),
+    db.from('lessons').select('id,title,chapter_id,preview,position').eq('product_id',courseId).eq('active',true).order('position'),
+  ]); [chapters,lessons].forEach(result=>dbError(result.error));
+  const visible=lessons.data!.filter(lesson=>chapters.data!.some(chapter=>chapter.id===lesson.chapter_id));
+  const requested=ctx.request.nextUrl.searchParams.get('lesson');
+  const requestedId=requested===null ? undefined : string(requested,'lesson',100);
+  const selected=requestedId ? visible.find(lesson=>lesson.id===requestedId) : visible.find(lesson=>lesson.preview);
+  if(!selected?.preview) throw new ApiError(403,'no_access');
+  const source=await db.from('lessons').select('vimeo_id,vimeo_url').eq('id',selected.id).eq('product_id',courseId).eq('active',true).eq('preview',true).maybeSingle(); dbError(source.error);
+  if(!source.data) throw new ApiError(403,'no_access');
+  const video=parseVimeoUrl(source.data.vimeo_url??(source.data.vimeo_id?'https://vimeo.com/'+source.data.vimeo_id:''));
+  if(!video) throw new ApiError(503,'video_unavailable');
+  return {courseId,title:product.data.title,poster:product.data.poster,recentLessonId:selected.id,previewUrl:video.embedUrl,chapters:chapters.data!.map(chapter=>({id:chapter.id,title:chapter.title,lessons:visible.filter(lesson=>lesson.chapter_id===chapter.id).map(lesson=>({id:lesson.id,title:lesson.title,preview:lesson.preview}))}))};
+}
 export async function hide(ctx:Context) {
   const user=await ctx.user(),db=adminDb();
   const result=await db.from('entitlements').update({hidden:true}).eq('id',uuid(ctx.params.id)).eq('user_id',user.id).lte('expires_at',new Date().toISOString()).select('id').maybeSingle(); dbError(result.error); if(!result.data) throw new ApiError(403,'no_access'); return {ok:true};
