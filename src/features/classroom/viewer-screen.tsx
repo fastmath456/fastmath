@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { isMockMode, isUnauthorized } from '@/lib/http';
+import { isUnauthorized } from '@/lib/http';
 import { VideoPlayer } from './video-player';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,15 +11,14 @@ import { ConfirmationDialog, SiteFooter, SiteHeader } from '@/components/site';
 import { useProfile } from '@/features/account';
 import { checkout } from '@/features/catalog';
 import { useLoginRedirect } from '@/features/auth';
-import { useMockReady } from '@/app/providers';
 import { getViewer } from './api';
 import { ViewerLoading } from './classroom-skeletons';
 import styles from './classroom.module.css';
 import mobileStyles from './viewer-mobile.module.css';
 
 export function ViewerScreen({ courseId, lessonId, state = '', preview = false }: { courseId: string; lessonId?: string; state?: string; preview?: boolean }) {
-  const ready = useMockReady(), profile = useProfile(), router = useRouter();
-  const query = useQuery({ queryKey: ['viewer',courseId,state,preview,preview ? lessonId : undefined], queryFn: () => getViewer(courseId,state,preview,lessonId), enabled: ready });
+  const profile = useProfile(), router = useRouter();
+  const query = useQuery({ queryKey: ['viewer',courseId,state,preview,preview ? lessonId : undefined], queryFn: () => getViewer(courseId,preview,lessonId) });
   const { requiresLogin, redirectIfUnauthorized } = useLoginRedirect(preview ? undefined : profile.error, query.error);
   const requestKey = useRef(''), purchase = useRef<Promise<void> | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -37,7 +36,7 @@ export function ViewerScreen({ courseId, lessonId, state = '', preview = false }
   }
   function handlePurchase() {
     setPaymentOpen(false);
-    if (isMockMode || isUnauthorized(profile.error)) { router.push('/login'); return; }
+    if (isUnauthorized(profile.error)) { router.push('/login'); return; }
     if (purchase.current) return;
     requestKey.current ||= crypto.randomUUID();
     purchase.current = checkout(courseId, requestKey.current)
@@ -70,16 +69,7 @@ export function ViewerScreen({ courseId, lessonId, state = '', preview = false }
         </div>
         <div className={styles.videoGroup}>
           <div className={mobileStyles.media}>
-            {query.isError ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={() => query.refetch()}>다시 시도</button></div></div> : data && (lessons.length === 0 ? <div className={styles.videoEmpty}>아직 공개된 강의가 없습니다.</div> : !lesson ? <div className={styles.videoEmpty}>강의를 찾을 수 없습니다.</div> : !isMockMode && (data.orderId || data.previewUrl) ? (data.orderId ? <VideoPlayer key={lesson.id} orderId={data.orderId} lessonId={lesson.id} /> : <VideoPlayer key={lesson.id} previewUrl={data.previewUrl!} lessonId={lesson.id} />) : <div className={mobileStyles.mockPlayer}>
-              <Image unoptimized loading="eager" className={styles.poster} src={data.poster} width={1100} height={619} alt="강의 영상 포스터" />
-              <div className={mobileStyles.mockControls} aria-hidden="true">
-                <div className={mobileStyles.progress}><span className={mobileStyles.progressTrack} /><span className={mobileStyles.progressValue} /><Image unoptimized className={mobileStyles.progressHandle} src="/assets/viewer-imgEllipse5.svg" width={10} height={10} alt="" /></div>
-                <div className={mobileStyles.controlRow}>
-                  <div className={mobileStyles.leftControls}><span className={`${mobileStyles.roundControl} ${mobileStyles.playControl}`}><Image unoptimized src="/assets/viewer-imgPlay03.svg" width={20} height={20} alt="" /></span><span className={mobileStyles.roundControl}><Image unoptimized src="/assets/viewer-imgVolume06.svg" width={24} height={24} alt="" /></span><span className={mobileStyles.time}>0:01 / 15:32</span></div>
-                  <div className={mobileStyles.rightControls}><span className={`${mobileStyles.roundControl} ${mobileStyles.playControl}`}><Image unoptimized src="/assets/viewer-imgFastForward.svg" width={20} height={20} alt="" /></span><span className={mobileStyles.roundControl}><Image unoptimized src="/assets/viewer-imgArrowExpand02.svg" width={20} height={20} alt="" /></span></div>
-                </div>
-              </div>
-            </div>)}
+            {query.isError ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={() => query.refetch()}>다시 시도</button></div></div> : data && (lessons.length === 0 ? <div className={styles.videoEmpty}>아직 공개된 강의가 없습니다.</div> : !lesson ? <div className={styles.videoEmpty}>강의를 찾을 수 없습니다.</div> : (data.orderId || data.previewUrl) ? (data.orderId ? <VideoPlayer key={lesson.id} orderId={data.orderId} lessonId={lesson.id} /> : <VideoPlayer key={lesson.id} previewUrl={data.previewUrl!} lessonId={lesson.id} />) : null)}
           </div>
           <div className={`${styles.videoActions} ${mobileStyles.videoActions}`}><Link href="/classroom">나가기</Link><div><button type="button" disabled={index <= 0} onClick={() => select(lessons[index-1].id)}>이전 강의</button><button type="button" disabled={index < 0 || index === lessons.length - 1} onClick={() => select(lessons[index + 1].id)}>다음 강의</button></div></div>
         </div>

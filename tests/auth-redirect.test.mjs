@@ -51,12 +51,32 @@ test('protected reads and the optional profile probe preserve the API error with
   const classroom = load('src/features/classroom/api.ts', modules, globals);
   const orders = load('src/features/account/orders-api.ts', modules, globals);
   const profile = load('src/features/account/use-profile.ts', {
-    ...modules, '@tanstack/react-query': { useQuery: options => options }, '@/app/providers': { useMockReady: () => true },
+    ...modules, '@tanstack/react-query': { useQuery: options => options },
   }, globals);
-  for (const read of [() => classroom.getClassroom(''), () => classroom.getViewer('course', ''), () => orders.getOrders(''), () => orders.getRefundQuote('order', ''), () => profile.useProfile().queryFn()]) {
+  for (const read of [() => classroom.getClassroom(), () => classroom.getViewer('course'), () => orders.getOrders(), () => orders.getRefundQuote('order'), () => profile.useProfile().queryFn()]) {
     await assert.rejects(read(), http.isUnauthorized);
   }
   assert.deepEqual(calls, ['/api/classroom', '/api/classroom/courses/course', '/api/orders', '/api/orders/order/refund-quote', '/api/profile']);
+});
+
+test('all frontend reads use the real API without a mock worker or environment mode', async () => {
+  const calls = [], data = { items: [], count: 0, kind: 'vod', title: '강의', reviews: [], chapters: [], price: 100, orderId: 'order', text: '환불 정보', name: '회원', email: 'test@example.com', image: '', avatar: '', birthday: '20000101', phone: '01012345678', marketing: false };
+  const globals = { fetch: async path => { calls.push(path); return Response.json(data); }, process: { env: { NODE_ENV: 'development', NEXT_PUBLIC_API_MODE: 'mock' } } };
+  const realHttp = load('src/lib/http.ts', {}, globals), modules = { '@/lib/http': realHttp };
+  assert.equal('isMockMode' in realHttp, false);
+  assert.equal('dataPath' in realHttp, false);
+  const catalog = load('src/features/catalog/api.ts', modules, globals);
+  const classroom = load('src/features/classroom/api.ts', modules, globals);
+  const orders = load('src/features/account/orders-api.ts', modules, globals);
+  const profile = load('src/features/account/use-profile.ts', { ...modules, '@tanstack/react-query': { useQuery: options => options } }, globals);
+  await catalog.getProducts('price-asc');
+  await catalog.getProduct('course name', 'vod');
+  await classroom.getClassroom();
+  await classroom.getViewer('course', true, 'lesson 1');
+  await orders.getOrders();
+  await orders.getRefundQuote('order');
+  await profile.useProfile().queryFn();
+  assert.deepEqual(calls, ['/api/products?sort=price-asc', '/api/products/course%20name', '/api/classroom', '/api/classroom/courses/course/preview?lesson=lesson%201', '/api/orders', '/api/orders/order/refund-quote', '/api/profile']);
 });
 
 test('mutations preserve the error without retrying or changing the request contract', async () => {
@@ -97,7 +117,7 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     '@/features/auth': { ...validation, ...hook }, './use-login-redirect': hook, './validation': validation,
     '@/features/account': { useProfile: () => profile, AccountShell: 'account' }, './use-profile': { useProfile: () => profile }, './account-shell': { AccountShell: 'account' },
     '@/components/site': { SiteHeader: 'header', SiteFooter: 'footer', Logo: 'logo', FormField: 'field', Checkbox: 'checkbox', Skeleton: 'skeleton', ConfirmationDialog: 'dialog', ResultScreen: 'result', useTermsDraft: (_key, initial) => [draft ? draft(initial) : initial, () => {}] },
-    '@/app/providers': { useMockReady: () => true }, './api': { parseSort: value => value ?? 'latest', downloadMaterials: async orderId => { requests.push(`orders/${orderId}/download`); throw mutateError; } }, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
+    './api': { parseSort: value => value ?? 'latest', downloadMaterials: async orderId => { requests.push(`orders/${orderId}/download`); throw mutateError; } }, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
     '@/features/manage': { AdminCourseActions: 'admin' }, './refund-copy': { refundSections: [] },
     './skeleton': { Skeleton: 'skeleton' }, './mobile-menu': { MobileMenu: 'mobile-menu' },
     './product-skeletons': { ProductDetailLoading: 'product-loading', ProductListSkeleton: 'list-loading' },

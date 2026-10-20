@@ -1,8 +1,8 @@
-import { dataPath, readResponse } from '@/lib/http';
+import { readResponse } from '@/lib/http';
 import type { Classroom, Viewer } from './types';
 
-export async function getClassroom(state: string): Promise<Classroom> {
-  const response = await fetch(dataPath(`/__mock/classroom?state=${encodeURIComponent(state)}`,'/api/classroom'));
+export async function getClassroom(): Promise<Classroom> {
+  const response = await fetch('/api/classroom');
   const data = await readResponse<Classroom>(response);
   if (!Array.isArray(data.items) || !Number.isInteger(data.count)) throw new Error('Invalid classroom response');
   return data;
@@ -21,9 +21,9 @@ export async function downloadMaterials(orderId: string) {
     location.assign(data.url);
   }
 }
-export async function getViewer(courseId: string, state: string, preview = false, lessonId?: string): Promise<Viewer> {
+export async function getViewer(courseId: string, preview = false, lessonId?: string): Promise<Viewer> {
   const suffix = preview ? `/preview${lessonId ? `?lesson=${encodeURIComponent(lessonId)}` : ''}` : '';
-  const response = await fetch(dataPath(`/__mock/courses/${encodeURIComponent(courseId)}${suffix}${suffix.includes('?') ? '&' : '?'}state=${encodeURIComponent(state)}`,`/api/classroom/courses/${encodeURIComponent(courseId)}${suffix}`));
+  const response = await fetch(`/api/classroom/courses/${encodeURIComponent(courseId)}${suffix}`);
   const data = await readResponse<Viewer>(response);
   if (!Array.isArray(data.chapters) || typeof data.title !== 'string') throw new Error('Invalid viewer response');
   return data;

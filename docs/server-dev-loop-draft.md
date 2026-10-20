@@ -38,7 +38,7 @@ PG·DB는 하나의 트랜잭션이 아니다. PG 호출 전 주문·환불 작�
 
 ## 데이터 연결
 
-기존 화면 DTO와 최소 조회 함수를 유지하며 `/__mock/...`와 `/api/...`를 환경 모드로 분리한다. 개발 기본은 MSW, 실제 검증은 MSW 비활성이다. 운영 환경에서는 MSW를 시작하지 않는다. 실제 모드 조회는 worker 준비 조건과 분리한다. 화면 상태는 React, 서버 상태는 TanStack Query, 실제 공유 UI 상태가 생기기 전에는 Zustand store를 만들지 않는다.
+기존 화면 DTO와 최소 조회 함수를 유지하며 개발·운영 모두 `/api/...`를 사용한다. MSW와 worker 준비 조건은 제거한다. 화면 상태는 React, 서버 상태는 TanStack Query, 실제 공유 UI 상태가 생기기 전에는 Zustand store를 만들지 않는다.
 
 모든 보호 API가 요청별 검증된 사용자와 소유권을 확인한다. 비밀 키·유료 원본 경로·토큰은 공개 DTO에 포함하지 않는다. Auth 쿠키·개인 응답은 공유 캐시 금지. Auth 사용자 생성과 프로필 기록은 DB 트리거로 일치시킨다. 역할 테이블과 금융 RPC는 service_role만 접근한다. 로그아웃한 세션은 API와 개인 데이터 RLS 모두에서 차단한다. 갱신 쿠키는 요청별 Route Handler 응답에 전달하며, 현재 Server Component에는 개인 조회를 추가하지 않는다.
 
@@ -49,7 +49,7 @@ PG·DB는 하나의 트랜잭션이 아니다. PG 호출 전 주문·환불 작�
 | 검증 | 완료 근거 |
 | --- | --- |
 | DB | 새 로컬 DB에 마이그레이션 적용, 사용자 A/B·anon·관리자·service 역할, 소유권 변경·금융 직접 쓰기 차단, 중복·트랜잭션·환불 동시성 |
-| 실제 로컬 연동 | MSW 비활성, Auth·API·DB·Storage 실제 응답 확인. 로그인·만료·저장·빈 데이터·거부·복구 |
+| 실제 로컬 연동 | Auth·API·DB·Storage 실제 응답 확인. 로그인·만료·저장·빈 데이터·거부·복구 |
 | 외부 서비스 | Toss·Vimeo·SMTP 키 없으면 실서비스 검증 불가로 기록. 테스트용 공급자 응답 검증과 실제 PG 검증을 구분 |
 | PC | 기존 라우트 직접 진입·조작, 네트워크·오류·사용자 변경 보존·스크린샷. 모바일 제외 |
 | 검사 | npm run lint, npx next typegen, npx tsc --noEmit, npm run build, Node 기본 테스트와 로컬 DB 검증 |
@@ -66,7 +66,7 @@ PG·DB는 하나의 트랜잭션이 아니다. PG 호출 전 주문·환불 작�
 | --- | --- |
 | 프로젝트·앱 | `/Users/sangkun/nocoders/quick-math`, `npm run dev -- --hostname 127.0.0.1`, `http://127.0.0.1:3000` |
 | 로컬 Supabase | CLI 2.120.0, API `http://127.0.0.1:54331`, Postgres 54332, Mailpit `http://127.0.0.1:54334`; Auth·DB·Storage 사용 |
-| 모드 | `.env.local`의 `NEXT_PUBLIC_API_MODE=real`; MSW 비활성. 운영 환경에서도 MSW 자동 활성화 없음 |
+| 모드 | 개발·운영 모두 실제 API 사용 |
 | 추가 의존성 | `@supabase/supabase-js` 2.117.3, `@supabase/ssr` 0.12.7, `server-only` 0.0.1, 기존 설치 버전과 동일한 `sharp` 0.35.5를 직접 의존성으로 선언 |
 | 보존 | Next.js·React 버전, 설정·CSS·기존 fixture 유지. 새 브랜치·커밋·push·배포·모바일 변경 없음 |
 
@@ -76,7 +76,6 @@ PG·DB는 하나의 트랜잭션이 아니다. PG 호출 전 주문·환불 작�
 | --- | --- |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` | 요청별 Auth 클라이언트와 서버 전용 관리자 클라이언트. 비밀 키는 브라우저에 전달하지 않음 |
 | `APP_ORIGIN` | 실제 앱 출처와 고정 Auth 콜백; 개발 값은 `http://127.0.0.1:3000` |
-| `NEXT_PUBLIC_API_MODE` | 실제 개발 검증은 `real`; 미지정 개발 환경은 기존 MSW |
 | `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`, `ALLOW_LIVE_PAYMENTS` | 아직 미설정. 테스트 키로 먼저 검증하며 실결제는 기본 `false` |
 | `VIMEO_ACCESS_TOKEN` | 아직 미설정. 실제 영상 식별자와 공급자 접근 제한 설정도 필요 |
 

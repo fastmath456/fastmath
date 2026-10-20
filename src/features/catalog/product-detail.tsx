@@ -3,13 +3,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { isMockMode } from '@/lib/http';
 import { checkout } from './checkout';
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ConfirmationDialog, SiteFooter, SiteHeader } from '@/components/site';
-import { useMockReady } from '@/app/providers';
 import { AdminCourseActions } from '@/features/manage';
 import { useLoginRedirect } from '@/features/auth';
 import { discountPercent, getProduct } from './api';
@@ -19,7 +17,7 @@ import styles from './catalog.module.css';
 import mobileStyles from './product-detail-mobile.module.css';
 
 export function ProductDetailScreen({ slug, kind, state = '', view = '' }: { slug: string; kind: 'vod' | 'pdf'; state?: string; view?: string }) {
-  const ready = useMockReady(), router = useRouter();
+  const router = useRouter();
   const { redirectIfUnauthorized } = useLoginRedirect();
   const requestKey = useRef(''), purchase = useRef<Promise<void> | null>(null);
   const query = useQuery({ queryKey: ['product', slug, kind, state, view], queryFn: () => getProduct(slug, kind, state, view), enabled: ready });
@@ -52,7 +50,7 @@ export function ProductDetailScreen({ slug, kind, state = '', view = '' }: { slu
   }
   const owned = product?.ownership === 'owned';
   const handlePurchase = (event?: MouseEvent<HTMLAnchorElement>) => {
-    if (isMockMode || !product?.profile) {
+    if (!product?.profile) {
       if (!event) router.push('/login');
       return;
     }

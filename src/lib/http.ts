@@ -1,5 +1,3 @@
-export const isMockMode = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_API_MODE !== 'real';
-export const dataPath = (mock: string, real: string) => isMockMode ? mock : real;
 export class RequestError extends Error {
   constructor(public code: string, public field?: string, public status?: number) { super(code); }
 }

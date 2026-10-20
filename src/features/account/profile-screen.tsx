@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { isMockMode, mutate, requestFailure } from '@/lib/http';
+import { mutate, requestFailure } from '@/lib/http';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Checkbox, ConfirmationDialog, FormField, isTermsPath, useTermsDraft } from '@/components/site';
@@ -72,7 +72,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
   }, [changed, values, marketing, imageChanged, selectedFile]);
   function change(field: typeof editable[number], value: string) { setDraft(current => ({...current,values:{...current.values,[field]:value}})); setMessage(''); }
   async function endAccount(action: 'logout' | 'withdraw') {
-    if (accountRequest.current || isMockMode) return;
+    if (accountRequest.current) return;
     accountRequest.current = true; setMessage('');
     try {
       await mutate(`auth/${action}`);
@@ -103,7 +103,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
     const first = editable.find(field => next[field]);
     if (first) event.currentTarget.querySelector<HTMLInputElement>(`#profile-${first}`)?.focus();
     else if (!changed) setMessage('변경된 정보가 없습니다.');
-    if (first || !changed || isMockMode) return;
+    if (first || !changed) return;
     try {
       let path = currentImage ? profile.imagePath : '';
       if(selectedFile) { const form = new FormData(); form.set('file',await (await fetch(selectedFile.preview)).blob(),selectedFile.name); path=(await mutate<{path:string}>('profile/image',form)).path; }

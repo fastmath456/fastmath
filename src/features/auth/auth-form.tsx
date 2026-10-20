@@ -3,11 +3,9 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { isMockMode, mutate, RequestError, requestFailure } from '@/lib/http';
-import { useQuery } from '@tanstack/react-query';
-import { Suspense, use, useEffect, useState, type FormEvent } from 'react';
+import { mutate, RequestError, requestFailure } from '@/lib/http';
+import { useState, type FormEvent } from 'react';
 import { Checkbox, FormField, Logo, SiteFooter, SiteHeader, useTermsDraft } from '@/components/site';
-import { useMockReady } from '@/app/providers';
 import { fieldLabels, fieldsByKind, placeholders, validateField, type AuthField, type AuthKind, type AuthValues } from './validation';
 import { useLoginRedirect } from './use-login-redirect';
 import styles from './auth.module.css';
@@ -21,34 +19,14 @@ const terms = [
 ];
 const titles = { login: '로그인', signup: '회원가입', recovery: '비밀번호 찾기', reset: '비밀번호 재설정' };
 
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-function AuthScenario({ searchParams, onChange }: { searchParams: SearchParams; onChange: (scenario: string) => void }) {
-  const search = use(searchParams);
-  const scenario = typeof search.state === 'string' ? search.state : '';
-  useEffect(() => { onChange(scenario); }, [scenario, onChange]);
-  return null;
-}
-
-export function AuthForm({ kind, scenario: initialScenario = '', searchParams }: { kind: AuthKind; scenario?: string; searchParams?: SearchParams }) {
-  const [resolvedScenario, setScenario] = useState(initialScenario);
-  const scenario = searchParams ? resolvedScenario : initialScenario;
+export function AuthForm({ kind }: { kind: AuthKind }) {
   const router = useRouter(), client = useQueryClient();
   const { redirectIfUnauthorized } = useLoginRedirect();
   const [remoteError,setRemoteError] = useState('');
-  // Saved drafts already include the full URL; keep their key stable while searchParams resolves.
   const [{ values, agreements }, setDraft] = useTermsDraft(`auth:${kind}`, { values: emptyValues, agreements: [false, false, false, false] });
   const [errors, setErrors] = useState<Partial<Record<AuthField, string>>>({});
   const [termsError, setTermsError] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-  const ready = useMockReady();
-  const state = useQuery<{ field?: AuthField; message: string }>({ queryKey: ['auth-display', kind, scenario], enabled: ready && isMockMode && Boolean(scenario), queryFn: async () => {
-    const response = await fetch(`/__mock/auth-state?screen=${kind}&state=${encodeURIComponent(scenario)}`);
-    if (!response.ok) throw new Error('Auth display state unavailable');
-    return response.json();
-  } });
   const fields = fieldsByKind[kind];
-  const displayedState = dismissed ? undefined : state.data;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,7 +38,7 @@ export function AuthForm({ kind, scenario: initialScenario = '', searchParams }:
     const first = fields.find(field => next[field]);
     if (first) event.currentTarget.querySelector<HTMLInputElement>(`#${first}`)?.focus();
     else if (missingTerms) event.currentTarget.querySelector<HTMLInputElement>(`#agreement-${agreements.findIndex(value => !value)}`)?.focus();
-    if (first || missingTerms || isMockMode) return;
+    if (first || missingTerms) return;
     setRemoteError('');
     try {
       await mutate('auth/'+(kind === 'recovery' ? 'recovery' : kind), {...values,agreements});
@@ -75,7 +53,7 @@ export function AuthForm({ kind, scenario: initialScenario = '', searchParams }:
   }
   function change(field: AuthField, value: string) {
     const next = { ...values, [field]: value };
-    setDraft(current => ({ ...current, values: next })); setDismissed(true); setRemoteError('');
+    setDraft(current => ({ ...current, values: next })); setRemoteError('');
     if (field === 'password' && values.confirmation) setErrors(current => ({ ...current, confirmation: validateField('confirmation', next) }));
   }
   function toggle(index?: number) {
@@ -84,10 +62,10 @@ export function AuthForm({ kind, scenario: initialScenario = '', searchParams }:
     if (next.slice(0, 3).every(Boolean)) setTermsError(false);
   }
   const form = <form className={styles.form} noValidate onSubmit={submit}><div className={styles.fields}>
-    {fields.map(field => <FormField key={field} id={field} name={field} label={fieldLabels[field]} placeholder={placeholders[field]} value={values[field]} type={field === 'password' || field === 'confirmation' ? 'password' : 'text'} inputMode={field === 'birthday' || field === 'phone' ? 'numeric' : field === 'email' ? 'email' : undefined} autoComplete={field === 'confirmation' ? 'new-password' : field === 'password' ? kind === 'login' ? 'current-password' : 'new-password' : field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : field} onChange={event => change(field, event.target.value)} onBlur={() => { if (errors[field]) setErrors(current => ({ ...current, [field]: validateField(field, values) })); }} error={errors[field] || (displayedState?.field === field ? displayedState.message : undefined)} />)}
+    {fields.map(field => <FormField key={field} id={field} name={field} label={fieldLabels[field]} placeholder={placeholders[field]} value={values[field]} type={field === 'password' || field === 'confirmation' ? 'password' : 'text'} inputMode={field === 'birthday' || field === 'phone' ? 'numeric' : field === 'email' ? 'email' : undefined} autoComplete={field === 'confirmation' ? 'new-password' : field === 'password' ? kind === 'login' ? 'current-password' : 'new-password' : field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : field} onChange={event => change(field, event.target.value)} onBlur={() => { if (errors[field]) setErrors(current => ({ ...current, [field]: validateField(field, values) })); }} error={errors[field]} />)}
     {kind === 'signup' && <div className={styles.terms}><p className={styles.termsTitle}>약관 동의</p><div className={styles.termsBox}><strong><Checkbox checked={agreements.every(Boolean)} onChange={() => toggle()}>전체 동의</Checkbox></strong><div className={styles.termsRule} />{terms.map((term, index) => <div className={styles.termsRow} key={term.href}><Checkbox id={`agreement-${index}`} checked={agreements[index]} onChange={() => toggle(index)}>{term.label}</Checkbox><Link href={term.href}>보기</Link></div>)}</div>{termsError && <p className={styles.error}>필수 약관에 동의해주세요.</p>}</div>}
-  </div>{remoteError && <p className={styles.error}>{remoteError}</p>}{displayedState && !displayedState.field && <p className={styles.error}>{displayedState.message}</p>}<button className={styles.button} type="submit">{titles[kind]}</button></form>;
-  return <div className={styles.shell}>{searchParams && <Suspense><AuthScenario searchParams={searchParams} onChange={setScenario} /></Suspense>}<SiteHeader mobile={kind === 'signup' ? { title: titles.signup, onBack: () => router.back() } : { title: '로그인', onBack: () => router.back() }} /><main className={`${styles.main} ${kind === 'signup' ? styles.signup : styles.responsiveMain}`}>
+  </div>{remoteError && <p className={styles.error}>{remoteError}</p>}<button className={styles.button} type="submit">{titles[kind]}</button></form>;
+  return <div className={styles.shell}><SiteHeader mobile={kind === 'signup' ? { title: titles.signup, onBack: () => router.back() } : { title: '로그인', onBack: () => router.back() }} /><main className={`${styles.main} ${kind === 'signup' ? styles.signup : styles.responsiveMain}`}>
     {kind === 'signup' ? <h1 className={styles.title}>회원가입</h1> : <div className={styles.brand}><Logo large />{kind === 'login' ? <div><p>1문제 넘게 틀려본 적 없는 수학 극상위권 연대 수학강사</p><p>여러분의 수학 공부 시간을 1초라도 줄여드리고 싶어서 만들었습니다</p></div> : <h1>{titles[kind]}</h1>}</div>}
     {kind === 'login' ? <div className={styles.loginBottom}>{form}<div className={styles.links}><Link href="/signup">회원가입</Link><span>·</span><Link href="/reset-password">비밀번호 찾기</Link></div></div> : form}
   </main><SiteFooter /></div>;
