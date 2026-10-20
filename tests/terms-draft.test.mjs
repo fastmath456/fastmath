@@ -11,7 +11,7 @@ const initial = { values: { email: '', password: '', name: '' }, agreements: [fa
 const filled = { values: { email: 'draft@example.com', password: 'draft-password', name: '테스트' }, agreements: [true, false, true, false] };
 const routerState = { __NA: true, tree: ['signup'], other: 'preserve' };
 
-function mount({ state = routerState, pathname = '/signup', key = 'signup', server = false } = {}) {
+function mount({ state = routerState, pathname = '/signup', search = '', key = 'signup', server = false } = {}) {
   const clicks = new Set(), pageShows = new Set();
   let draft, initialized = false, effect, cleanup;
   const history = { state: structuredClone(state), replaceState(value) { this.state = structuredClone(value); } };
@@ -24,7 +24,7 @@ function mount({ state = routerState, pathname = '/signup', key = 'signup', serv
   runInNewContext(source, {
     exports, Element, HTMLAnchorElement: Anchor, URL,
     window: server ? undefined : {
-      history, location: { origin: 'http://localhost:3000', pathname, search: '' },
+      history, location: { origin: 'http://localhost:3000', pathname, search },
       addEventListener(type, callback) { assert.equal(type, 'pageshow'); pageShows.add(callback); },
       removeEventListener(type, callback) { assert.equal(type, 'pageshow'); pageShows.delete(callback); },
     },
@@ -80,6 +80,17 @@ test('a saved draft cannot cross routes or profile identities', () => {
   form.click('http://localhost:3000/term/marketing');
   assert.deepEqual(mount({ state: form.history.state, pathname: '/login', key: 'profile:first@example.com' }).draft, initial);
   assert.deepEqual(mount({ state: form.history.state, pathname: '/profile', key: 'profile:second@example.com' }).draft, initial);
+});
+
+test('auth drafts restore on the same query URL without depending on asynchronous display state', () => {
+  const options = { key: 'auth:signup', search: '?state=duplicate-email' };
+  const form = mount(options);
+  form.change(filled);
+  form.click('http://localhost:3000/term');
+  const saved = form.history.state;
+  form.unmount();
+  assert.deepEqual(mount({ ...options, state: saved }).draft, filled);
+  assert.deepEqual(mount({ ...options, search: '?state=invalid-phone', state: saved }).draft, initial);
 });
 
 test('profile drafts retain the selected image, removal state, and original save revision', () => {

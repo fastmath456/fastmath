@@ -14,6 +14,7 @@ import { AdminCourseActions } from '@/features/manage';
 import { useLoginRedirect } from '@/features/auth';
 import { discountPercent, getProduct } from './api';
 import { refundEmphasis, refundIntro, refundSections } from './refund-copy';
+import { ProductDetailLoading } from './product-skeletons';
 import styles from './catalog.module.css';
 import mobileStyles from './product-detail-mobile.module.css';
 
@@ -68,6 +69,7 @@ export function ProductDetailScreen({ slug, kind, state = '', view = '' }: { slu
     if (!owned && !lesson.preview) { setPaymentOpen(true); return; }
     router.push(`/classroom/courses/${encodeURIComponent(product.id)}?lesson=${encodeURIComponent(id)}${owned ? '' : '&preview=1'}`);
   }
+  if (query.isPending) return <ProductDetailLoading kind={kind} />;
   const buyLabel = kind === 'vod' ? '수강 신청하기' : '전자책 구매하기';
   return <><SiteHeader activeCourses mobileAt1080 profile={product?.profile} mobile={{ title: product?.title ?? '', onBack: () => router.back() }} /><main className={`${styles.detail} ${mobileStyles.detail} ${product?.admin ? styles.adminDetail : ''}`}>
     {query.isError ? <div className={styles.requestError}><p>강의 정보를 불러오지 못했습니다. 다시 시도해주세요.</p><button onClick={() => query.refetch()}>다시 시도</button></div> : product && (() => {

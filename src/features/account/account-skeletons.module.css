@@ -1,0 +1,14 @@
+.line { width: 100%; height: 1lh; }
+.count { display: inline-block; vertical-align: middle; }
+.refundAction { border-radius: 16px; padding: 4px 8px; }
+.quote { display: flex; flex-direction: column; gap: 8px; }
+.quoteActions { display: flex; justify-content: flex-end; gap: 8px; }
+.quoteAction { height: 48px; padding-inline: 16px; border-radius: 16px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.input { height: 52px; width: 100%; border-radius: 16px; }
+.submit { height: 52px; border-radius: 16px; }
+.image { width: 108px; height: 108px; border-radius: 16px; }
+.details { flex: 1; }
+@media (width < 1360px) {
+  .line { flex: 1; }
+}

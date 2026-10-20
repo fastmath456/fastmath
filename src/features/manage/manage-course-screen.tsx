@@ -11,6 +11,7 @@ import { CurriculumEditor } from './curriculum-editor';
 import { useCourseUploads } from './use-course-uploads';
 import { emptyDocument, formattedPrice, parseVimeoUrl, validateBasic, validateCurriculum } from './validation';
 import type { BasicErrors, CourseChapter, CourseDocument, CourseDraft, CourseLesson, DraftSummary } from './types';
+import { ManageCourseSkeleton } from './manage-course-skeleton';
 import styles from './manage.module.css';
 
 type Props = { courseId?: string; draftId?: string; stepValue?: string };
@@ -32,7 +33,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
   const [draft, setDraft] = useState<CourseDraft | null>(null);
   const [saved, setSaved] = useState(() => serialize(emptyDocument()));
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
-  const [phase, setPhase] = useState<'checking' | 'ready' | 'error' | 'forbidden' | 'missing'>('checking');
+  const [phase, setPhase] = useState<'checking' | 'loading' | 'ready' | 'error' | 'forbidden' | 'missing'>('checking');
   const [busy, setBusy] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [errors, setErrors] = useState<BasicErrors>({});
@@ -70,6 +71,8 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
     async function load() {
       try {
         await checkAccess();
+        if (cancelled) return;
+        setPhase(current => current === 'checking' ? 'loading' : current);
         const [listing, loaded] = await Promise.all([
           getDrafts(), draftId ? getDraft(draftId) : courseId ? getEditableCourse(courseId) : Promise.resolve(null),
         ]);
@@ -258,6 +261,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
   }
 
   if (phase === 'checking') return null;
+  if (phase === 'loading') return <ManageCourseSkeleton />;
   if (phase !== 'ready') return <><main className={styles.main}><p role="alert">{phase === 'forbidden' ? '관리자만 이용할 수 있습니다.' : phase === 'missing' ? '강의를 찾을 수 없습니다.' : message}</p><button type="button" className={styles.outlined} onClick={phase === 'error' ? () => { setPhase('checking'); setLoadAttempt(value => value + 1); } : () => router.push('/courses')}>{phase === 'error' ? '재시도' : '목록으로'}</button></main><SiteFooter /></>;
 
   const nameLabel = nameDialog ? `${nameDialog.kind === 'chapter' ? '챕터' : '차시'} ${nameDialog.lessonId || (nameDialog.kind === 'chapter' && nameDialog.chapterId) ? '이름 변경' : '추가'}` : '';

@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { MobileMenu } from './mobile-menu';
+import { Skeleton } from './skeleton';
 import styles from './site.module.css';
 
 export function Logo({ large = false }: { large?: boolean }) {
@@ -11,10 +12,10 @@ export function Logo({ large = false }: { large?: boolean }) {
   </span></span>;
 }
 
-export function SiteHeader({ profile, activeCourses = false, mobileAt1080 = false, mobileAt1360 = false, mobile }: { profile?: { name: string; image: string }; activeCourses?: boolean; mobileAt1080?: boolean; mobileAt1360?: boolean; mobile?: { title: string; onBack?: () => void; href?: string; menu?: boolean } }) {
+export function SiteHeader({ profile, profileLoading = false, titleLoading = false, activeCourses = false, mobileAt1080 = false, mobileAt1360 = false, mobile }: { profile?: { name: string; image: string }; profileLoading?: boolean; titleLoading?: boolean; activeCourses?: boolean; mobileAt1080?: boolean; mobileAt1360?: boolean; mobile?: { title: string; onBack?: () => void; href?: string; menu?: boolean } }) {
   return <><header className={`${styles.header} ${mobileAt1080 ? styles.mobileAt1080 : ''} ${mobileAt1360 ? styles.mobileAt1360 : ''}`}><nav className={styles.headerLeft} aria-label="주 메뉴"><Link href="/" aria-label="빠른수학 홈"><Logo /></Link><Link href="/">홈</Link><Link href="/courses" className={activeCourses ? styles.activeCourses : undefined}>강의·교재 목록</Link></nav>
-    <div className={styles.headerRight}>{profile ? <Link href="/profile" className={styles.profileLink}><Image unoptimized className={styles.profileImage} src={profile.image} width={24} height={24} alt="" />{profile.name}님</Link> : <Link href="/login">로그인/회원가입</Link>}<Link href={profile ? '/classroom' : '/login'} className={styles.classroomLink}>내 강의실</Link></div>
-  </header><header className={`${styles.mobileHeader} ${mobileAt1080 ? styles.mobileAt1080 : ''} ${mobileAt1360 ? styles.mobileAt1360 : ''}`}>{mobile ? <>{mobile.onBack ? <button className={styles.backButton} type="button" aria-label="뒤로가기" onClick={mobile.onBack}><Image unoptimized src="/assets/login-imgArrowLeft.svg" width={24} height={24} alt="" /></button> : <Link className={styles.backButton} href={mobile.href ?? '/courses'} aria-label="뒤로가기"><Image unoptimized src="/assets/login-imgArrowLeft.svg" width={24} height={24} alt="" /></Link>}<p className={styles.mobileTitle}>{mobile.title}</p>{mobile.menu ? <MobileMenu profile={profile} /> : <span className={styles.mobileHeaderSpacer} aria-hidden="true" />}</> : <><Link href="/" aria-label="빠른수학 홈"><Logo /></Link><MobileMenu profile={profile} /></>}</header></>;
+    <div className={styles.headerRight}>{profileLoading && !profile ? <span className={styles.profileLink} aria-busy="true"><Skeleton className={styles.profileSkeletonImage} /><Skeleton>로그인/회원가입</Skeleton></span> : profile ? <Link href="/profile" className={styles.profileLink}><Image unoptimized className={styles.profileImage} src={profile.image} width={24} height={24} alt="" />{profile.name}님</Link> : <Link href="/login">로그인/회원가입</Link>}<Link href={profile ? '/classroom' : '/login'} className={styles.classroomLink}>내 강의실</Link></div>
+  </header><header className={`${styles.mobileHeader} ${mobileAt1080 ? styles.mobileAt1080 : ''} ${mobileAt1360 ? styles.mobileAt1360 : ''}`}>{mobile ? <>{mobile.onBack ? <button className={styles.backButton} type="button" aria-label="뒤로가기" onClick={mobile.onBack}><Image unoptimized src="/assets/login-imgArrowLeft.svg" width={24} height={24} alt="" /></button> : <Link className={styles.backButton} href={mobile.href ?? '/courses'} aria-label="뒤로가기"><Image unoptimized src="/assets/login-imgArrowLeft.svg" width={24} height={24} alt="" /></Link>}<p className={`${styles.mobileTitle} ${titleLoading ? styles.pendingTitle : ''}`}>{titleLoading ? <Skeleton className={styles.lineSkeleton} /> : mobile.title}</p>{mobile.menu ? <MobileMenu profile={profile} profileLoading={profileLoading} /> : <span className={styles.mobileHeaderSpacer} aria-hidden="true" />}</> : <><Link href="/" aria-label="빠른수학 홈"><Logo /></Link><MobileMenu profile={profile} profileLoading={profileLoading} /></>}</header></>;
 }
 
 export function SiteFooter() {

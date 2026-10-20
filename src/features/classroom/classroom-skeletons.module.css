@@ -1,0 +1,12 @@
+.fill { width: 100%; height: 100%; }
+.line { width: 100%; height: 1lh; }
+.status { height: 24px; width: 100%; border-radius: 16px; }
+.action { height: 44px; padding-inline: 16px; border-radius: 16px; }
+.count { display: inline-block; vertical-align: middle; }
+.unit { height: 32px; border-radius: 8px; }
+.heading { width: 100%; }
+.title { height: 30px; width: 100%; }
+.media { display: block; }
+@media (width < 1360px) {
+  .media { width: 100%; height: 100%; }
+}

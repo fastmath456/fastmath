@@ -12,6 +12,7 @@ import { AccountShell } from './account-shell';
 import { useProfile } from './use-profile';
 import { validProfileImage } from './profile-image';
 import type { Profile } from './types';
+import { ProfileLoading } from './account-skeletons';
 import styles from './profile.module.css';
 import accountStyles from './account.module.css';
 
@@ -141,5 +142,6 @@ export function ProfileScreen({ state = '' }: { state?: string }) {
   const query = useProfile(state);
   const { requiresLogin } = useLoginRedirect(query.error);
   if (requiresLogin) return null;
+  if (query.isPending) return <ProfileLoading />;
   return <AccountShell profile={query.data} section="profile"><div className={styles.content}><div><h1 className={accountStyles.title}>내 정보</h1><p className={accountStyles.subtitle}>내 정보를 확인하고 수정하세요.</p></div>{query.isError ? <div className={accountStyles.error}><p>내 정보를 불러오지 못했습니다. 다시 시도해주세요.</p><button onClick={() => query.refetch()}>다시 시도</button></div> : query.data && <ProfileForm key={state+query.data.email} profile={query.data} />}</div></AccountShell>;
 }

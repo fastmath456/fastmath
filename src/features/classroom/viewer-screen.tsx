@@ -13,6 +13,7 @@ import { checkout } from '@/features/catalog';
 import { useLoginRedirect } from '@/features/auth';
 import { useMockReady } from '@/app/providers';
 import { getViewer } from './api';
+import { ViewerLoading } from './classroom-skeletons';
 import styles from './classroom.module.css';
 import mobileStyles from './viewer-mobile.module.css';
 
@@ -44,9 +45,11 @@ export function ViewerScreen({ courseId, lessonId, state = '', preview = false }
       .finally(() => { purchase.current = null; });
   }
   if (requiresLogin) return null;
+  if (query.isPending) return <ViewerLoading />;
   return <>
     <SiteHeader
       mobileAt1360
+      profileLoading={profile.isPending}
       profile={profile.data ? {name: profile.data.name, image: profile.data.avatar} : undefined}
       mobile={{ title: data?.title ?? '', onBack: () => router.back(), menu: true }}
     />

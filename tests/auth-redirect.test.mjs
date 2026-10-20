@@ -71,34 +71,38 @@ test('mutations preserve the error without retrying or changing the request cont
 });
 
 // Render component functions with isolated hooks and requests; no browser, payment SDK, or live account is used.
-function runtime({ error = null, profileError = null, quoteError = null, data, quote, pathname = '/classroom', mutateError = unauthorized(), draft, state } = {}) {
+function runtime({ error = null, profileError = null, quoteError = null, data, quote, pending = false, quotePending = false, profilePending = false, pathname = '/classroom', mutateError = unauthorized(), draft, state } = {}) {
   const routes = [], effects = [], cleanups = [], writes = [], requests = [], refetches = [], events = {}, players = [];
   const router = { replace: path => routes.push(['replace', path]), push: path => routes.push(['push', path]), refresh() {} };
   const react = {
-    useEffect: effect => effects.push(effect), useCallback: callback => callback, useRef: value => ({ current: value }),
+    useId: () => 'test-menu', useEffect: effect => effects.push(effect), useCallback: callback => callback, useRef: value => ({ current: value }),
     useState: value => [state ? state(value) : typeof value === 'function' ? value() : value, next => writes.push(next)],
     Fragment: 'fragment',
   };
   const globals = {
     location: { hash: '', replace: path => routes.push(['location', path]) },
-    window: { addEventListener() {}, removeEventListener() {}, Vimeo: { Player: class { constructor(_container, options) { players.push(options); } on(name, callback) { events[name] = callback; } async destroy() {} } } },
+    window: { addEventListener() {}, removeEventListener() {}, Vimeo: { Player: class { constructor(_container, options) { players.push(options); } on(name, callback) { events[name] = callback; } ready() { return new Promise(resolve => { events.ready = resolve; }); } async destroy() {} } } },
     document: { addEventListener() {}, removeEventListener() {}, getElementById: () => null, createElement: () => ({}), head: { append: script => queueMicrotask(() => script.onload()) } },
     performance: { now: () => 6000 }, crypto: { randomUUID: () => 'test-request-key' },
     fetch: async () => new Response('image'),
   };
   const hook = load('src/features/auth/use-login-redirect.ts', { react, 'next/navigation': { useRouter: () => router }, '@/lib/http': http });
-  const profile = { error: profileError, data: { name: '테스트', email: 'test@example.com', birthday: '20000101', phone: '01012345678', image: '', avatar: '', marketing: false, revision: 1 } };
-  const query = { error, isError: Boolean(error), data, refetch: () => refetches.push('query') };
+  const profile = { isPending: profilePending, error: profileError, data: profilePending ? undefined : { name: '테스트', email: 'test@example.com', birthday: '20000101', phone: '01012345678', image: '', avatar: '', marketing: false, revision: 1 } };
+  const query = { isPending: pending, error, isError: Boolean(error), data, refetch: () => refetches.push('query') };
   const modules = {
     react, 'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }), Fragment: 'fragment' },
     'next/navigation': { useRouter: () => router, usePathname: () => pathname }, 'next/image': 'image', 'next/link': 'link',
-    '@tanstack/react-query': { useQuery: options => options.queryKey[0] === 'refund-quote' ? { error: quoteError, isError: Boolean(quoteError), data: quote, refetch: () => refetches.push('quote') } : query, useQueryClient: () => ({ cancelQueries: async () => { writes.push('cancel-queries'); }, clear() { writes.push('clear-cache'); }, invalidateQueries: async () => {} }) },
+    '@tanstack/react-query': { useQuery: options => options.queryKey[0] === 'refund-quote' ? { isPending: quotePending, error: quoteError, isError: Boolean(quoteError), data: quote, refetch: () => refetches.push('quote') } : query, useQueryClient: () => ({ cancelQueries: async () => { writes.push('cancel-queries'); }, clear() { writes.push('clear-cache'); }, invalidateQueries: async () => {} }) },
     '@/lib/http': { ...http, mutate: async path => { requests.push(path); if (mutateError === null) return { ok: true }; if (path === 'playback' && mutateError === 'progress') return { sessionId: 'session', url: 'https://player.vimeo.com/video/test' }; throw mutateError === 'progress' ? unauthorized() : mutateError; } },
     '@/features/auth': { ...validation, ...hook }, './use-login-redirect': hook, './validation': validation,
     '@/features/account': { useProfile: () => profile, AccountShell: 'account' }, './use-profile': { useProfile: () => profile }, './account-shell': { AccountShell: 'account' },
-    '@/components/site': { SiteHeader: 'header', SiteFooter: 'footer', Logo: 'logo', FormField: 'field', Checkbox: 'checkbox', ConfirmationDialog: 'dialog', ResultScreen: 'result', useTermsDraft: (_key, initial) => [draft ? draft(initial) : initial, () => {}] },
-    '@/app/providers': { useMockReady: () => true }, './api': { downloadMaterials: async orderId => { requests.push(`orders/${orderId}/download`); throw mutateError; } }, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
+    '@/components/site': { SiteHeader: 'header', SiteFooter: 'footer', Logo: 'logo', FormField: 'field', Checkbox: 'checkbox', Skeleton: 'skeleton', ConfirmationDialog: 'dialog', ResultScreen: 'result', useTermsDraft: (_key, initial) => [draft ? draft(initial) : initial, () => {}] },
+    '@/app/providers': { useMockReady: () => true }, './api': { parseSort: value => value ?? 'latest', downloadMaterials: async orderId => { requests.push(`orders/${orderId}/download`); throw mutateError; } }, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
     '@/features/manage': { AdminCourseActions: 'admin' }, './refund-copy': { refundSections: [] },
+    './skeleton': { Skeleton: 'skeleton' }, './mobile-menu': { MobileMenu: 'mobile-menu' },
+    './product-skeletons': { ProductDetailLoading: 'product-loading', ProductListSkeleton: 'list-loading' },
+    './classroom-skeletons': { ViewerLoading: 'viewer-loading', ClassroomSkeleton: 'classroom-loading' },
+    './account-skeletons': { OrdersSkeletonRows: 'orders-loading', ProfileLoading: 'profile-loading', RefundQuoteSkeleton: 'quote-loading' },
     './checkout': { checkout: async () => { requests.push('checkout'); throw mutateError; } },
     '@/features/catalog': { checkout: async () => { requests.push('checkout'); throw mutateError; } },
   };
@@ -227,7 +231,7 @@ test('playback start and progress handle session expiry without turning it into 
   for (const progress of [false, true]) {
     const context = runtime({ mutateError: progress ? 'progress' : unauthorized() });
     const tree = context.render('src/features/classroom/video-player.tsx', 'VideoPlayer', { orderId: 'order', lessonId: 'lesson' });
-    tree.props.ref.current = {};
+    find(tree, node => node.props.ref).props.ref.current = {};
     context.flush();
     await settle();
     if (progress) { context.events.timeupdate({ seconds: 10 }); await settle(); }
@@ -313,13 +317,20 @@ test('preview player embeds its permitted video without creating paid playback o
   const context = runtime();
   const url = 'https://player.vimeo.com/video/123456?h=unlistedhash&autoplay=0';
   const tree = context.render('src/features/classroom/video-player.tsx', 'VideoPlayer', { lessonId: 'free', previewUrl: url });
-  tree.props.ref.current = {};
+  find(tree, node => node.props.ref).props.ref.current = {};
   context.flush();
   await settle();
   assert.equal(context.players[0].url, url);
   assert.deepEqual(context.requests, []);
   assert.equal(context.events.timeupdate, undefined);
+  assert.equal(tree.props['aria-busy'], true);
+  context.events.ready();
+  await settle();
+  assert.ok(context.writes.includes(url));
   context.unmount();
+  const writes = context.writes.length;
+  context.events.ready();
+  assert.equal(context.writes.length, writes);
 });
 
 test('an anonymous preview visitor choosing payment goes to login without starting checkout', () => {
@@ -329,6 +340,110 @@ test('an anonymous preview visitor choosing payment goes to login without starti
   assert.deepEqual(context.routes, [['push', '/login']]);
   assert.deepEqual(context.requests, []);
 });
+
+
+test('pending data uses skeletons, while empty, error and cached results retain their existing states', () => {
+  for (const [file, name, expected, props] of [
+    ['catalog/product-list.tsx', 'ProductListScreen', 'list-loading', {}],
+    ['catalog/product-detail.tsx', 'ProductDetailScreen', 'product-loading', { slug: 'course', kind: 'vod' }],
+    ['classroom/classroom-screen.tsx', 'ClassroomScreen', 'classroom-loading', {}],
+    ['account/orders-screen.tsx', 'OrdersScreen', 'orders-loading', {}],
+    ['account/profile-screen.tsx', 'ProfileScreen', 'profile-loading', {}],
+    ['classroom/viewer-screen.tsx', 'ViewerScreen', 'viewer-loading', { courseId: 'course', preview: true }],
+  ]) {
+    const context = runtime({ pending: true, profilePending: true });
+    const tree = context.render('src/features/' + file, name, props);
+    assert.ok(find(tree, node => node.type === expected), name);
+    assert.deepEqual(context.routes, []);
+  }
+  for (const entry of [['catalog/product-list.tsx', 'ProductListScreen'], ['classroom/classroom-screen.tsx', 'ClassroomScreen'], ['account/orders-screen.tsx', 'OrdersScreen']]) {
+    for (const options of [{ data: { count: 0, items: [] } }, { error: serverError() }]) {
+      const context = runtime(options);
+      const tree = context.render('src/features/' + entry[0], entry[1]);
+      assert.equal(find(tree, node => /^(list|classroom|orders)-loading$/.test(node.type)), undefined);
+      assert.ok(find(tree, node => node.type === 'p'));
+    }
+  }
+  const cached = runtime({ data: { count: 1, items: [{ id: 'course', kind: 'vod', slug: 'course', title: '기존 강의', tags: [], price: 100 }] } });
+  const tree = cached.render('src/features/catalog/product-list.tsx', 'ProductListScreen');
+  assert.ok(find(tree, node => node.props.children === '기존 강의'));
+  assert.equal(find(tree, node => node.type === 'list-loading'), undefined);
+});
+
+test('pending profile shows placeholders without first presenting a guest login link', () => {
+  for (const name of ['SiteHeader', 'MobileMenu']) {
+    const file = name === 'SiteHeader' ? 'site.tsx' : 'mobile-menu.tsx';
+    const context = runtime({ state: value => value === false ? true : value });
+    const pending = context.render('src/components/site/' + file, name, { profileLoading: true });
+    assert.equal(find(pending, node => node.type === 'link' && node.props.children === '로그인/회원가입'), undefined);
+    assert.ok(find(pending, node => node.type === 'skeleton'));
+    const guest = context.render('src/components/site/' + file, name, { profileLoading: false });
+    assert.ok(find(guest, node => node.type === 'link' && node.props.children === '로그인/회원가입'));
+  }
+});
+
+test('refund quote stays skeletal and exposes no refund action before the quote arrives', () => {
+  const context = runtime({ data: { count: 0, items: [] }, quotePending: true, pathname: '/orders/order-id/refund' });
+  const tree = context.render('src/features/account/orders-screen.tsx', 'OrdersScreen');
+  const dialog = find(tree, node => node.type === 'dialog');
+  assert.ok(find(dialog, node => node.type === 'quote-loading'));
+  assert.equal(dialog.props.actions.length, 0);
+  assert.deepEqual(context.requests, []);
+});
+
+test('approved loading counts are eight products, three classroom cards and three order rows', () => {
+  for (const [file, name, count] of [
+    ['catalog/product-skeletons.tsx', 'ProductListSkeleton', 8],
+    ['classroom/classroom-skeletons.tsx', 'ClassroomSkeleton', 3],
+    ['account/account-skeletons.tsx', 'OrdersSkeletonRows', 3],
+  ]) {
+    const tree = runtime().render('src/features/' + file, name);
+    assert.equal(tree.props.children.length, count);
+  }
+});
+
+test('admin data skeleton appears only after access succeeds and clears when data is ready', async () => {
+  for (const accessError of [null, forbidden()]) {
+    const slots = [], effects = [];
+    let cursor = 0, allow, list, reads = 0;
+    const access = new Promise((resolve, reject) => { allow = () => accessError ? reject(accessError) : resolve(); });
+    const listing = new Promise(resolve => { list = resolve; });
+    const blank = () => ({ basic: {}, chapters: [], step: 1 });
+    const modules = {
+      react: {
+        useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial; return [slots[index], value => { slots[index] = typeof value === 'function' ? value(slots[index]) : value; }]; },
+        useRef: current => ({ current }), useCallback: callback => callback, useEffect: callback => effects.push(callback),
+      },
+      'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }), Fragment: 'fragment' },
+      'next/image': 'image', 'next/navigation': { useRouter: () => ({ replace() {} }) },
+      '@/components/site': { SiteFooter: 'footer' }, '@/lib/http': http,
+      './api': { checkAccess: () => access, getDrafts: () => { reads++; return listing; } },
+      './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': {},
+      './use-course-uploads': { useCourseUploads: () => ({}) },
+      './validation': { emptyDocument: blank, validateBasic: () => ({}) },
+      './manage-course-skeleton': { ManageCourseSkeleton: 'admin-loading' },
+    };
+    const { ManageCourseScreen } = load('src/features/manage/manage-course-screen.tsx', modules, { window: { history: { replaceState() {} } }, URLSearchParams });
+    const render = () => { cursor = 0; return ManageCourseScreen({}); };
+    assert.equal(render(), null);
+    const cleanup = effects[0]();
+    assert.equal(reads, 0);
+    allow();
+    await settle();
+    if (accessError) {
+      assert.equal(reads, 0);
+      assert.equal(find(render(), node => node.type === 'admin-loading'), undefined);
+    } else {
+      assert.equal(render().type, 'admin-loading');
+      assert.equal(reads, 1);
+      list({ items: [] });
+      await settle();
+      assert.ok(find(render(), node => node.type === 'basic'));
+    }
+    cleanup();
+  }
+});
+
 
 test('logout sends one request, clears cached account data and replaces the route with login', async () => {
   const context = runtime({ mutateError: null });

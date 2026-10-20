@@ -2,9 +2,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { mutate } from '@/lib/http';
 import { useLoginRedirect } from '@/features/auth';
+import { Skeleton } from '@/components/site';
 import styles from './classroom.module.css';
 type PlayerEvent={seconds:number};
-type Player={on:(event:string,fn:(data:PlayerEvent)=>void)=>void;destroy:()=>Promise<void>};
+type Player={on:(event:string,fn:(data:PlayerEvent)=>void)=>void;ready:()=>Promise<void>;destroy:()=>Promise<void>};
 type Vimeo={Player:new(container:HTMLElement,options:{url:string;width:number;height:number})=>Player};
 let sdk:Promise<Vimeo>|undefined;
 function loadVimeo() {
@@ -17,6 +18,9 @@ function loadVimeo() {
 type VideoPlayerProps = { lessonId: string } & ({ orderId: string; previewUrl?: never } | { previewUrl: string; orderId?: never });
 export function VideoPlayer({orderId,lessonId,previewUrl}:VideoPlayerProps) {
   const container=useRef<HTMLDivElement>(null),[failed,setFailed]=useState(false);
+  const [readySource, setReadySource] = useState<string>();
+  const source = previewUrl ?? `${orderId}:${lessonId}`;
+  const ready = readySource === source;
   const { redirectIfUnauthorized } = useLoginRedirect();
   useEffect(()=>{
     let active=true,player:Player|undefined,playing=false,seeking=false,sequence=0,lastSent=0,queue=Promise.resolve();
@@ -24,6 +28,7 @@ export function VideoPlayer({orderId,lessonId,previewUrl}:VideoPlayerProps) {
       const session=previewUrl ? {url:previewUrl} : await mutate<{sessionId:string;url:string}>('playback',{orderId,lessonId});
       const vimeo=await loadVimeo();if(!active||!container.current) return;
       player=new vimeo.Player(container.current,{url:session.url,width:1100,height:619});
+      void player.ready().then(()=>{if(active) setReadySource(source);}).catch(error=>{if(active && !redirectIfUnauthorized(error)) setFailed(true);});
       player.on('error',()=>{if(active) setFailed(true);});
       if (!('sessionId' in session)) return;
       const sessionId = session.sessionId;
@@ -41,6 +46,6 @@ export function VideoPlayer({orderId,lessonId,previewUrl}:VideoPlayerProps) {
     }
     void start().catch(error=>{if(active && !redirectIfUnauthorized(error)) setFailed(true);});
     return ()=>{active=false;void player?.destroy();};
-  },[orderId,lessonId,previewUrl,redirectIfUnauthorized]);
-  return failed ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={()=>location.reload()}>다시 시도</button></div></div> : <div ref={container} className={styles.poster} />;
+  },[orderId,lessonId,previewUrl,redirectIfUnauthorized,source]);
+  return failed ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={()=>location.reload()}>다시 시도</button></div></div> : <div className={`${styles.poster} ${styles.player}`} aria-busy={!ready}><div ref={container} className={styles.playerFrame} />{!ready && <Skeleton className={styles.playerSkeleton} />}</div>;
 }
