@@ -1,9 +1,11 @@
-.editor { display: flex; align-items: flex-start; gap: 40px; width: 960px; }
-.curriculum { display: flex; flex-direction: column; gap: 16px; width: 280px; }
+.editor { display: flex; align-items: flex-start; gap: 40px; width: 100%; }
+.curriculum { display: flex; flex-direction: column; gap: 16px; width: 280px; flex-shrink: 0; }
 .chapter { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .chapterHeader, .addChapterRow { display: flex; align-items: center; justify-content: space-between; height: 40px; }
+.chapterHeader { height: auto; min-height: 40px; }
 .chapterTitle, .addChapterRow p { margin: 0; color: var(--gray-800); font-size: 12px; font-weight: 600; line-height: 16px; letter-spacing: -.6px; }
-.chapterActions { display: flex; align-items: center; gap: 4px; }
+.chapterTitle { overflow-wrap: anywhere; }
+.chapterActions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .addLesson, .addChapter { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 24px; padding: 0; background: transparent; color: var(--brand-500); font-size: 12px; font-weight: 600; line-height: 16px; letter-spacing: -.6px; white-space: nowrap; }
 .addLesson img, .addChapter img { display: block; }
 .emptyCurriculum, .emptyChapter, .emptyVideo { margin: 0; color: var(--gray-400); font-size: 12px; font-weight: 600; line-height: 16px; letter-spacing: -.6px; }
@@ -34,4 +36,9 @@
 .verify:disabled { background: var(--gray-100); color: var(--gray-400); }
 .emptyVideo { margin-top: 4px; }
 .videoError { margin: 0; color: var(--red-500); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: -.6px; }
-.preview { display: block; width: 640px; height: 360px; border: 0; }
+.preview { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border: 0; }
+
+@media (width < 1000px) {
+  .editor { flex-direction: column; }
+  .curriculum, .videoEditor { width: 100%; }
+}

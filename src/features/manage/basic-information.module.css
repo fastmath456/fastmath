@@ -1,4 +1,4 @@
-.content { width: 640px; display: flex; flex-direction: column; gap: 16px; }
+.content { width: 100%; display: flex; flex-direction: column; gap: 16px; }
 .field { width: 100%; display: flex; flex-direction: column; gap: 8px; }
 .assetHeading { display: flex; flex-direction: column; }
 .label { color: var(--gray-800); font-weight: 600; line-height: 20px; }
