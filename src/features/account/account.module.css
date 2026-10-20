@@ -20,3 +20,8 @@
   .sidebar { display: none; }
   .content { width: 100%; gap: 32px; }
 }
+
+@media (768px < width < 1360px) {
+  .classroomLayout .sidebar { display: flex; }
+  .classroomLayout .content { flex: 1; width: auto; }
+}

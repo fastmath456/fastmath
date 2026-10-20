@@ -14,7 +14,7 @@
 .action { composes: action from './classroom.module.css'; }
 .expired { composes: expired from './classroom.module.css'; }
 
-@media (width < 1360px) {
+@media (width <= 1360px) {
   .row { width: 100%; }
 
   .rowContent { flex-direction: column; align-items: flex-start; gap: 20px; padding: 16px; border-radius: 32px; }
@@ -30,4 +30,8 @@
   .actions { gap: 4px; }
 
   .expired { border-radius: 32px; }
+}
+
+@media (1080px <= width <= 1360px) {
+  .list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
