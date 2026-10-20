@@ -19,10 +19,10 @@ export function SiteHeader({ profile, profileLoading = false, titleLoading = fal
 }
 
 export function SiteFooter() {
-  return <footer className={styles.footer}><Logo /><div className={styles.footerRule} /><div className={styles.footerLinks}>
+  return <footer className={styles.footer}><Link className={styles.footerLogo} href="/" aria-label="빠른수학 홈"><Logo /></Link><div className={styles.footerRule} /><div className={styles.footerLinks}>
     <Link href="/term">이용약관</Link><Link className={styles.privacy} href="/privacy">개인정보처리방침</Link>
-    <div className={styles.footerGroup}><p>고객센터</p><p>전화번호 : 000-0000-0000</p><p>평일 09:00 ~ 18:00 (점심시간 : 12시 ~ 13시, 주말 및 공휴일 제외)</p></div>
-  </div><div className={styles.footerRule} /><div className={styles.footerGroup}><p>사업자등록증 상호명</p><p>사업자등록번호 : 000-00-000</p><p>대표 : 홍길동</p><p>개인정보처리담당자 : 홍길동</p><p>주소 : 경기도 고양시 덕양구 동축로 70, A동 901호 (동산동, 현대프리미어캠퍼스)</p><p>Copyright © 2026 빠른수학. All Rights Reserved.</p></div></footer>;
+    <div className={styles.footerGroup}><p>고객센터</p><p>전화번호 : 010-2030-6138</p><p>평일 09:00 ~ 18:00 (점심시간 : 12시 ~ 13시, 주말 및 공휴일 제외)</p></div>
+  </div><div className={styles.footerRule} /><div className={styles.footerGroup}><p>사업자등록증 상호명</p><p>사업자등록번호 : 873-03-03352</p><p>대표 : 임재현</p><p>개인정보처리담당자 : 임재현</p><p>주소 : 서울특별시 동작구 만양로14길 43(노량진동)</p><p>Copyright © 2026 빠른수학. All Rights Reserved.</p></div></footer>;
 }
 
 export function FormField({ label, error, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
