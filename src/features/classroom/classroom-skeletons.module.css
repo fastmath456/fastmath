@@ -1,11 +1,10 @@
 .fill { width: 100%; height: 100%; }
-.line { width: 100%; height: 1lh; }
-.status { height: 24px; width: 100%; border-radius: 16px; }
+.line { width: fit-content; max-width: 100%; height: 1lh; white-space: nowrap; overflow: hidden; }
+.status { width: fit-content; max-width: 100%; height: 24px; padding: 4px 8px; border-radius: 16px; font-size: 12px; line-height: 16px; letter-spacing: -.6px; }
 .action { height: 44px; padding-inline: 16px; border-radius: 16px; }
-.count { display: inline-block; vertical-align: middle; }
-.unit { height: 32px; border-radius: 8px; }
+.unit { width: fit-content; max-width: 100%; height: 32px; border-radius: 8px; white-space: nowrap; overflow: hidden; }
 .heading { width: 100%; }
-.title { height: 30px; width: 100%; }
+.title { width: fit-content; max-width: 100%; height: 30px; font-size: 20px; line-height: 30px; font-weight: 600; letter-spacing: -1px; white-space: nowrap; overflow: hidden; }
 .media { display: block; }
 @media (width < 1360px) {
   .media { width: 100%; height: 100%; }

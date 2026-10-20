@@ -7,13 +7,13 @@ import loading from './account-skeletons.module.css';
 
 export function OrdersSkeletonRows() {
   return <div className={orders.rows} aria-hidden="true">{Array.from({ length: 3 }, (_, index) => <div className={orders.row} key={index}>
-    <div className={orders.status}><Skeleton className={loading.line} /></div>
-    <div className={orders.mobileContent}><div className={orders.product}><Skeleton className={`${orders.name} ${loading.line}`} /></div><div className={orders.mobileAction}><div className={`${orders.details} ${loading.details}`}>{Array.from({ length: 4 }, (_, field) => <div className={orders.detail} key={field}><Skeleton className={loading.line} /></div>)}</div><div className={orders.refundCell}><Skeleton className={loading.refundAction}>환불</Skeleton></div></div></div>
+    <div className={orders.status}><Skeleton className={loading.text}>결제완료</Skeleton></div>
+    <div className={orders.mobileContent}><div className={orders.product}><Skeleton className={loading.text}>지수함수와 로그함수 핵심 정리</Skeleton></div><div className={orders.mobileAction}><div className={`${orders.details} ${loading.details}`}>{['99,000원', '~ 2026. 12. 05', '2/34', '2026. 10. 06'].map(value => <div className={orders.detail} key={value}><Skeleton className={loading.text}>{value}</Skeleton></div>)}</div><div className={orders.refundCell}><Skeleton className={loading.refundAction}>환불</Skeleton></div></div></div>
   </div>)}</div>;
 }
 
 export function OrdersLoading() {
-  return <AccountShell profileLoading section="orders"><div><h1 className={account.title}>내 결제내역<Skeleton className={loading.count}>(　)</Skeleton></h1><p className={account.subtitle}>구매한 강의와 교재 결제내역을 확인하세요.</p></div><div className={orders.table} aria-busy="true"><div className={orders.header}>{['상품명', '상태', '결제금액', '', '진도율', '결제일', '환불'].map((label, index) => <div key={index}>{label || <Skeleton className={loading.line} />}</div>)}</div><OrdersSkeletonRows /></div></AccountShell>;
+  return <AccountShell profileLoading section="orders"><div><h1 className={account.title} aria-label="내 결제내역"><Skeleton className={loading.text}>내 결제내역(00)</Skeleton></h1><p className={account.subtitle}>구매한 강의와 교재 결제내역을 확인하세요.</p></div><div className={orders.table} aria-busy="true"><div className={orders.header}>{['상품명', '상태', '결제금액', '', '진도율', '결제일', '환불'].map((label, index) => <div key={index}>{label || <Skeleton className={loading.text}>수강기간</Skeleton>}</div>)}</div><OrdersSkeletonRows /></div></AccountShell>;
 }
 
 export function RefundQuoteSkeleton() {

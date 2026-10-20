@@ -27,5 +27,5 @@
 }
 
 .avatarSkeleton { width: 48px; height: 48px; border-radius: 32px; }
-.greetingSkeleton { width: 240px; height: 20px; }
-.emailSkeleton { width: 240px; height: 16px; }
+.greetingSkeleton { width: fit-content; max-width: 100%; height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.emailSkeleton { width: fit-content; max-width: 100%; height: 16px; font-size: 12px; line-height: 16px; letter-spacing: -.6px; white-space: nowrap; overflow: hidden; }

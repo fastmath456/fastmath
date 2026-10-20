@@ -32,9 +32,9 @@ export function OrdersScreen({ state = '' }: { state?: string }) {
   const periodTitle = mixed ? '이용기간' : query.data?.items.length && query.data.items.every(item => item.kind === 'pdf') ? '다운로드기간' : '수강기간';
   if (requiresLogin) return null;
   return <AccountShell profileLoading={profile.isPending} profile={profile.data} section="orders">
-    <div><h1 className={accountStyles.title}>내 결제내역{query.data ? `(${query.data.count})` : query.isPending ? <Skeleton className={loading.count}>(　)</Skeleton> : ''}</h1><p className={accountStyles.subtitle}>구매한 강의와 교재 결제내역을 확인하세요.</p></div>
+    <div><h1 className={accountStyles.title} aria-label={query.isPending ? '내 결제내역' : undefined}>{query.isPending ? <Skeleton className={loading.text}>내 결제내역(00)</Skeleton> : <>내 결제내역{query.data ? `(${query.data.count})` : ''}</>}</h1><p className={accountStyles.subtitle}>구매한 강의와 교재 결제내역을 확인하세요.</p></div>
     <div className={styles.table} role="table" aria-label="내 결제내역" aria-busy={query.isPending}>
-      <div className={styles.header} role="row">{['상품명','상태','결제금액',periodTitle,'진도율','결제일','환불'].map((label, index) => <div role="columnheader" key={index}>{query.isPending && index === 3 ? <Skeleton className={loading.line} /> : label}</div>)}</div>
+      <div className={styles.header} role="row">{['상품명','상태','결제금액',periodTitle,'진도율','결제일','환불'].map((label, index) => <div role="columnheader" key={index}>{query.isPending && index === 3 ? <Skeleton className={loading.text}>수강기간</Skeleton> : label}</div>)}</div>
       {query.isPending ? <OrdersSkeletonRows /> : query.isError ? <div className={accountStyles.error}><p>결제내역을 불러오지 못했습니다. 다시 시도해주세요.</p><button onClick={() => query.refetch()}>다시 시도</button></div> : query.data?.count === 0 ? <div className={accountStyles.empty}><p>아직 구매한 강의·교재가 없습니다.</p></div> : query.data && <div className={styles.rows} role="rowgroup">{query.data.items.map((item,index) => <Fragment key={item.id}>{index > 0 && <div className={styles.divider} role="presentation" />}<div className={styles.row} role="row">
         <div className={styles.status} role="cell"><span className={styles.statusBadge}>{item.status}</span></div>
         <div className={styles.mobileContent}>
