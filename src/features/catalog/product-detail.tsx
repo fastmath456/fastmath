@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { checkout } from './checkout';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ConfirmationDialog, SiteFooter, SiteHeader } from '@/components/site';
@@ -20,15 +20,26 @@ export function ProductDetailScreen({ slug, kind, state = '', view = '' }: { slu
   const router = useRouter();
   const { redirectIfUnauthorized } = useLoginRedirect();
   const requestKey = useRef(''), purchase = useRef<Promise<void> | null>(null);
-  const query = useQuery({ queryKey: ['product', slug, kind, state, view], queryFn: () => getProduct(slug, kind, state, view), enabled: ready });
+  const query = useQuery({ queryKey: ['product', slug, kind, state, view], queryFn: () => getProduct(slug, kind) });
   const [expandedChapters, setExpandedChapters] = useState<string[] | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [active, setActive] = useState('info');
+  const scrollingTo = useRef<string | null>(null);
   const product = query.data;
   const openChapters = expandedChapters ?? product?.chapters.slice(0, 1).map(chapter => chapter.id) ?? [];
   useEffect(() => {
     if (!product) return;
     function update() {
+      if (scrollingTo.current) {
+        const target = document.getElementById(scrollingTo.current);
+        if (target) {
+          const top = window.scrollY + target.getBoundingClientRect().top - parseFloat(getComputedStyle(target).scrollMarginTop);
+          const destination = Math.max(0, Math.min(top, document.documentElement.scrollHeight - window.innerHeight));
+          if (Math.abs(window.scrollY - destination) > 1) return;
+        }
+        scrollingTo.current = null;
+        return;
+      }
       let current = 'info';
       for (const id of ['info', 'reviews', 'refund']) {
         const element = document.getElementById(id);
@@ -36,18 +47,47 @@ export function ProductDetailScreen({ slug, kind, state = '', view = '' }: { slu
       }
       setActive(current);
     }
-    update(); window.addEventListener('scroll', update, { passive: true });
+    function interrupt() {
+      scrollingTo.current = null;
+      update();
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) interrupt();
+    }
+    function onScrollEnd() {
+      if (scrollingTo.current) interrupt();
+    }
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('scrollend', onScrollEnd);
+    window.addEventListener('wheel', interrupt, { passive: true });
+    window.addEventListener('touchmove', interrupt, { passive: true });
+    window.addEventListener('keydown', onKeyDown);
     const hash = location.hash.slice(1);
     if (['info', 'reviews', 'refund'].includes(hash)) document.getElementById(hash)?.scrollIntoView();
-    return () => window.removeEventListener('scroll', update);
+    return () => {
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('scrollend', onScrollEnd);
+      window.removeEventListener('wheel', interrupt);
+      window.removeEventListener('touchmove', interrupt);
+      window.removeEventListener('keydown', onKeyDown);
+      scrollingTo.current = null;
+    };
   }, [product]);
-  function scrollToSection(event: MouseEvent<HTMLAnchorElement>, id: string) {
+  const scrollToSection = useCallback((event: MouseEvent<HTMLAnchorElement>, id: string) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
+    if (scrollingTo.current === id) return;
+    const target = document.getElementById(id);
+    if (!target) return;
     if (location.hash !== `#${id}`) history.pushState(null, '', `#${id}`);
-    document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const top = window.scrollY + target.getBoundingClientRect().top - parseFloat(getComputedStyle(target).scrollMarginTop);
+    const destination = Math.max(0, Math.min(top, document.documentElement.scrollHeight - window.innerHeight));
+    scrollingTo.current = !reducedMotion && Math.abs(window.scrollY - destination) > 1 ? id : null;
     setActive(id);
-  }
+    target.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' });
+  }, []);
   const owned = product?.ownership === 'owned';
   const handlePurchase = (event?: MouseEvent<HTMLAnchorElement>) => {
     if (!product?.profile) {
