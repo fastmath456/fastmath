@@ -22,6 +22,6 @@
 }
 
 @media (768px < width < 1360px) {
-  .classroomLayout .sidebar { display: flex; }
-  .classroomLayout .content { flex: 1; width: auto; }
+  .sidebar { display: flex; }
+  .content { flex: 1; width: auto; }
 }
