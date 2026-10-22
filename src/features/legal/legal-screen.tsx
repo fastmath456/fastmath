@@ -14,7 +14,7 @@ export function LegalScreen({ document }: { document: { title: string; lines: re
     <main className={styles.main}>
       <h1 className={styles.title}>{document.title}</h1>
       <article className={styles.content}>
-        {document.lines.map(line => <p key={line}>{line}</p>)}
+        {document.lines.map((line, index) => <p key={index}>{line}</p>)}
       </article>
     </main>
     <SiteFooter />
