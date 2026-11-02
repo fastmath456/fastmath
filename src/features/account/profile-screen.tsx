@@ -17,11 +17,18 @@ import styles from './profile.module.css';
 import accountStyles from './account.module.css';
 
 const editable = ['name','birthday','phone'] as const;
+const maxProfileNameLength = 80;
+const maxProfilePhoneLength = 30;
 type NavigationEvent = Event & { navigationType: string; destination: { url: string; key: string } };
 type BrowserNavigation = EventTarget & { traverseTo: (key: string) => { finished: Promise<unknown> } };
 type ProfileDraft = { values: AuthValues; marketing: boolean; baseline: Profile; selectedFile?: { name: string; preview: string }; imageChanged: boolean };
 function profileValues(profile: Profile): AuthValues {
   return { email:profile.email, name:profile.name, birthday:profile.birthday, phone:profile.phone, password:'', confirmation:'' };
+}
+function validateProfileField(field: typeof editable[number], values: AuthValues) {
+  if (field === 'name' && values.name.length > maxProfileNameLength) return '이름은 80자 이하로 입력해주세요.';
+  if (field === 'phone' && values.phone.length > maxProfilePhoneLength) return '연락처는 30자 이하로 입력해주세요.';
+  return validateField(field,values);
 }
 function ProfileForm({ profile }: { profile: Profile }) {
   const router = useRouter(), client = useQueryClient();
@@ -98,7 +105,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const next: Partial<Record<AuthField,string>> = {};
-    editable.forEach(field => { const error = validateField(field,values); if (error) next[field] = error; });
+    editable.forEach(field => { const error = validateProfileField(field,values); if (error) next[field] = error; });
     setErrors(next); setMessage('');
     const first = editable.find(field => next[field]);
     if (first) event.currentTarget.querySelector<HTMLInputElement>(`#profile-${first}`)?.focus();
@@ -134,7 +141,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
   }
   return <form className={styles.form} noValidate onSubmit={submit}><div className={styles.fields}><div className={styles.imageField}><span>프로필 이미지</span><input ref={input} type="file" accept=".jpg,.jpeg,.png,.webp" hidden onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; void choose(file); }} /><div className={styles.imageBox}><button type="button" aria-label="프로필 이미지 선택" className={currentImage ? styles.choose : `${styles.choose} ${styles.upload}`} onClick={() => input.current?.click()}>{currentImage ? <Image unoptimized loading="eager" src={currentImage} width={108} height={108} alt="프로필 이미지 미리보기" /> : <span className={styles.imageTag}>Upload<Image unoptimized src="/assets/profile-upload.svg" width={16} height={16} alt="" /></span>}</button>{currentImage && <div className={styles.imageTag}><button type="button" onClick={() => input.current?.click()}>IMG</button><button type="button" aria-label="프로필 이미지 삭제" onClick={() => { selection.current += 1; setDraft(current => ({ ...current, imageChanged: Boolean(profile.image), selectedFile: undefined })); setImageError(''); setMessage(''); }}><Image unoptimized src="/assets/profile-imgX03.svg" width={16} height={16} alt="" /></button></div>}</div>{imageError && <p className={styles.error} role="alert">{imageError}</p>}</div>
     <FormField id="profile-email" label="이메일" value={profile.email} readOnly type="text" autoComplete="email" />
-    {editable.map(field => <FormField key={field} id={`profile-${field}`} label={fieldLabels[field]} value={values[field]} error={errors[field]} onChange={event => change(field,event.target.value)} onBlur={() => { if (errors[field]) setErrors(current => ({...current,[field]:validateField(field,values)})); }} inputMode={field === 'name' ? undefined : 'numeric'} autoComplete={field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : 'name'} />)}
+    {editable.map(field => <FormField key={field} id={`profile-${field}`} label={fieldLabels[field]} value={values[field]} error={errors[field]} onChange={event => change(field,event.target.value)} onBlur={() => { if (errors[field]) setErrors(current => ({...current,[field]:validateProfileField(field,values)})); }} inputMode={field === 'name' ? undefined : 'numeric'} autoComplete={field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : 'name'} />)}
     <div className={styles.marketing}><strong>마케팅 수신 동의</strong><div><Checkbox checked={marketing} onChange={event => { const marketing = event.target.checked; setDraft(current => ({ ...current, marketing })); setMessage(''); }}>[선택] 마케팅 정보 수신에 동의합니다.</Checkbox><Link href="/term/marketing">보기</Link></div></div>
   </div>{message && <p role="status">{message}</p>}<div className={styles.submitGroup}><button className={styles.submit} type="submit">정보수정</button><div className={styles.accountActions}><button type="button" onClick={() => { void endAccount('logout'); }}>로그아웃</button><button type="button" onClick={() => setWithdrawConfirm(true)}>회원탈퇴</button></div></div>{withdrawConfirm && <ConfirmationDialog label="회원탈퇴 확인" onCancel={() => { if (!accountRequest.current) setWithdrawConfirm(false); }} actions={[{label:'취소',cancel:true},{label:'회원탈퇴',onClick:() => { void endAccount('withdraw'); }}]}><p>회원탈퇴하시겠어요?</p><p>탈퇴하면 구매·수강권이 즉시 종료됩니다. 주문·결제 기록은 보존됩니다.</p></ConfirmationDialog>}{leaving && <ConfirmationDialog label="저장 전 화면 이동 확인" onCancel={() => setLeaving(null)} actions={[{label:'계속 수정',cancel:true},{label:'나가기',onClick:leave}]}><p>수정한 내용을 저장하지 않고 나가시겠어요?</p></ConfirmationDialog>}</form>;
 }

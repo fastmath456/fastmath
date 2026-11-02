@@ -233,6 +233,31 @@ test('profile save and image upload navigate on session expiry without advancing
   }
 });
 
+test('profile blocks a name over the server raw 80-character limit before saving', async () => {
+  const context = runtime({ draft: initial => ({ ...initial, values: { ...initial.values, name: ` ${'가'.repeat(80)}` } }) });
+  const screen = context.render('src/features/account/profile-screen.tsx', 'ProfileScreen');
+  const formNode = find(screen, node => typeof node.type === 'function');
+  const form = formNode.type(formNode.props);
+  await form.props.onSubmit({ preventDefault() {}, currentTarget: { querySelector: () => ({ focus() {} }) } });
+  assert.deepEqual(context.requests, []);
+  assert.ok(context.writes.some(value => value?.name === '이름은 80자 이하로 입력해주세요.'));
+});
+
+test('profile allows the raw 30-character phone limit and blocks a longer value before saving', async () => {
+  for (const [phone, requests, error] of [
+    [`010-1234-5678${' '.repeat(17)}`, ['profile'], undefined],
+    [`010-1234-5678${' '.repeat(18)}`, [], '연락처는 30자 이하로 입력해주세요.'],
+  ]) {
+    const context = runtime({ draft: initial => ({ ...initial, values: { ...initial.values, name: '변경된 이름', phone } }) });
+    const screen = context.render('src/features/account/profile-screen.tsx', 'ProfileScreen');
+    const formNode = find(screen, node => typeof node.type === 'function');
+    const form = formNode.type(formNode.props);
+    await form.props.onSubmit({ preventDefault() {}, currentTarget: { querySelector: () => ({ focus() {} }) } });
+    assert.deepEqual(context.requests, requests);
+    if (error) assert.ok(context.writes.some(value => value?.phone === error));
+  }
+});
+
 test('expired password reset redirects while invalid login credentials stay in the existing form', async () => {
   for (const kind of ['reset', 'login']) {
     const context = runtime({ mutateError: kind === 'reset' ? unauthorized() : new http.RequestError('invalid_credentials', 'password', 401), draft: initial => ({ ...initial, values: { ...initial.values, email: 'test@example.com', password: 'test-password', confirmation: 'test-password' } }) });
@@ -267,6 +292,25 @@ test('signup accepts digits only and formats 11-digit phone numbers while editin
   assert.equal(validation.validateField('phone', values, 'signup'), '연락처 11자리를 입력해주세요.');
   assert.equal(validation.validateField('phone', values, 'recovery'), undefined);
   assert.equal(validation.validateField('phone', { phone: '010-1234-5678' }, 'signup'), undefined);
+});
+
+test('auth forms validate password minimum length and server field limits before submit', () => {
+  const values = { email: 'test@example.com', password: '1234567', confirmation: '1234567', name: '테스트', birthday: '20000101', phone: '010-1234-5678' };
+  assert.equal(validation.validateField('password', values, 'login'), '비밀번호는 8자 이상 입력해주세요.');
+  assert.equal(validation.validateField('password', { ...values, password: 'a'.repeat(129) }, 'reset'), '비밀번호는 128자 이하로 입력해주세요.');
+  assert.equal(validation.validateField('confirmation', { ...values, password: 'a'.repeat(128), confirmation: 'a'.repeat(129) }, 'signup'), '비밀번호는 128자 이하로 입력해주세요.');
+  assert.equal(validation.validateField('email', { ...values, email: `${'a'.repeat(190)}@example.com` }, 'signup'), '이메일은 200자 이하로 입력해주세요.');
+  assert.equal(validation.validateField('name', { ...values, name: '가'.repeat(201) }, 'signup'), '이름은 200자 이하로 입력해주세요.');
+  assert.equal(validation.validateField('phone', { ...values, phone: `010-1234-5678${' '.repeat(188)}` }, 'recovery'), '연락처는 200자 이하로 입력해주세요.');
+  assert.equal(validation.validateField('name', { ...values, name: '가'.repeat(201) }), undefined);
+});
+
+test('login blocks a short password before sending an authentication request', async () => {
+  const context = runtime({ mutateError: null, draft: initial => ({ ...initial, values: { ...initial.values, email: 'test@example.com', password: '1234567' } }) });
+  const tree = context.render('src/features/auth/auth-form.tsx', 'AuthForm', { kind: 'login' });
+  await find(tree, node => node.type === 'form').props.onSubmit({ preventDefault() {}, currentTarget: { querySelector: () => ({ focus() {} }) } });
+  assert.deepEqual(context.requests, []);
+  assert.ok(context.writes.some(value => value?.password === '비밀번호는 8자 이상 입력해주세요.'));
 });
 
 test('signup enforces 11 phone digits at the server boundary', async () => {

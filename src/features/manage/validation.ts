@@ -1,6 +1,7 @@
 import type { BasicErrors, CourseBasic, CourseChapter, CourseDocument } from './types';
 
 const MAX_DATABASE_INTEGER = 2_147_483_647;
+const MAX_VIMEO_URL_LENGTH = 2_048;
 const VIMEO_HOSTS = new Set(['vimeo.com', 'www.vimeo.com', 'player.vimeo.com']);
 
 function validName(value: string, maximum: number) {
@@ -78,7 +79,7 @@ export function validateCurriculum(chapters: CourseChapter[]): string | null {
 
 export function parseVimeoUrl(value: string): { id: string; hash: string | null; url: string; embedUrl: string } | null {
   const input = value.trim();
-  if (!input) return null;
+  if (!input || input.length > MAX_VIMEO_URL_LENGTH) return null;
 
   let url: URL;
   try {

@@ -123,4 +123,12 @@ test('Vimeo URLs reject SSRF-shaped hosts and preserve private-video access data
   });
 });
 
+test('Vimeo URLs use the same 2,048-character limit as the video verification API', () => {
+  const prefix = 'https://vimeo.com/123456789?label=';
+  const atLimit = prefix + 'a'.repeat(2_048 - prefix.length);
+
+  assert.notEqual(validation.parseVimeoUrl(atLimit), null);
+  assert.equal(validation.parseVimeoUrl(atLimit + 'a'), null);
+});
+
 test.after(() => rmSync(compiled, { recursive: true, force: true }));
