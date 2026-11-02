@@ -20,7 +20,7 @@ export async function authenticate(ctx: Context) {
   const input = await body(ctx.request);
   const fields: AuthField[] = action === 'signup' ? ['email','password','confirmation','name','birthday','phone'] : action === 'login' ? ['email','password'] : action === 'reset' ? ['password','confirmation'] : ['email','name','phone'];
   const values: AuthValues = {email:'',password:'',confirmation:'',name:'',birthday:'',phone:''};
-  for (const field of fields) { values[field] = string(input[field],field,field==='password'||field==='confirmation'?128:200); if (validateField(field,values)) throw new ApiError(400,'invalid_field',field); }
+  for (const field of fields) { values[field] = string(input[field],field,field==='password'||field==='confirmation'?128:200); if (validateField(field,values,action === 'signup' ? 'signup' : undefined)) throw new ApiError(400,'invalid_field',field); }
   if (action !== 'recovery' && values.password.length<8) throw new ApiError(400,'invalid_field','password');
   values.email=values.email.trim().toLowerCase(); values.name=values.name.trim(); values.phone=values.phone.replace(/[-\s]/g,'');
   await limit('auth:'+action+':'+(action==='reset' ? (await ctx.user()).id : values.email),5,300);

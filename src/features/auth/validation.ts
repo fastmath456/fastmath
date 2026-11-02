@@ -15,12 +15,13 @@ export function validBirthday(value: string, today = new Date().toLocaleDateStri
   return year > 0 && date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month && date.getUTCDate() === day;
 }
 
-export function validateField(field: AuthField, values: AuthValues): string | undefined {
+export function validateField(field: AuthField, values: AuthValues, kind?: AuthKind): string | undefined {
   const raw = values[field];
   const value = field === 'email' || field === 'name' ? raw.trim() : field === 'phone' ? raw.replace(/[-\s]/g, '') : raw;
   if (!value) return `${field === 'confirmation' ? '비밀번호' : fieldLabels[field]}${field === 'email' || field === 'birthday' || field === 'name' ? '을' : '를'} 입력해주세요.`;
   if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return '이메일 양식으로 입력해주세요.';
   if (field === 'confirmation' && values.password && raw !== values.password) return '비밀번호가 일치하지 않습니다.';
   if (field === 'birthday' && !validBirthday(value)) return '생년월일 8자리를 정확히 입력해주세요.';
+  if (field === 'phone' && kind === 'signup' && !/^\d{11}$/.test(value)) return '연락처 11자리를 입력해주세요.';
   if (field === 'phone' && !/^\d{10,11}$/.test(value)) return '연락처 10~11자리를 입력해주세요.';
 }

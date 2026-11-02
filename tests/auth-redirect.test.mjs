@@ -92,7 +92,7 @@ test('mutations preserve the error without retrying or changing the request cont
 
 // Render component functions with isolated hooks and requests; no browser, payment SDK, or live account is used.
 function runtime({ error = null, profileError = null, quoteError = null, data, quote, pending = false, quotePending = false, profilePending = false, pathname = '/classroom', mutateError = unauthorized(), draft, state } = {}) {
-  const routes = [], effects = [], cleanups = [], writes = [], requests = [], refetches = [], events = {}, players = [];
+  const routes = [], effects = [], cleanups = [], writes = [], requests = [], refetches = [], events = {}, players = [], draftWrites = [];
   const router = { replace: path => routes.push(['replace', path]), push: path => routes.push(['push', path]), refresh() {} };
   const react = {
     useId: () => 'test-menu', useEffect: effect => effects.push(effect), useCallback: callback => callback, useRef: value => ({ current: value }),
@@ -116,7 +116,7 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     '@/lib/http': { ...http, mutate: async path => { requests.push(path); if (mutateError === null) return { ok: true }; if (path === 'playback' && mutateError === 'progress') return { sessionId: 'session', url: 'https://player.vimeo.com/video/test' }; throw mutateError === 'progress' ? unauthorized() : mutateError; } },
     '@/features/auth': { ...validation, ...hook }, './use-login-redirect': hook, './validation': validation,
     '@/features/account': { useProfile: () => profile, AccountShell: 'account' }, './use-profile': { useProfile: () => profile }, './account-shell': { AccountShell: 'account' },
-    '@/components/site': { SiteHeader: 'header', SiteFooter: 'footer', Logo: 'logo', FormField: 'field', Checkbox: 'checkbox', Skeleton: 'skeleton', ConfirmationDialog: 'dialog', ResultScreen: 'result', useTermsDraft: (_key, initial) => [draft ? draft(initial) : initial, () => {}] },
+    '@/components/site': { SiteHeader: 'header', SiteFooter: 'footer', Logo: 'logo', FormField: 'field', Checkbox: 'checkbox', Skeleton: 'skeleton', ConfirmationDialog: 'dialog', ResultScreen: 'result', useTermsDraft: (_key, initial) => { const current = draft ? draft(initial) : initial; return [current, next => draftWrites.push(typeof next === 'function' ? next(current) : next)]; } },
     './api': { parseSort: value => value ?? 'latest', downloadMaterials: async orderId => { requests.push(`orders/${orderId}/download`); throw mutateError; } }, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
     '@/features/manage': { AdminCourseActions: 'admin' }, './refund-copy': { refundSections: [] },
     './skeleton': { Skeleton: 'skeleton' }, './mobile-menu': { MobileMenu: 'mobile-menu' },
@@ -127,7 +127,7 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     '@/features/catalog': { checkout: async () => { requests.push('checkout'); throw mutateError; } },
   };
   return {
-    routes, writes, requests, refetches, events, players, hook,
+    routes, writes, requests, refetches, events, players, hook, draftWrites,
     render(file, name, props = {}) { return load(file, modules, globals)[name](props); },
     flush() { for (const effect of effects.splice(0)) { const cleanup = effect(); if (cleanup) cleanups.push(cleanup); } },
     unmount() { for (const cleanup of cleanups.splice(0)) cleanup(); },
@@ -245,6 +245,43 @@ test('expired password reset redirects while invalid login credentials stay in t
       assert.ok(context.writes.some(value => value?.password === '이메일 또는 비밀번호를 확인해주세요.'));
     }
   }
+});
+
+test('signup accepts digits only and formats 11-digit phone numbers while editing', () => {
+  for (const [field, previous, raw, cursor, inputType, expected, expectedCursor] of [
+    ['birthday', '', '20a01-02', 8, 'insertText', '200102', 6],
+    ['phone', '', '010abc123456789', 15, 'insertFromPaste', '010-1234-5678', 13],
+    ['phone', '010-1234-5678', '0101234-5678', 3, 'deleteContentBackward', '011-2345-678', 2],
+    ['phone', '010-1234-5678', '0101234-5678', 3, 'deleteContentForward', '010-2345-678', 3],
+    ['phone', '010-1234-5678', '010-19234-5678', 6, 'insertText', '010-1923-4567', 6],
+  ]) {
+    const context = runtime({ draft: initial => ({ ...initial, values: { ...initial.values, [field]: previous } }) });
+    const tree = context.render('src/features/auth/auth-form.tsx', 'AuthForm', { kind: 'signup' });
+    const input = { value: raw, selectionStart: cursor, setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; } };
+    find(tree, node => node.type === 'field' && node.props.name === field).props.onChange({ currentTarget: input, nativeEvent: { inputType } });
+    assert.equal(input.value, expected);
+    assert.equal(input.selectionStart, expectedCursor);
+    assert.equal(context.draftWrites[0].values[field], expected);
+  }
+  const values = { phone: '010-123-4567' };
+  assert.equal(validation.validateField('phone', values, 'signup'), '연락처 11자리를 입력해주세요.');
+  assert.equal(validation.validateField('phone', values, 'recovery'), undefined);
+  assert.equal(validation.validateField('phone', { phone: '010-1234-5678' }, 'signup'), undefined);
+});
+
+test('signup enforces 11 phone digits at the server boundary', async () => {
+  class ApiError extends Error { constructor(status, code, field) { super(code); Object.assign(this, { status, code, field }); } }
+  const auth = load('src/server/auth.ts', {
+    'next/server': {}, '../features/auth': validation,
+    './http': { ApiError, body: async request => request, string: value => value, limit: async () => {}, setting: () => 'https://example.com' },
+  });
+  const input = { email: 'test@example.com', password: 'password', confirmation: 'password', name: '테스트', birthday: '20000101', phone: '010-123-4567', agreements: [true, true, true, false] };
+  let savedPhone;
+  const ctx = { params: { action: 'signup' }, request: input, db: { auth: { signUp: async options => { savedPhone = options.options.data.phone; return { data: { user: { identities: [{}] } } }; } } } };
+  await assert.rejects(auth.authenticate(ctx), error => error.status === 400 && error.field === 'phone');
+  input.phone = '010-1234-5678';
+  assert.equal((await auth.authenticate(ctx)).ok, true);
+  assert.equal(savedPhone, '01012345678');
 });
 
 test('playback start and progress handle session expiry without turning it into a playback failure', async () => {
