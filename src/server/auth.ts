@@ -29,8 +29,8 @@ export async function authenticate(ctx: Context) {
     if(error) throw new ApiError(401,'invalid_credentials','password'); return {ok:true};
   }
   if (action === 'signup') {
-    if (!Array.isArray(input.agreements) || input.agreements.length!==4 || input.agreements.some(v=>typeof v!=='boolean') || !input.agreements.slice(0,3).every(Boolean)) throw new ApiError(400,'agreements_required');
-    const {data,error} = await ctx.db.auth.signUp({email:values.email,password:values.password, options:{emailRedirectTo:setting('APP_ORIGIN')+'/api/auth/callback',data:{agreements:input.agreements,name:values.name,birthday:values.birthday.slice(0,4)+'-'+values.birthday.slice(4,6)+'-'+values.birthday.slice(6),phone:values.phone,marketing:input.agreements[3]}}});
+    if (!Array.isArray(input.agreements) || input.agreements.length!==5 || input.agreements.some(v=>typeof v!=='boolean') || !input.agreements.slice(0,4).every(Boolean)) throw new ApiError(400,'agreements_required');
+    const {data,error} = await ctx.db.auth.signUp({email:values.email,password:values.password, options:{emailRedirectTo:setting('APP_ORIGIN')+'/api/auth/callback',data:{agreements:[...input.agreements.slice(0,3),input.agreements[4]],age_confirmed:true,name:values.name,birthday:values.birthday.slice(0,4)+'-'+values.birthday.slice(4,6)+'-'+values.birthday.slice(6),phone:values.phone,marketing:input.agreements[4]}}});
     if(error || !data.user || data.user.identities?.length===0) throw new ApiError(400,'signup_failed'); return {ok:true,confirmed:Boolean(data.session)};
   }
   if (action === 'recovery') {

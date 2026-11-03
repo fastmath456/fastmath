@@ -16,6 +16,7 @@ const terms = [
   { label: '[필수] 서비스 이용약관에 동의합니다.', href: '/term' },
   { label: '[필수] 개인정보 수집 및 이용에 동의합니다.', href: '/privacy/collection' },
   { label: '[필수] 개인정보 처리 방침에 동의합니다.', href: '/privacy' },
+  { label: '[필수] 만 14세 이상입니다.' },
   { label: '[선택] 마케팅 정보 수신에 동의합니다.', href: '/term/marketing' },
 ];
 const titles = { login: '로그인', signup: '회원가입', recovery: '비밀번호 찾기', reset: '비밀번호 재설정' };
@@ -26,7 +27,7 @@ export function AuthForm({ kind }: { kind: AuthKind }) {
   const [remoteError,setRemoteError] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryComplete, setRecoveryComplete] = useState(false);
-  const [{ values, agreements }, setDraft] = useTermsDraft(`auth:${kind}`, { values: emptyValues, agreements: [false, false, false, false] });
+  const [{ values, agreements }, setDraft] = useTermsDraft(`auth:${kind}`, { values: emptyValues, agreements: [false, false, false, false, false] });
   const [errors, setErrors] = useState<Partial<Record<AuthField, string>>>({});
   const [termsError, setTermsError] = useState(false);
   const fields = fieldsByKind[kind];
@@ -37,7 +38,7 @@ export function AuthForm({ kind }: { kind: AuthKind }) {
     const next: Partial<Record<AuthField, string>> = {};
     fields.forEach(field => { const error = validateField(field, values, kind); if (error) next[field] = error; });
     setErrors(next);
-    const missingTerms = kind === 'signup' && !agreements.slice(0, 3).every(Boolean);
+    const missingTerms = kind === 'signup' && !agreements.slice(0, 4).every(Boolean);
     setTermsError(missingTerms);
     const first = fields.find(field => next[field]);
     if (first) event.currentTarget.querySelector<HTMLInputElement>(`#${first}`)?.focus();
@@ -78,11 +79,11 @@ export function AuthForm({ kind }: { kind: AuthKind }) {
   function toggle(index?: number) {
     const next = index === undefined ? agreements.map(() => !agreements.every(Boolean)) : agreements.map((value, i) => i === index ? !value : value);
     setDraft(current => ({ ...current, agreements: next }));
-    if (next.slice(0, 3).every(Boolean)) setTermsError(false);
+    if (next.slice(0, 4).every(Boolean)) setTermsError(false);
   }
   const form = <form className={styles.form} noValidate onSubmit={submit}><div className={styles.fields}>
     {fields.map(field => <FormField key={field} id={field} name={field} label={fieldLabels[field]} description={kind === 'signup' && field === 'password' ? '비밀번호는 8자 이상 입력해 주세요.' : undefined} placeholder={placeholders[field]} value={field === 'phone' ? displayedPhone : values[field]} type={field === 'password' || field === 'confirmation' ? 'password' : 'text'} inputMode={field === 'birthday' || field === 'phone' ? 'numeric' : field === 'email' ? 'email' : undefined} autoComplete={field === 'confirmation' ? 'new-password' : field === 'password' ? kind === 'login' ? 'current-password' : 'new-password' : field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : field} onChange={event => changeInput(field, event)} onBlur={() => { if (errors[field]) setErrors(current => ({ ...current, [field]: validateField(field, values, kind) })); }} error={errors[field]} />)}
-    {kind === 'signup' && <div className={styles.terms}><p className={styles.termsTitle}>약관 동의</p><div className={styles.termsBox}><strong><Checkbox checked={agreements.every(Boolean)} onChange={() => toggle()}>전체 동의</Checkbox></strong><div className={styles.termsRule} />{terms.map((term, index) => <div className={styles.termsRow} key={term.href}><Checkbox id={`agreement-${index}`} checked={agreements[index]} onChange={() => toggle(index)}>{term.label}</Checkbox><Link href={term.href}>보기</Link></div>)}</div>{termsError && <p className={styles.error}>필수 약관에 동의해주세요.</p>}</div>}
+    {kind === 'signup' && <div className={styles.terms}><p className={styles.termsTitle}>약관 동의</p><div className={styles.termsBox}><strong><Checkbox checked={agreements.every(Boolean)} onChange={() => toggle()}>전체 동의</Checkbox></strong><div className={styles.termsRule} />{terms.map((term, index) => <div className={styles.termsRow} key={term.label}><Checkbox id={`agreement-${index}`} checked={agreements[index]} onChange={() => toggle(index)}>{term.label}</Checkbox>{term.href && <Link href={term.href}>보기</Link>}</div>)}</div>{termsError && <p className={styles.error}>필수 약관에 동의해주세요.</p>}</div>}
   </div>{remoteError && <p className={styles.error}>{remoteError}</p>}<button className={styles.button} type="submit" disabled={kind === 'recovery' && recoveryLoading} aria-busy={kind === 'recovery' && recoveryLoading}>{titles[kind]}{kind === 'recovery' && recoveryLoading && <span className={styles.spinner} aria-hidden="true" />}</button></form>;
   return <div className={styles.shell}><SiteHeader mobile={kind === 'signup' ? { title: titles.signup, onBack: () => router.back() } : { title: '로그인', onBack: () => router.back() }} /><main className={`${styles.main} ${kind === 'signup' ? styles.signup : styles.responsiveMain}`}>
     {kind === 'signup' ? <h1 className={styles.title}>회원가입</h1> : <div className={styles.brand}><Logo large />{kind === 'login' ? <div><p>1문제 넘게 틀려본 적 없는 수학 극상위권 연대 수학강사</p><p>여러분의 수학 공부 시간을 1초라도 줄여드리고 싶어서 만들었습니다</p></div> : <h1>{titles[kind]}</h1>}</div>}

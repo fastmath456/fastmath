@@ -152,7 +152,7 @@ async function consumeAuthLink(link,jar) {
 }
 test('local mail: real signup confirmation, recovery, password reset and reused link',async()=>{
  const email='qa-'+run+'-mail@example.com',jar=new Map();
- const input={email,password:'test-password-2026',confirmation:'test-password-2026',name:'홍길동',birthday:'20140222',phone:'01032428118',agreements:[true,true,true,false]};
+ const input={email,password:'test-password-2026',confirmation:'test-password-2026',name:'홍길동',birthday:'20140222',phone:'01032428118',agreements:[true,true,true,true,false]};
  const signup=await http('auth/signup',{method:'POST',data:input,jar});assert.equal(signup.status,200,JSON.stringify(signup.body));assert.equal(signup.body.confirmed,false);
  const listing=await db.auth.admin.listUsers();const u=listing.data.users.find(u=>u.email===email);assert.ok(u);users.push({id:u.id});
  assert.equal((await http('auth/login',{method:'POST',data:{email,password:input.password}})).status,401);
