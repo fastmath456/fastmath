@@ -459,7 +459,6 @@
 .reviewTrack {
   display: flex;
   width: max-content;
-  animation: rollReviews 138s linear infinite;
 }
 
 .reviewGroup {
@@ -468,20 +467,7 @@
   padding-right: 20px;
 }
 
-.reviewBanner[data-paused='true'] .reviewTrack {
-  animation-play-state: paused;
-}
-
-@media (hover: hover) {
-  .reviewBanner:hover .reviewTrack { animation-play-state: paused; }
-}
-
-@keyframes rollReviews {
-  to { transform: translateX(-50%); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .reviewTrack { animation: none; }
   .reviewBanner { overflow-x: auto; }
   .reviewGroup[aria-hidden='true'] { display: none; }
 }
