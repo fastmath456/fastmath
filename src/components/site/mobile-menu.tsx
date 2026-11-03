@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Skeleton } from './skeleton';
 import styles from './site.module.css';
 
@@ -17,5 +17,15 @@ function MenuLinks({ onClose }: { onClose: () => void }) {
 export function MobileMenu({ profile, profileLoading = false }: { profile?: { name: string; image: string }; profileLoading?: boolean }) {
   const [open, setOpen] = useState(false);
   const id = useId();
-  return <><button className={styles.backButton} type="button" aria-label="메뉴" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)} onKeyDown={event => { if (event.key === 'Escape') setOpen(false); }}><Image unoptimized src="/assets/mobile-menu.svg" width={24} height={24} alt="" /></button>{open && <><div className={styles.mobileMenuBackdrop} aria-hidden="true" /><nav id={id} className={styles.mobileMenu} aria-label="사이트·계정 메뉴" onKeyDown={event => { if (event.key === 'Escape') setOpen(false); }}>{profileLoading && !profile ? <span className={styles.profileLink} aria-busy="true"><Skeleton className={styles.profileSkeletonImage} /><Skeleton>홍길동님</Skeleton></span> : profile ? <Link href="/profile" className={styles.profileLink} onClick={() => setOpen(false)}><Image unoptimized className={styles.profileImage} src={profile.image} width={24} height={24} alt="" />{profile.name}님</Link> : <Link href="/login" onClick={() => setOpen(false)}>로그인/회원가입</Link>}<MenuLinks onClose={() => setOpen(false)} /></nav></>}</>;
+  const trigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const rootOverflow = root.style.overflow;
+    root.style.overflow = 'hidden';
+    const closeWhenHidden = () => { if (trigger.current && trigger.current.getClientRects().length === 0) setOpen(false); };
+    window.addEventListener('resize', closeWhenHidden);
+    return () => { root.style.overflow = rootOverflow; window.removeEventListener('resize', closeWhenHidden); };
+  }, [open]);
+  return <><button ref={trigger} className={styles.backButton} type="button" aria-label="메뉴" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)} onKeyDown={event => { if (event.key === 'Escape') setOpen(false); }}><Image unoptimized src="/assets/mobile-menu.svg" width={24} height={24} alt="" /></button>{open && <><div className={styles.mobileMenuBackdrop} aria-hidden="true" /><nav id={id} className={styles.mobileMenu} aria-label="사이트·계정 메뉴" onKeyDown={event => { if (event.key === 'Escape') setOpen(false); }}>{profileLoading && !profile ? <span className={styles.profileLink} aria-busy="true"><Skeleton className={styles.profileSkeletonImage} /><Skeleton>홍길동님</Skeleton></span> : profile ? <Link href="/profile" className={styles.profileLink} onClick={() => setOpen(false)}><Image unoptimized className={styles.profileImage} src={profile.image} width={24} height={24} alt="" />{profile.name}님</Link> : <Link href="/login" onClick={() => setOpen(false)}>로그인/회원가입</Link>}<MenuLinks onClose={() => setOpen(false)} /></nav></>}</>;
 }
