@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { MobileMenu } from './mobile-menu';
+import { PasswordInput } from './password-input';
 import { Skeleton } from './skeleton';
 import styles from './site.module.css';
 
@@ -27,7 +28,7 @@ export function SiteFooter() {
 
 export function FormField({ label, description, error, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; description?: string; error?: string }) {
   const describedBy = [description && `${props.id}-description`, error && `${props.id}-error`].filter(Boolean).join(' ') || undefined;
-  return <div className={styles.field}>{description ? <div><label htmlFor={props.id} className={styles.fieldLabel}>{label}</label><p id={`${props.id}-description`} className={styles.fieldDescription}>{description}</p></div> : <label htmlFor={props.id}>{label}</label>}<input {...props} className={styles.input} aria-invalid={Boolean(error)} aria-describedby={describedBy} />{error && <p id={`${props.id}-error`} className={styles.error}>{error}</p>}</div>;
+  return <div className={styles.field}>{description ? <div><label htmlFor={props.id} className={styles.fieldLabel}>{label}</label><p id={`${props.id}-description`} className={styles.fieldDescription}>{description}</p></div> : <label htmlFor={props.id}>{label}</label>}{props.type === 'password' ? <PasswordInput {...props} label={label} aria-invalid={Boolean(error)} aria-describedby={describedBy} /> : <input {...props} className={styles.input} aria-invalid={Boolean(error)} aria-describedby={describedBy} />}{error && <p id={`${props.id}-error`} className={styles.error}>{error}</p>}</div>;
 }
 
 export function Checkbox({ children, ...props }: InputHTMLAttributes<HTMLInputElement> & { children: ReactNode }) {
