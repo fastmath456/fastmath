@@ -9,7 +9,7 @@ export async function profile(ctx: Context) {
   const {data,error} = await db.from('profiles').select('name,birthday,phone,image_path,marketing,updated_at').eq('user_id',user.id).single(); dbError(error); if(!data) throw new ApiError(404,'profile_missing');
   let image = '';
   if(data.image_path) { const signed=await db.storage.from('profile-images').createSignedUrl(data.image_path,300); dbError(signed.error); image=signed.data!.signedUrl; }
-  return { name:data.name,email:user.email,birthday:data.birthday.replaceAll('-',''),phone:data.phone,marketing:data.marketing,imagePath:data.image_path,revision:data.updated_at,image,avatar:image||'/assets/profile-imgRectangle2.png' };
+  return { name:data.name,email:user.email,birthday:data.birthday.replaceAll('-',''),phone:data.phone,marketing:data.marketing,imagePath:data.image_path,revision:data.updated_at,image,avatar:image||'/assets/default-profile.png' };
 }
 export async function saveProfile(ctx: Context) {
   const user=await ctx.user(),input=await body(ctx.request),db=adminDb();
