@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { mutate, requestFailure } from '@/lib/http';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Checkbox, ConfirmationDialog, FormField, isTermsPath, useTermsDraft } from '@/components/site';
+import { Checkbox, ConfirmationDialog, FormField, ResetOnLeave, isTermsPath, useTermsDraft } from '@/components/site';
 import { editPhone, formatPhone, validateField, fieldLabels, useLoginRedirect, type AuthField, type AuthValues } from '@/features/auth';
 import { AccountShell } from './account-shell';
 import { useProfile } from './use-profile';
@@ -151,5 +151,5 @@ export function ProfileScreen({ state = '' }: { state?: string }) {
   const { requiresLogin } = useLoginRedirect(query.error);
   if (requiresLogin) return null;
   if (query.isPending) return <ProfileLoading />;
-  return <AccountShell profile={query.data} section="profile"><div className={styles.content}><div><h1 className={accountStyles.title}>내 정보</h1><p className={accountStyles.subtitle}>내 정보를 확인하고 수정하세요.</p></div>{query.isError ? <div className={accountStyles.error}><p>내 정보를 불러오지 못했습니다. 다시 시도해주세요.</p><button onClick={() => query.refetch()}>다시 시도</button></div> : query.data && <ProfileForm key={state+query.data.email} profile={query.data} />}</div></AccountShell>;
+  return <AccountShell profile={query.data} section="profile"><div className={styles.content}><div><h1 className={accountStyles.title}>내 정보</h1><p className={accountStyles.subtitle}>내 정보를 확인하고 수정하세요.</p></div>{query.isError ? <div className={accountStyles.error}><p>내 정보를 불러오지 못했습니다. 다시 시도해주세요.</p><button onClick={() => query.refetch()}>다시 시도</button></div> : query.data && <ResetOnLeave><ProfileForm key={state+query.data.email} profile={query.data} /></ResetOnLeave>}</div></AccountShell>;
 }

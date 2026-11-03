@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { readResponse } from '@/lib/http';
+import { ResetOnLeave } from '@/components/site';
 import { ReviewDialog } from './review-dialog';
 import { ReviewEditorDialog } from './review-editor-dialog';
 import { landingReviews, type SourceReview } from './reviews';
@@ -45,9 +46,9 @@ export function ReviewsSection() {
     </div>
     <div className={`${styles.container} ${styles.reviewActions}`}><p className={styles.videoPrompt}>영상으로 먼저 만나보세요.</p><a href="https://www.youtube.com/@fastermaths" target="_blank" rel="noreferrer" className={styles.action}>빠른수학 유튜브<Image unoptimized src="/assets/landing/arrow.svg" width={20} height={20} alt="" /></a></div>
     {review && <ReviewDialog review={review} onClose={() => setReview(null)} />}
-    {editing && <ReviewEditorDialog reviews={items} onClose={() => setEditing(false)} onSaved={saved => {
+    {editing && <ResetOnLeave><ReviewEditorDialog reviews={items} onClose={() => setEditing(false)} onSaved={saved => {
       client.setQueryData<{ items: SourceReview[]; admin: boolean }>(['landing-reviews'], current => ({ admin: true, items: items.some(item => item.id === saved.id) ? (current?.items ?? items).map(item => item.id === saved.id ? saved : item) : [...(current?.items ?? items), saved] }));
       setEditing(false);
-    }} />}
+    }} /></ResetOnLeave>}
   </section>;
 }

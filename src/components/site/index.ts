@@ -2,3 +2,4 @@ export { Checkbox, FormField, Logo, ResultScreen, SiteFooter, SiteHeader } from 
 export { ConfirmationDialog } from './confirmation-dialog';
 export { Skeleton } from './skeleton';
 export { isTermsPath, useTermsDraft } from './use-terms-draft';
+export { ResetOnLeave } from './reset-on-leave';

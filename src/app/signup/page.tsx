@@ -1,5 +1,6 @@
 import { AuthForm } from '@/features/auth';
+import { ResetOnLeave } from '@/components/site';
 
 export default function Page() {
-  return <AuthForm kind="signup" />;
+  return <ResetOnLeave><AuthForm kind="signup" /></ResetOnLeave>;
 }
