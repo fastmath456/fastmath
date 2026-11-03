@@ -21,7 +21,7 @@ function findAll(node, predicate) {
 
 test('age checkbox is required, has no link, and participates in select all', async () => {
   const hooks = []; let index = 0, requests = 0;
-  const react = { useState(initial) { const i = index++; if (!(i in hooks)) hooks[i] = initial; return [hooks[i], value => { hooks[i] = typeof value === 'function' ? value(hooks[i]) : value; }]; } };
+  const react = { useState(initial) { const i = index++; if (!(i in hooks)) hooks[i] = initial; return [hooks[i], value => { hooks[i] = typeof value === 'function' ? value(hooks[i]) : value; }]; }, useRef(initial) { const i = index++; return hooks[i] ??= { current: initial }; } };
   const { AuthForm } = load('src/features/auth/auth-form.tsx', {
     react, 'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
     'next/link': { default: 'link' }, 'next/navigation': { useRouter: () => ({ push() {}, refresh() {}, back() {} }) },

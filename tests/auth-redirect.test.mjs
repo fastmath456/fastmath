@@ -367,7 +367,7 @@ test('signup enforces 11 phone digits at the server boundary', async () => {
     'next/server': {}, '../features/auth': validation,
     './http': { ApiError, body: async request => request, string: value => value, limit: async () => {}, setting: () => 'https://example.com' },
   });
-  const input = { email: 'test@example.com', password: 'password', confirmation: 'password', name: '테스트', birthday: '20000101', phone: '010-123-4567', agreements: [true, true, true, false] };
+  const input = { email: 'test@example.com', password: 'password', confirmation: 'password', name: '테스트', birthday: '20000101', phone: '010-123-4567', agreements: [true, true, true, true, false] };
   let savedPhone;
   const ctx = { params: { action: 'signup' }, request: input, db: { auth: { signUp: async options => { savedPhone = options.options.data.phone; return { data: { user: { identities: [{}] } } }; } } } };
   await assert.rejects(auth.authenticate(ctx), error => error.status === 400 && error.field === 'phone');

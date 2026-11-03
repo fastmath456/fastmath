@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { mutate, RequestError, requestFailure } from '@/lib/http';
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Checkbox, ConfirmationDialog, FormField, Logo, SiteFooter, SiteHeader, useTermsDraft } from '@/components/site';
 import { fieldLabels, fieldsByKind, placeholders, validateField, type AuthField, type AuthKind, type AuthValues } from './validation';
 import { editPhone, formatPhone } from './phone';
@@ -20,6 +20,7 @@ const terms = [
   { label: '[선택] 마케팅 정보 수신에 동의합니다.', href: '/term/marketing' },
 ];
 const titles = { login: '로그인', signup: '회원가입', recovery: '비밀번호 찾기', reset: '비밀번호 재설정' };
+const duplicateEmailError = '이미 가입한 이메일입니다.';
 
 export function AuthForm({ kind }: { kind: AuthKind }) {
   const router = useRouter(), client = useQueryClient();
@@ -28,6 +29,7 @@ export function AuthForm({ kind }: { kind: AuthKind }) {
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryComplete, setRecoveryComplete] = useState(false);
   const [{ values, agreements }, setDraft] = useTermsDraft(`auth:${kind}`, { values: emptyValues, agreements: [false, false, false, false, false] });
+  const currentEmail = useRef(values.email);
   const [errors, setErrors] = useState<Partial<Record<AuthField, string>>>({});
   const [termsError, setTermsError] = useState(false);
   const fields = fieldsByKind[kind];
@@ -55,6 +57,9 @@ export function AuthForm({ kind }: { kind: AuthKind }) {
     } catch (error) {
       if (kind === 'reset' && redirectIfUnauthorized(error)) return;
       if (error instanceof RequestError && error.code === 'invalid_credentials') setErrors({password:'이메일 또는 비밀번호를 확인해주세요.'});
+      else if (kind === 'signup' && error instanceof RequestError && error.code === 'email_already_registered') {
+        if (currentEmail.current === values.email) setErrors(current => ({ ...current, email: duplicateEmailError }));
+      }
       else setRemoteError(requestFailure);
     } finally {
       if (kind === 'recovery') setRecoveryLoading(false);
@@ -62,6 +67,10 @@ export function AuthForm({ kind }: { kind: AuthKind }) {
   }
   function change(field: AuthField, value: string) {
     const next = { ...values, [field]: value };
+    if (field === 'email') {
+      currentEmail.current = value;
+      setErrors(current => current.email === duplicateEmailError ? { ...current, email: undefined } : current);
+    }
     setDraft(current => ({ ...current, values: next })); setRemoteError('');
     if (field === 'password' && values.confirmation) setErrors(current => ({ ...current, confirmation: validateField('confirmation', next) }));
   }
@@ -82,7 +91,7 @@ export function AuthForm({ kind }: { kind: AuthKind }) {
     if (next.slice(0, 4).every(Boolean)) setTermsError(false);
   }
   const form = <form className={styles.form} noValidate onSubmit={submit}><div className={styles.fields}>
-    {fields.map(field => <FormField key={field} id={field} name={field} label={fieldLabels[field]} description={kind === 'signup' && field === 'password' ? '비밀번호는 8자 이상 입력해 주세요.' : undefined} placeholder={placeholders[field]} value={field === 'phone' ? displayedPhone : values[field]} type={field === 'password' || field === 'confirmation' ? 'password' : 'text'} inputMode={field === 'birthday' || field === 'phone' ? 'numeric' : field === 'email' ? 'email' : undefined} autoComplete={field === 'confirmation' ? 'new-password' : field === 'password' ? kind === 'login' ? 'current-password' : 'new-password' : field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : field} onChange={event => changeInput(field, event)} onBlur={() => { if (errors[field]) setErrors(current => ({ ...current, [field]: validateField(field, values, kind) })); }} error={errors[field]} />)}
+    {fields.map(field => <FormField key={field} id={field} name={field} label={fieldLabels[field]} description={kind === 'signup' && field === 'password' ? '비밀번호는 8자 이상 입력해 주세요.' : undefined} placeholder={placeholders[field]} value={field === 'phone' ? displayedPhone : values[field]} type={field === 'password' || field === 'confirmation' ? 'password' : 'text'} inputMode={field === 'birthday' || field === 'phone' ? 'numeric' : field === 'email' ? 'email' : undefined} autoComplete={field === 'confirmation' ? 'new-password' : field === 'password' ? kind === 'login' ? 'current-password' : 'new-password' : field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : field} onChange={event => changeInput(field, event)} onBlur={() => { if (errors[field] && !(field === 'email' && errors[field] === duplicateEmailError)) setErrors(current => ({ ...current, [field]: validateField(field, values, kind) })); }} error={errors[field]} />)}
     {kind === 'signup' && <div className={styles.terms}><p className={styles.termsTitle}>약관 동의</p><div className={styles.termsBox}><strong><Checkbox checked={agreements.every(Boolean)} onChange={() => toggle()}>전체 동의</Checkbox></strong><div className={styles.termsRule} />{terms.map((term, index) => <div className={styles.termsRow} key={term.label}><Checkbox id={`agreement-${index}`} checked={agreements[index]} onChange={() => toggle(index)}>{term.label}</Checkbox>{term.href && <Link href={term.href}>보기</Link>}</div>)}</div>{termsError && <p className={styles.error}>필수 약관에 동의해주세요.</p>}</div>}
   </div>{remoteError && <p className={styles.error}>{remoteError}</p>}<button className={styles.button} type="submit" disabled={kind === 'recovery' && recoveryLoading} aria-busy={kind === 'recovery' && recoveryLoading}>{titles[kind]}{kind === 'recovery' && recoveryLoading && <span className={styles.spinner} aria-hidden="true" />}</button></form>;
   return <div className={styles.shell}><SiteHeader mobile={kind === 'signup' ? { title: titles.signup, onBack: () => router.back() } : { title: '로그인', onBack: () => router.back() }} /><main className={`${styles.main} ${kind === 'signup' ? styles.signup : styles.responsiveMain}`}>

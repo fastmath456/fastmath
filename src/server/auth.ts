@@ -31,7 +31,8 @@ export async function authenticate(ctx: Context) {
   if (action === 'signup') {
     if (!Array.isArray(input.agreements) || input.agreements.length!==5 || input.agreements.some(v=>typeof v!=='boolean') || !input.agreements.slice(0,4).every(Boolean)) throw new ApiError(400,'agreements_required');
     const {data,error} = await ctx.db.auth.signUp({email:values.email,password:values.password, options:{emailRedirectTo:setting('APP_ORIGIN')+'/api/auth/callback',data:{agreements:[...input.agreements.slice(0,3),input.agreements[4]],age_confirmed:true,name:values.name,birthday:values.birthday.slice(0,4)+'-'+values.birthday.slice(4,6)+'-'+values.birthday.slice(6),phone:values.phone,marketing:input.agreements[4]}}});
-    if(error || !data.user || data.user.identities?.length===0) throw new ApiError(400,'signup_failed'); return {ok:true,confirmed:Boolean(data.session)};
+    if (error?.code === 'user_already_exists' || error?.code === 'email_exists' || (!error && data.user?.identities?.length === 0)) throw new ApiError(400,'email_already_registered','email');
+    if(error || !data.user) throw new ApiError(400,'signup_failed'); return {ok:true,confirmed:Boolean(data.session)};
   }
   if (action === 'recovery') {
     // The response deliberately does not disclose membership; name/phone are not proof of ownership.
