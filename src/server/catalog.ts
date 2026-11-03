@@ -9,7 +9,8 @@ type ProductAssetRow={role:'thumbnail'|'detailImage'|'material';position:number;
 const product=(p:Row):Product=>({id:p.id,slug:p.slug,kind:p.kind,title:p.title,tags:p.tags,price:p.price,...(p.base_price?{basePrice:p.base_price}:{}),image:p.image,publishedOrder:-new Date(p.published_at).getTime()});
 export async function products(ctx: Context) {
   const sort=ctx.request.nextUrl.searchParams.get('sort');
-  let query=ctx.db.from('products').select(columns).order(sort==='price-asc'||sort==='price-desc'?'price':'published_at',{ascending:sort==='price-asc'}).order('id');
+  // shortcut: hide the production QA item until catalog visibility is managed explicitly.
+  let query=ctx.db.from('products').select(columns).neq('id','course-9664ad3b74f94f7a834a53cff0d16188').order(sort==='price-asc'||sort==='price-desc'?'price':'published_at',{ascending:sort==='price-asc'}).order('id');
   query=query.limit(1000); const {data,error}=await query; dbError(error);
   const user=await ctx.optionalUser(),current=user?await profile(ctx):null;
   return {items:(data as unknown as Row[]).map(product),count:data!.length,...(current?{profile:{name:current.name,image:current.avatar}}:{})};
