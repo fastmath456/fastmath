@@ -26,6 +26,5 @@ export function validateField(field: AuthField, values: AuthValues, kind?: AuthK
   if (field === 'password' && kind && value.length < 8) return '비밀번호는 8자 이상 입력해주세요.';
   if (field === 'confirmation' && values.password && raw !== values.password) return '비밀번호가 일치하지 않습니다.';
   if (field === 'birthday' && !validBirthday(value)) return '생년월일 8자리를 정확히 입력해주세요.';
-  if (field === 'phone' && kind === 'signup' && !/^\d{11}$/.test(value)) return '연락처 11자리를 입력해주세요.';
-  if (field === 'phone' && !/^\d{10,11}$/.test(value)) return '연락처 10~11자리를 입력해주세요.';
+  if (field === 'phone' && !/^\d{11}$/.test(value)) return '연락처 11자리를 입력해주세요.';
 }

@@ -16,7 +16,7 @@ export async function saveProfile(ctx: Context) {
   const revision=string(input.revision,'revision',100); if(!Number.isFinite(Date.parse(revision))) throw new ApiError(400,'invalid_field','revision');
   const name=string(input.name,'name',80).trim(),birthday=string(input.birthday,'birthday',8),phone=string(input.phone,'phone',30).replace(/[-\s]/g,'');
   if(!name || !validBirthday(birthday)) throw new ApiError(400,'invalid_field','birthday');
-  if(!/^\d{10,11}$/.test(phone)) throw new ApiError(400,'invalid_field','phone');
+  if(!/^\d{11}$/.test(phone)) throw new ApiError(400,'invalid_field','phone');
   if(typeof input.marketing!=='boolean') throw new ApiError(400,'invalid_field','marketing');
   const current=await db.from('profiles').select('image_path').eq('user_id',user.id).single(); dbError(current.error);
   const image=input.imagePath===undefined ? current.data!.image_path : input.imagePath;

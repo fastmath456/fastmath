@@ -27,6 +27,7 @@ const forbidden = () => new http.RequestError('forbidden', undefined, 403);
 const serverError = () => new http.RequestError('auth_unavailable', undefined, 503);
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const validation = load('src/features/auth/validation.ts');
+const phone = load('src/features/auth/phone.ts');
 
 test('HTTP failures retain status, code and field; only a session 401 requires login', async () => {
   assert.deepEqual(await http.readResponse(Response.json({ ok: true })), { ok: true });
@@ -114,7 +115,7 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     'next/navigation': { useRouter: () => router, usePathname: () => pathname }, 'next/image': 'image', 'next/link': 'link',
     '@tanstack/react-query': { useQuery: options => options.queryKey[0] === 'refund-quote' ? { isPending: quotePending, error: quoteError, isError: Boolean(quoteError), data: quote, refetch: () => refetches.push('quote') } : query, useQueryClient: () => ({ cancelQueries: async () => { writes.push('cancel-queries'); }, clear() { writes.push('clear-cache'); }, invalidateQueries: async () => {} }) },
     '@/lib/http': { ...http, mutate: async path => { requests.push(path); if (mutateError === null) return { ok: true }; if (path === 'playback' && mutateError === 'progress') return { sessionId: 'session', url: 'https://player.vimeo.com/video/test' }; throw mutateError === 'progress' ? unauthorized() : mutateError; } },
-    '@/features/auth': { ...validation, ...hook }, './use-login-redirect': hook, './validation': validation,
+    '@/features/auth': { ...validation, ...phone, ...hook }, './use-login-redirect': hook, './validation': validation, './phone': phone,
     '@/features/account': { useProfile: () => profile, AccountShell: 'account' }, './use-profile': { useProfile: () => profile }, './account-shell': { AccountShell: 'account' },
     '@/components/site': { SiteHeader: 'header', SiteFooter: 'footer', Logo: 'logo', FormField: 'field', Checkbox: 'checkbox', Skeleton: 'skeleton', ConfirmationDialog: 'dialog', ResultScreen: 'result', useTermsDraft: (_key, initial) => { const current = draft ? draft(initial) : initial; return [current, next => draftWrites.push(typeof next === 'function' ? next(current) : next)]; } },
     './api': { parseSort: value => value ?? 'latest', downloadMaterials: async orderId => { requests.push(`orders/${orderId}/download`); throw mutateError; } }, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
@@ -290,8 +291,55 @@ test('signup accepts digits only and formats 11-digit phone numbers while editin
   }
   const values = { phone: '010-123-4567' };
   assert.equal(validation.validateField('phone', values, 'signup'), '연락처 11자리를 입력해주세요.');
-  assert.equal(validation.validateField('phone', values, 'recovery'), undefined);
+  assert.equal(validation.validateField('phone', values, 'recovery'), '연락처 11자리를 입력해주세요.');
   assert.equal(validation.validateField('phone', { phone: '010-1234-5678' }, 'signup'), undefined);
+});
+
+test('recovery and profile format phone input while preserving the cursor', () => {
+  for (const kind of ['recovery', 'profile']) {
+    for (const [previous, raw, cursor, inputType, expected, expectedCursor] of [
+      ['', '010abc123456789', 15, 'insertFromPaste', '010-1234-5678', 13],
+      ['010-1234-5678', '0101234-5678', 3, 'deleteContentBackward', '011-2345-678', 2],
+      ['010-1234-5678', '0101234-5678', 3, 'deleteContentForward', '010-2345-678', 3],
+      ['010-1234-5678', '010-19234-5678', 6, 'insertText', '010-1923-4567', 6],
+    ]) {
+      const context = runtime({ draft: initial => ({ ...initial, values: { ...initial.values, phone: previous } }) });
+      const tree = kind === 'recovery'
+        ? context.render('src/features/auth/auth-form.tsx', 'AuthForm', { kind })
+        : find(context.render('src/features/account/profile-screen.tsx', 'ProfileScreen'), node => typeof node.type === 'function');
+      const form = kind === 'profile' ? tree.type(tree.props) : tree;
+      const field = find(form, node => node.type === 'field' && (node.props.name === 'phone' || node.props.id === 'profile-phone'));
+      const input = { value: raw, selectionStart: cursor, setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; } };
+      field.props.onChange({ currentTarget: input, nativeEvent: { inputType } });
+      assert.equal(input.value, expected, kind);
+      assert.equal(input.selectionStart, expectedCursor, kind);
+      assert.equal(context.draftWrites[0].values.phone, expected, kind);
+    }
+  }
+});
+
+test('profile displays a saved phone without treating formatting as a change', async () => {
+  const context = runtime({ mutateError: null });
+  const screen = context.render('src/features/account/profile-screen.tsx', 'ProfileScreen');
+  const formNode = find(screen, node => typeof node.type === 'function');
+  const form = formNode.type(formNode.props);
+  assert.equal(find(form, node => node.type === 'field' && node.props.id === 'profile-phone').props.value, '010-1234-5678');
+  await form.props.onSubmit({ preventDefault() {}, currentTarget: { querySelector: () => ({ focus() {} }) } });
+  assert.deepEqual(context.requests, []);
+  assert.ok(context.writes.includes('변경된 정보가 없습니다.'));
+});
+
+test('recovery and profile reject a 10-digit phone before submitting', async () => {
+  for (const kind of ['recovery', 'profile']) {
+    const context = runtime({ mutateError: null, draft: initial => ({ ...initial, values: { ...initial.values, email: 'test@example.com', name: '테스트', phone: '0101234567' } }) });
+    const tree = kind === 'recovery'
+      ? context.render('src/features/auth/auth-form.tsx', 'AuthForm', { kind })
+      : find(context.render('src/features/account/profile-screen.tsx', 'ProfileScreen'), node => typeof node.type === 'function');
+    const form = kind === 'profile' ? tree.type(tree.props) : find(tree, node => node.type === 'form');
+    await form.props.onSubmit({ preventDefault() {}, currentTarget: { querySelector: () => ({ focus() {} }) } });
+    assert.deepEqual(context.requests, [], kind);
+    assert.ok(context.writes.some(value => value?.phone === '연락처 11자리를 입력해주세요.'), kind);
+  }
 });
 
 test('auth forms validate password minimum length and server field limits before submit', () => {
@@ -326,6 +374,43 @@ test('signup enforces 11 phone digits at the server boundary', async () => {
   input.phone = '010-1234-5678';
   assert.equal((await auth.authenticate(ctx)).ok, true);
   assert.equal(savedPhone, '01012345678');
+});
+
+test('recovery enforces 11 phone digits at the server boundary', async () => {
+  class ApiError extends Error { constructor(status, code, field) { super(code); Object.assign(this, { status, code, field }); } }
+  const auth = load('src/server/auth.ts', {
+    'next/server': {}, '../features/auth': validation,
+    './http': { ApiError, body: async request => request, string: value => value, limit: async () => {}, setting: () => 'https://example.com' },
+  });
+  const input = { email: 'test@example.com', name: '테스트', phone: '0101234567' };
+  const sent = [];
+  const ctx = { params: { action: 'recovery' }, request: input, db: { auth: { resetPasswordForEmail: async email => { sent.push(email); return { error: null }; } } } };
+  await assert.rejects(auth.authenticate(ctx), error => error.status === 400 && error.field === 'phone');
+  assert.deepEqual(sent, []);
+  input.phone = '010-1234-5678';
+  assert.equal((await auth.authenticate(ctx)).ok, true);
+  assert.deepEqual(sent, ['test@example.com']);
+});
+
+test('profile saves only 11 phone digits and stores them without separators', async () => {
+  class ApiError extends Error { constructor(status, code, field) { super(code); Object.assign(this, { status, code, field }); } }
+  const saved = [];
+  const record = { name: '테스트', birthday: '2000-01-01', phone: '01012345678', marketing: false, image_path: '', updated_at: '2026-01-01T00:00:00.000Z' };
+  const db = {
+    from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: record, error: null }) }) }) }),
+    rpc: async (_name, values) => { saved.push(values.p_phone); return { error: null }; },
+  };
+  const profile = load('src/server/profile.ts', {
+    sharp: {}, 'node:crypto': {}, '../features/account/profile-image': {}, '../features/auth/validation': validation,
+    './http': { ApiError, adminDb: () => db, body: async request => request, dbError: error => { if (error) throw error; }, string: value => value },
+  });
+  const input = { name: '테스트', birthday: '20000101', phone: '0101234567', marketing: false, imagePath: '', revision: '2026-01-01T00:00:00.000Z' };
+  const ctx = { request: input, user: async () => ({ id: 'user', email: 'test@example.com' }) };
+  await assert.rejects(profile.saveProfile(ctx), error => error.status === 400 && error.field === 'phone');
+  assert.deepEqual(saved, []);
+  input.phone = '010-1234-5678';
+  assert.equal((await profile.saveProfile(ctx)).phone, '01012345678');
+  assert.deepEqual(saved, ['01012345678']);
 });
 
 test('playback start and progress handle session expiry without turning it into a playback failure', async () => {
