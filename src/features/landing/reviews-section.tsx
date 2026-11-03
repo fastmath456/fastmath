@@ -7,7 +7,7 @@ import { readResponse } from '@/lib/http';
 import { ResetOnLeave } from '@/components/site';
 import { ReviewDialog } from './review-dialog';
 import { ReviewEditorDialog } from './review-editor-dialog';
-import { landingReviews, type SourceReview } from './reviews';
+import { landingReviews, maskReviewAuthor, type SourceReview } from './reviews';
 import { reviewKeyframes } from './review-carousel';
 import styles from './landing.module.css';
 
@@ -54,7 +54,7 @@ export function ReviewsSection() {
         {[false, true].map(duplicate => <div key={String(duplicate)} className={styles.reviewGroup} aria-hidden={duplicate || undefined}>
           {items.map(item => <article className={styles.reviewCard} key={item.id}>
             <div className={styles.reviewSource}><span className={styles.youtubeBadge}><span className={styles.youtubeIcon}><Image unoptimized src="/assets/landing/youtube.png" width={640} height={443} alt="" /></span>유튜브</span><span className={styles.sourceLabel}>시청자 댓글<span>中</span></span></div>
-            <div className={styles.reviewBody}><p className={styles.reviewPreview}>{item.text}</p><div className={styles.reviewMeta}><span className={styles.author}>{item.author}</span><button type="button" tabIndex={duplicate ? -1 : undefined} className={styles.reviewLink} onClick={() => setReview(item)}>원문 보기<Image unoptimized src="/assets/landing/up-right.svg" width={16} height={16} alt="" /></button></div></div>
+            <div className={styles.reviewBody}><p className={styles.reviewPreview}>{item.text}</p><div className={styles.reviewMeta}><span className={styles.author}>{maskReviewAuthor(item.author)}</span><button type="button" tabIndex={duplicate ? -1 : undefined} className={styles.reviewLink} onClick={() => setReview(item)}>원문 보기<Image unoptimized src="/assets/landing/up-right.svg" width={16} height={16} alt="" /></button></div></div>
           </article>)}
         </div>)}
       </div>

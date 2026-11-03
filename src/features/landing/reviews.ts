@@ -7,6 +7,12 @@ export type ReviewImage = {
 
 export type SourceReview = { id: string; author: string; text: string; images: ReviewImage[] };
 
+export function maskReviewAuthor(author: string) {
+  const prefix = author.startsWith('@') ? '@' : '';
+  const characters = Array.from(author.slice(prefix.length));
+  return prefix + (characters[0] ?? '') + '*'.repeat(Math.max(0, characters.length - 1));
+}
+
 export const landingReviews: SourceReview[] = [
   { id: 'figma-480-3089', author: '@Feather_', text: '정말 유익하네요 감사합니다', images: [{ src: '/assets/landing/review-480-3089.png', width: 354, height: 140, crop: { heightPercent: 197.14, topPercent: 0 } }] },
   { id: 'figma-480-3082', author: '@주민2홍', text: '오늘 시험에서 총 25점을 올렸습니다!!! 영상이 엄청난 도움이 된거 같아요. 여러 꿀팁 다 써먹으며 점수 잘 올렸습니다!! 😊', images: [{ src: '/assets/landing/review-480-3082.png', width: 454, height: 149, crop: { heightPercent: 160.4, topPercent: -60.4 } }] },
