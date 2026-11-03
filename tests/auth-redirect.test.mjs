@@ -92,7 +92,7 @@ test('mutations preserve the error without retrying or changing the request cont
 });
 
 // Render component functions with isolated hooks and requests; no browser, payment SDK, or live account is used.
-function runtime({ error = null, profileError = null, quoteError = null, data, quote, pending = false, quotePending = false, profilePending = false, pathname = '/classroom', mutateError = unauthorized(), draft, state } = {}) {
+function runtime({ error = null, profileError = null, quoteError = null, data, quote, pending = false, quotePending = false, profilePending = false, pathname = '/classroom', mutateError = unauthorized(), draft, state, reducedMotion = false } = {}) {
   const routes = [], effects = [], cleanups = [], writes = [], requests = [], refetches = [], events = {}, players = [], draftWrites = [];
   const router = { replace: path => routes.push(['replace', path]), push: path => routes.push(['push', path]), refresh() {} };
   const react = {
@@ -102,7 +102,7 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
   };
   const globals = {
     location: { hash: '', replace: path => routes.push(['location', path]) },
-    window: { addEventListener() {}, removeEventListener() {}, Vimeo: { Player: class { constructor(_container, options) { players.push(options); } on(name, callback) { events[name] = callback; } ready() { return new Promise(resolve => { events.ready = resolve; }); } async destroy() {} } } },
+    window: { addEventListener() {}, removeEventListener() {}, matchMedia: () => ({ matches: reducedMotion }), Vimeo: { Player: class { constructor(_container, options) { players.push(options); } on(name, callback) { events[name] = callback; } ready() { return new Promise(resolve => { events.ready = resolve; }); } async destroy() {} } } },
     document: { addEventListener() {}, removeEventListener() {}, getElementById: () => null, createElement: () => ({}), head: { append: script => queueMicrotask(() => script.onload()) } },
     performance: { now: () => 6000 }, crypto: { randomUUID: () => 'test-request-key' },
     fetch: async () => new Response('image'),
@@ -120,7 +120,7 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     '@/components/site': { SiteHeader: 'header', SiteFooter: 'footer', Logo: 'logo', FormField: 'field', Checkbox: 'checkbox', Skeleton: 'skeleton', ConfirmationDialog: 'dialog', ResultScreen: 'result', useTermsDraft: (_key, initial) => { const current = draft ? draft(initial) : initial; return [current, next => draftWrites.push(typeof next === 'function' ? next(current) : next)]; } },
     './api': { parseSort: value => value ?? 'latest', downloadMaterials: async orderId => { requests.push(`orders/${orderId}/download`); throw mutateError; } }, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
     '@/features/manage': { AdminCourseActions: 'admin' }, './refund-copy': { refundSections: [] },
-    './skeleton': { Skeleton: 'skeleton' }, './mobile-menu': { MobileMenu: 'mobile-menu' },
+    './skeleton': { Skeleton: 'skeleton' }, './mobile-menu': { MobileMenu: 'mobile-menu' }, './password-input': { PasswordInput: 'password-input' },
     './product-skeletons': { ProductDetailLoading: 'product-loading', ProductListSkeleton: 'list-loading' },
     './classroom-skeletons': { ViewerLoading: 'viewer-loading', ClassroomSkeleton: 'classroom-loading' },
     './account-skeletons': { OrdersSkeletonRows: 'orders-loading', ProfileLoading: 'profile-loading', RefundQuoteSkeleton: 'quote-loading' },
@@ -359,6 +359,20 @@ test('login blocks a short password before sending an authentication request', a
   await find(tree, node => node.type === 'form').props.onSubmit({ preventDefault() {}, currentTarget: { querySelector: () => ({ focus() {} }) } });
   assert.deepEqual(context.requests, []);
   assert.ok(context.writes.some(value => value?.password === '비밀번호는 8자 이상 입력해주세요.'));
+});
+
+test('signup scrolls to the first invalid field and respects reduced motion', async () => {
+  for (const reducedMotion of [false, true]) {
+    const context = runtime({ reducedMotion });
+    const tree = context.render('src/features/auth/auth-form.tsx', 'AuthForm', { kind: 'signup' });
+    let selector, scroll, focus;
+    await find(tree, node => node.type === 'form').props.onSubmit({ preventDefault() {}, currentTarget: { querySelector(value) { selector = value; return { scrollIntoView(options) { scroll = options; }, focus(options) { focus = options; } }; } } });
+    assert.equal(selector, '#email');
+    assert.equal(scroll.behavior, reducedMotion ? 'instant' : 'smooth');
+    assert.equal(scroll.block, 'center');
+    assert.equal(focus.preventScroll, true);
+    assert.deepEqual(context.requests, []);
+  }
 });
 
 test('signup enforces 11 phone digits at the server boundary', async () => {

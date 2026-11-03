@@ -9,7 +9,7 @@ function load(path, modules) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
   const exports = {};
-  runInNewContext(source, { exports, require(name) { if (!(name in modules)) throw new Error(`Unexpected import: ${name}`); return modules[name]; } });
+  runInNewContext(source, { exports, window: { matchMedia: () => ({ matches: false }) }, require(name) { if (!(name in modules)) throw new Error(`Unexpected import: ${name}`); return modules[name]; } });
   return exports;
 }
 
@@ -39,11 +39,13 @@ test('age checkbox is required, has no link, and participates in select all', as
   boxes[0].props.onChange(); tree = render(); boxes = findAll(tree, n => n.type === 'checkbox');
   assert.ok(boxes.every(box => box.props.checked));
   boxes[4].props.onChange(); tree = render();
-  let focused = '';
+  let focused = '', scroll;
   const submit = findAll(tree, n => n.type === 'form')[0].props.onSubmit;
-  await submit({ preventDefault() {}, currentTarget: { querySelector: selector => ({ focus() { focused = selector; } }) } });
+  await submit({ preventDefault() {}, currentTarget: { querySelector: selector => ({ scrollIntoView(options) { scroll = options; }, focus(options) { focused = selector; assert.equal(options.preventScroll, true); } }) } });
   assert.equal(requests, 0);
   assert.equal(focused, '#agreement-3');
+  assert.equal(scroll.behavior, 'smooth');
+  assert.equal(scroll.block, 'center');
   tree = render(); assert.ok(findAll(tree, n => n.type === 'p' && n.props.children === '필수 약관에 동의해주세요.').length);
 });
 

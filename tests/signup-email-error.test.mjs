@@ -7,7 +7,7 @@ import ts from 'typescript';
 function load(path, modules) {
   const source = ts.transpileModule(readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const exports = {};
-  runInNewContext(source, { exports, require(name) { if (!(name in modules)) throw new Error(`Unexpected import: ${name}`); return modules[name]; } });
+  runInNewContext(source, { exports, window: { matchMedia: () => ({ matches: false }) }, require(name) { if (!(name in modules)) throw new Error(`Unexpected import: ${name}`); return modules[name]; } });
   return exports;
 }
 function find(node, predicate) {
@@ -56,8 +56,13 @@ function formRuntime() {
 
 test('duplicate message persists on blur and clears when the email is edited', async () => {
   const app = formRuntime(); let tree = app.render();
-  const pending = find(tree, n => n.type === 'form').props.onSubmit({ preventDefault() {}, currentTarget: { querySelector() {} } });
+  let selected, scroll, focus;
+  const pending = find(tree, n => n.type === 'form').props.onSubmit({ preventDefault() {}, currentTarget: { querySelector(selector) { selected = selector; return { scrollIntoView(options) { scroll = options; }, focus(options) { focus = options; } }; } } });
   app.reject(new app.RequestError('email_already_registered')); await pending;
+  assert.equal(selected, '#email');
+  assert.equal(scroll.behavior, 'smooth');
+  assert.equal(scroll.block, 'center');
+  assert.equal(focus.preventScroll, true);
   tree = app.render(); let field = find(tree, n => n.type === 'field' && n.props.name === 'email');
   assert.equal(field.props.value, 'test@example.com');
   assert.equal(field.props.error, '이미 가입한 이메일입니다.');

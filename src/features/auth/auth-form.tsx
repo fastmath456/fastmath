@@ -35,16 +35,25 @@ export function AuthForm({ kind }: { kind: AuthKind }) {
   const fields = fieldsByKind[kind];
   const displayedPhone = /^\d{11}$/.test(values.phone) ? formatPhone(values.phone) : values.phone;
 
+  function focusError(input: HTMLInputElement | null) {
+    if (!input) return;
+    if (kind === 'signup') {
+      input.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
+      input.focus({ preventScroll: true });
+    } else input.focus();
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     const next: Partial<Record<AuthField, string>> = {};
     fields.forEach(field => { const error = validateField(field, values, kind); if (error) next[field] = error; });
     setErrors(next);
     const missingTerms = kind === 'signup' && !agreements.slice(0, 4).every(Boolean);
     setTermsError(missingTerms);
     const first = fields.find(field => next[field]);
-    if (first) event.currentTarget.querySelector<HTMLInputElement>(`#${first}`)?.focus();
-    else if (missingTerms) event.currentTarget.querySelector<HTMLInputElement>(`#agreement-${agreements.findIndex(value => !value)}`)?.focus();
+    if (first) focusError(form.querySelector<HTMLInputElement>(`#${first}`));
+    else if (missingTerms) focusError(form.querySelector<HTMLInputElement>(`#agreement-${agreements.findIndex(value => !value)}`));
     if (first || missingTerms) return;
     setRemoteError('');
     if (kind === 'recovery') setRecoveryLoading(true);
@@ -58,7 +67,10 @@ export function AuthForm({ kind }: { kind: AuthKind }) {
       if (kind === 'reset' && redirectIfUnauthorized(error)) return;
       if (error instanceof RequestError && error.code === 'invalid_credentials') setErrors({password:'이메일 또는 비밀번호를 확인해주세요.'});
       else if (kind === 'signup' && error instanceof RequestError && error.code === 'email_already_registered') {
-        if (currentEmail.current === values.email) setErrors(current => ({ ...current, email: duplicateEmailError }));
+        if (currentEmail.current === values.email) {
+          setErrors(current => ({ ...current, email: duplicateEmailError }));
+          focusError(form.querySelector<HTMLInputElement>('#email'));
+        }
       }
       else setRemoteError(requestFailure);
     } finally {
