@@ -11,7 +11,7 @@ import { useStatisticsCount } from './use-statistics-count';
 import styles from './landing.module.css';
 
 function CoursesLink({ dark = false }: { dark?: boolean }) {
-  return <Link href="/courses" className={dark ? styles.darkAction : styles.action}>
+  return <Link href={dark ? '/courses#top' : '/courses'} className={dark ? styles.darkAction : styles.action}>
     강의·교재 살펴보기
     <Image unoptimized src={`/assets/landing/arrow${dark ? '-yellow' : ''}.svg`} width={20} height={20} alt="" />
   </Link>;
