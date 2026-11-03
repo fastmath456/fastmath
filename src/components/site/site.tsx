@@ -25,8 +25,9 @@ export function SiteFooter() {
   </div><div className={styles.footerRule} /><div className={styles.footerGroup}><p>사업자등록증 상호명</p><p>사업자등록번호 : 873-03-03352</p><p>대표 : 임재현</p><p>개인정보처리담당자 : 임재현</p><p>주소 : 서울특별시 동작구 만양로14길 43(노량진동)</p><p>Copyright © 2026 빠른수학. All Rights Reserved.</p></div></footer>;
 }
 
-export function FormField({ label, error, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
-  return <div className={styles.field}><label htmlFor={props.id}>{label}</label><input {...props} className={styles.input} aria-invalid={Boolean(error)} aria-describedby={error ? `${props.id}-error` : undefined} />{error && <p id={`${props.id}-error`} className={styles.error}>{error}</p>}</div>;
+export function FormField({ label, description, error, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; description?: string; error?: string }) {
+  const describedBy = [description && `${props.id}-description`, error && `${props.id}-error`].filter(Boolean).join(' ') || undefined;
+  return <div className={styles.field}>{description ? <div><label htmlFor={props.id} className={styles.fieldLabel}>{label}</label><p id={`${props.id}-description`} className={styles.fieldDescription}>{description}</p></div> : <label htmlFor={props.id}>{label}</label>}<input {...props} className={styles.input} aria-invalid={Boolean(error)} aria-describedby={describedBy} />{error && <p id={`${props.id}-error`} className={styles.error}>{error}</p>}</div>;
 }
 
 export function Checkbox({ children, ...props }: InputHTMLAttributes<HTMLInputElement> & { children: ReactNode }) {
