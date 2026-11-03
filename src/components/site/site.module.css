@@ -43,7 +43,7 @@
 .resultActions { display: flex; gap: 8px; }
 .resultActions .button { width: 120px; }
 .checkLabel { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-.checkbox { appearance: none; width: 20px; height: 20px; flex-shrink: 0; margin: 0; background: var(--gray-400) url('/assets/signup-imgCheck01.svg') center / 16px no-repeat; border: 0; border-radius: 16px; }
+.checkbox { appearance: none; width: 20px; height: 20px; flex-shrink: 0; margin: 0; background: var(--gray-400) url('/assets/signup-imgCheck01.svg') center / 16px no-repeat; border: 0; border-radius: 16px; cursor: pointer; }
 .checkbox:checked { background-color: var(--brand-500); }
 
 .activeCourses { font-weight: 800; }
