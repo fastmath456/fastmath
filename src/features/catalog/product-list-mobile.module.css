@@ -14,6 +14,10 @@
 .tag { composes: tag from './catalog.module.css'; }
 .cardTitle { composes: cardTitle from './catalog.module.css'; }
 .price { composes: price from './catalog.module.css'; }
+.discount { composes: discount from './catalog.module.css'; }
+.discountedPrice { width: min(208px, 100%); }
+.cardBasePrice { color: #727262; font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: -.6px; }
+.cardPriceRow { display: flex; align-items: flex-start; width: fit-content; gap: 8px; white-space: nowrap; }
 .empty { composes: empty from './catalog.module.css'; }
 .requestError { composes: requestError from './catalog.module.css'; }
 
