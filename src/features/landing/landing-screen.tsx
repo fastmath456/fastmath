@@ -73,7 +73,7 @@ export function LandingScreen() {
             <p className={styles.heroDescription}>정의를 정확히 이해하고,<br className={styles.mobBreak} /> 스스로 ‘왜?’를 설명할 수 있을 때까지.<br />극상위권의 사고과정으로 수학을 다시 봅니다.</p>
             <div className={styles.heroActions}><CoursesLink /><Link href="/#philosophy" scroll={false} className={styles.philosophyLink} onClick={goToPhilosophy}>강의 철학 알아보기<Image unoptimized src="/assets/landing/arrow.svg" width={20} height={20} alt="" /></Link></div>
           </div>
-          <div className={styles.heroImage}><Image unoptimized loading="eager" src="/assets/landing/hero-desktop.png" width={1366} height={1152} alt="점 A(1,1)과 B(2,4)를 잇는 직선과 함수 f(x)=x²를 비교한 손글씨 그래프" /></div>
+          <div className={styles.heroImage}><Image unoptimized loading="eager" src="/assets/landing/hero-desktop.webp" width={1366} height={1152} alt="점 A(1,1)과 B(2,4)를 잇는 직선과 함수 f(x)=x²를 비교한 손글씨 그래프" /></div>
         </div>
       </section>
       <section ref={statisticsRef} className={styles.statistics} aria-label="빠른수학 소개 정보">

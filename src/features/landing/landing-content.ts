@@ -18,7 +18,7 @@ export const teachingPoints = [
     board: {
       title: '풀이의 시작은, 정의를 읽는 것.',
       description: '왼쪽이 0 이상이므로 오른쪽도 0 이상. 계산 전에 x가 만족해야 할 조건을 찾습니다.',
-      image: '/assets/landing/board-desktop.png',
+      image: '/assets/landing/board-desktop.webp',
       alt: '√(x+1)=x−1에서 x+1≥0과 x−1≥0을 함께 확인하여 x≥1을 얻습니다.',
     },
   },
