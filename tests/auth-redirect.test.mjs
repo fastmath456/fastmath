@@ -312,6 +312,26 @@ test('signup accepts digits only and formats 11-digit phone numbers while editin
   assert.equal(validation.validateField('phone', { phone: '010-1234-5678' }, 'signup'), undefined);
 });
 
+test('profile birthday accepts only digits and preserves the cursor', () => {
+  for (const [raw, cursor, expected, expectedCursor] of [
+    ['20a01-02', 8, '200102', 6],
+    ['20가010101', 3, '20010101', 2],
+    ['20000101', 4, '20000101', 4],
+  ]) {
+    const context = runtime();
+    const screen = context.render('src/features/account/profile-screen.tsx', 'ProfileScreen');
+    const formNode = find(screen, node => typeof node.type === 'function');
+    const form = formNode.type(formNode.props);
+    const field = find(form, node => node.type === 'field' && node.props.id === 'profile-birthday');
+    const input = { value: raw, selectionStart: cursor, setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; } };
+    field.props.onChange({ currentTarget: input, target: input, nativeEvent: { inputType: 'insertText' } });
+    assert.equal(input.value, expected);
+    assert.equal(input.selectionStart, expectedCursor);
+    assert.equal(context.draftWrites[0].values.birthday, expected);
+    assert.equal(field.props.maxLength, 8);
+  }
+});
+
 test('recovery and profile format phone input while preserving the cursor', () => {
   for (const kind of ['recovery', 'profile']) {
     for (const [previous, raw, cursor, inputType, expected, expectedCursor] of [
