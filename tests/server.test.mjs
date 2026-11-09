@@ -4,7 +4,7 @@ import {test,before,after} from 'node:test';
 import {createClient} from '@supabase/supabase-js';
 import nextEnv from '@next/env';
 const {loadEnvConfig}=nextEnv;
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {mkdtempSync,readFileSync,writeFileSync,mkdirSync,symlinkSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -64,6 +64,9 @@ test('RLS, financial write restrictions, hidden source paths, server role and ID
  assert.ok((await publicClient.from('products').select('pdf_path')).error);
  assert.ok((await publicClient.from('lessons').select('vimeo_id')).error);
  assert.equal((await http('orders/'+order.id+'/refund-quote',{jar:b.jar})).status,404);
+ assert.equal((await http('orders/'+order.id+'/payment-status',{jar:b.jar})).status,404);
+ assert.deepEqual((await http('orders/'+order.id+'/payment-status',{jar:a.jar})).body,{status:'paid',kind:'vod'});
+ assert.ok((await publicClient.from('nicepay_attempts').select('*')).error);
  assert.equal((await http('classroom/courses/'+productId,{jar:b.jar})).status,403);
  assert.equal((await http('admin/products',{method:'POST',jar:b.jar,data:{}})).status,403);
  assert.equal((await http('products/'+productId+'?view=admin',{jar:b.jar})).body.admin,false);
@@ -75,7 +78,7 @@ test('payment replay creates one entitlement; browser amount cannot grant access
  const key=randomUUID(),again=await rpc('create_order',{p_user:a.id,p_product:productId,p_key:order.request_key});assert.equal(again.id,order.id);
  assert.ok((await db.rpc('create_order',{p_user:a.id,p_product:productId,p_key:key})).error);
  assert.equal((await http('orders',{jar:a.jar})).body.items[0].amount,99000);
- assert.equal((await http('orders',{method:'POST',jar:b.jar,data:{productId,requestKey:randomUUID()}})).status,503);
+ assert.equal((await http('orders',{method:'POST',data:{productId,requestKey:randomUUID()}})).status,401);
 });
 test('progress ignores seeking, excludes preview and deduplicates replay',async()=>{
  await rpc('record_progress',{p_user:a.id,p_session:session,p_sequence:1,p_position:1000,p_playing:true});assert.equal(await rpc('used_seconds',{p_order:order.id}),0);
@@ -186,51 +189,134 @@ test('private Storage: validated image upload, signed PDF, expiration and hide p
  await db.storage.from('paid-files').remove([object.path]);
 });
 
-test('gateway contract: same keys recover PG success followed by DB failure; no duplicate cancel',async()=>{
+test('Nicepay: verified approval, timeout cancellation, recovery, and a single refund',async()=>{
  const compiled=mkdtempSync(join(tmpdir(),'quick-math-server-test-'));
  symlinkSync(join(process.cwd(),'node_modules'),join(compiled,'node_modules'),'dir');
  mkdirSync(join(compiled,'server'));
- for(const file of ['http','orders']) writeFileSync(join(compiled,'server',file+'.js'),ts.transpileModule(readFileSync('src/server/'+file+'.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText);
+ for(const file of ['http','nicepay','orders']) writeFileSync(join(compiled,'server',file+'.js'),ts.transpileModule(readFileSync('src/server/'+file+'.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText);
  const code=await import(pathToFileURL(join(compiled,'server','orders.js')).href);
  const o=await rpc('create_order',{p_user:b.id,p_product:productId,p_key:randomUUID()});orders.push(o.id);
- const resumed=await Promise.all([rpc('create_order',{p_user:b.id,p_product:productId,p_key:randomUUID()}),rpc('create_order',{p_user:b.id,p_product:productId,p_key:randomUUID()})]);assert.ok(resumed.every(order=>order.id===o.id),'abandoned checkout retries must reuse one pending order');
- const original=globalThis.fetch,oldKey=process.env.TOSS_SECRET_KEY;
- process.env.TOSS_SECRET_KEY='test_contract_only';
- let failedPayment=false,failedRefund=false,cancelCalls=0;
- const paymentKeys=[],confirmed={paymentKey:'contract-'+run,orderId:o.id,totalAmount:99000,status:'DONE',approvedAt:new Date().toISOString()},state={...confirmed};
+ const clientId='S2_contract',secret='contract-test-only';
+ const settings={NICEPAY_ENV:'sandbox',NICEPAY_CLIENT_ID:clientId,NICEPAY_SECRET_KEY:secret};
+ const oldSettings=Object.fromEntries(Object.keys(settings).map(name=>[name,process.env[name]]));
+ Object.assign(process.env,settings);
+ const original=globalThis.fetch;
+ const digest=(...fields)=>createHash('sha256').update(fields.join('')+secret).digest('hex');
+ const ediDate=new Date().toISOString();
+ let state, orderId=o.id, timedOut=true, failedPayment=false, failedRefund=false, cancelCalls=0, approvals=0;
+ let partialAmount, loseRefundResponse=false;
+ const reply=()=>({...state,signature:digest(state.tid,state.amount,state.ediDate)});
+ const transaction=(checkout,tid)=>({tid,orderId:checkout.orderId,amount:checkout.amount,status:'paid',paidAt:ediDate,ediDate,resultCode:'0000',currency:'KRW',payMethod:'card',balanceAmt:checkout.amount,cancels:[]});
  globalThis.fetch=async(input,options)=>{
   const url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url);
-  if(url.hostname==='api.tosspayments.com') {
-   if(url.pathname.endsWith('/confirm')){paymentKeys.push(new Headers(options.headers).get('Idempotency-Key'));return Response.json(confirmed);}
-   if(url.pathname.endsWith('/cancel')){cancelCalls++;state.status='CANCELED';state.cancels=[{cancelAmount:99000,transactionKey:'contract-cancel'}];return Response.json(state);}
-   return Response.json(state);
+  if(url.hostname==='sandbox-api.nicepay.co.kr') {
+   assert.equal(new Headers(options.headers).get('Authorization'),'Basic '+Buffer.from(`${clientId}:${secret}`).toString('base64'));
+   if(url.pathname.endsWith('/netcancel')) {
+    assert.deepEqual(JSON.parse(options.body),{orderId:state.orderId});
+    state={...state,status:'cancelled',balanceAmt:0};
+    throw new Error('lost netcancel response');
+   }
+   if(url.pathname.endsWith('/cancel')) {
+    cancelCalls++;
+    const request=JSON.parse(options.body);
+    assert.match(request.orderId,/^refund-/);
+    assert.equal(request.cancelAmt,partialAmount);
+    const amount=partialAmount??state.amount;
+    state={...state,status:partialAmount?'partialCancelled':'cancelled',balanceAmt:state.amount-amount,cancelledTid:'contract-cancel',cancels:[{tid:'contract-cancel',amount}]};
+    if(loseRefundResponse) throw new Error('lost refund response');
+   } else if(options.method==='POST') {
+    approvals++;
+    assert.deepEqual(JSON.parse(options.body),{amount:state.amount});
+    if(timedOut) {timedOut=false;throw new Error('approval timeout');}
+   }
+   return Response.json(reply());
   }
-  if(url.pathname.endsWith('/rpc/complete_payment')&&!failedPayment){failedPayment=true;return Response.json({message:'injected DB failure',code:'XX000'},{status:500});}
+  if(url.pathname.endsWith('/rpc/complete_nicepay_payment')&&!failedPayment){failedPayment=true;return Response.json({message:'injected DB failure',code:'XX000'},{status:500});}
   if(url.pathname.endsWith('/rpc/complete_refund')&&!failedRefund){failedRefund=true;return Response.json({message:'injected DB failure',code:'XX000'},{status:500});}
   return original(input,options);
  };
- const ctx=(data)=>({params:{orderId:o.id},user:async()=>({id:b.id,email:b.email}),request:new NextRequest(base+'/api/payments/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})});
+ const ctx=(data,actor=b)=>({params:{orderId},user:async()=>({id:actor.id,email:actor.email}),request:new NextRequest(base+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})});
+ const start=()=>code.createOrder(ctx({productId,requestKey:randomUUID(),amount:1}));
+ const callback=(checkout,overrides={},returnUrl=checkout.returnUrl)=>{
+  const authToken=state.tid+'-auth';
+  const form=new URLSearchParams({authResultCode:'0000',orderId:checkout.orderId,clientId,tid:state.tid,authToken,amount:String(checkout.amount),signature:digest(authToken,clientId,checkout.amount),...overrides});
+  return code.nicepayCallback({request:new NextRequest(returnUrl,{method:'POST',body:form})});
+ };
+ const webhook=(event=reply())=>code.paymentWebhook(ctx(event));
  try {
-  const payload={orderId:o.id,paymentKey:confirmed.paymentKey,amount:99000};
-  await assert.rejects(code.confirmPayment(ctx({...payload,amount:1})),e=>e.code==='payment_mismatch');
-  await assert.rejects(code.confirmPayment(ctx(payload)),e=>e.code==='database_error');
+  const [first,resumed]=await Promise.all([start(),start()]);
+  assert.equal(first.orderId,resumed.orderId);
+  assert.equal(first.amount,99000);
+  assert.equal('secretKey' in first,false);
+  state=transaction(first,'timeout-'+run);
+  await assert.rejects(callback(first,{amount:'1'}),e=>e.code==='invalid_payment_signature');
+  await assert.rejects(callback(first,{},first.returnUrl+'x'),e=>e.code==='invalid_payment_state');
+  assert.equal(approvals,0);
+  await assert.rejects(callback(first),e=>e.code==='payment_outcome_unknown');
+  assert.equal((await db.from('nicepay_attempts').select('status').eq('id',first.orderId).single()).data.status,'voiding');
+  await assert.rejects(start(),e=>e.code==='payment_outcome_unknown');
+  assert.equal(await (await webhook()).text(),'OK');
   assert.equal((await db.from('entitlements').select('*').eq('order_id',o.id)).data.length,0);
-  assert.equal((await code.confirmPayment(ctx(payload))).ok,true);
-  assert.deepEqual(paymentKeys,['pay-'+o.id,'pay-'+o.id]);
+
+  const next=await start();
+  assert.notEqual(next.orderId,first.orderId);
+  state=transaction(next,'approved-'+run);
+  const callbacks=await Promise.allSettled([callback(next),callback(next)]);
+  assert.ok(callbacks.every(result=>result.status==='rejected'));
+  assert.ok(callbacks.some(result=>result.reason.code==='database_error'));
+  assert.equal(approvals,2,'one request per claimed attempt');
+  assert.equal((await db.from('entitlements').select('*').eq('order_id',o.id)).data.length,0);
+  await assert.rejects(webhook(),e=>e.code==='payment_outcome_unknown');
+  assert.equal((await db.from('nicepay_attempts').update({claimed_at:new Date(Date.now()-60_000).toISOString()}).eq('id',next.orderId)).error,null);
+  await assert.rejects(webhook({...reply(),amount:1}),e=>e.code==='invalid_payment_signature');
+  assert.equal(await (await webhook()).text(),'OK');
+  assert.equal(await (await webhook()).text(),'OK');
+  const success=await callback(next);
+  assert.equal(success.status,303);
+  assert.equal(success.headers.get('location'),`${base}/payments/success?orderId=${o.id}`);
   assert.equal((await db.from('entitlements').select('*').eq('order_id',o.id)).data.length,1);
-  const webhook=()=>code.paymentWebhook(ctx({data:{orderId:o.id,totalAmount:1,status:'CANCELED'}}));
-  assert.equal((await webhook()).ok,true,'webhook data cannot override PG verification');
-  assert.equal((await webhook()).ok,true);
-  assert.equal((await db.from('orders').select('status').eq('id',o.id).single()).data.status,'paid');
+  const delayedApproval=reply();
   const q=await code.refundQuote(ctx({}));
   const refund={quote:q.quote,token:q.token,requestKey:randomUUID()};
   await assert.rejects(code.requestRefund(ctx(refund)),e=>e.code==='database_error');
   assert.equal((await code.requestRefund(ctx(refund))).status,'completed');
   assert.equal(cancelCalls,1);
-  assert.equal((await webhook()).ok,true);assert.equal((await webhook()).ok,true);
+  assert.equal(await (await webhook(delayedApproval)).text(),'OK');
+  assert.equal(await (await webhook()).text(),'OK');
   assert.equal((await db.from('orders').select('status').eq('id',o.id).single()).data.status,'refunded');
   assert.equal((await db.from('entitlements').select('revoked').eq('order_id',o.id).single()).data.revoked,true);
- } finally {globalThis.fetch=original;if(oldKey===undefined) delete process.env.TOSS_SECRET_KEY;else process.env.TOSS_SECRET_KEY=oldKey;rmSync(compiled,{recursive:true});}
+
+  assert.equal((await db.from('user_roles').upsert({user_id:a.id,role:'admin'})).error,null);
+  partialAmount=15000;
+  for(const lost of [false,true]) {
+   loseRefundResponse=lost;
+   const checkout=await start();
+   const attempt=await db.from('nicepay_attempts').select('order_id').eq('id',checkout.orderId).single();
+   assert.equal(attempt.error,null);
+   orderId=attempt.data.order_id;
+   state={...transaction(checkout,'partial-'+Number(lost)+'-'+run),card:{canPartCancel:'true'}};
+   assert.equal((await callback(checkout)).status,303);
+   assert.equal((await db.from('refunds').insert({order_id:orderId,user_id:b.id,request_key:randomUUID(),amount:partialAmount,used_seconds:1,status:'review'})).error,null);
+   assert.equal((await db.from('orders').update({status:'review'}).eq('id',orderId)).error,null);
+   const review=ctx({approve:true,amount:partialAmount,reason:'테스트 부분취소'},a);
+   if(lost) {
+    await assert.rejects(code.reviewRefund(review),e=>e.code==='payment_outcome_unknown');
+    await assert.rejects(code.recoverOrder(ctx({},a)),e=>e.code==='payment_outcome_unknown');
+    await assert.rejects(webhook(),e=>e.code==='payment_outcome_unknown');
+    assert.equal((await db.from('refunds').select('status').eq('order_id',orderId).single()).data.status,'processing');
+   } else {
+    assert.equal((await code.reviewRefund(review)).status,'completed');
+    assert.equal((await db.from('entitlements').select('revoked').eq('order_id',orderId).single()).data.revoked,true);
+   }
+   assert.equal(cancelCalls,lost?3:2);
+  }
+ } finally {
+  globalThis.fetch=original;
+  for(const [name,value] of Object.entries(oldSettings)) {
+   if(value===undefined) delete process.env[name]; else process.env[name]=value;
+  }
+  rmSync(compiled,{recursive:true});
+ }
 });
 
 after(async()=>{

@@ -173,6 +173,24 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"nicepay_attempts": {
+                  Row: {
+                    "auth_token_hash": string | null,"claimed_at": string | null,"environment": string,"id": string,"order_id": string,"status": string,"tid": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth_token_hash"?: string | null,"claimed_at"?: string | null,"environment": string,"id"?: string,"order_id": string,"status"?: string,"tid"?: string | null
+                  }
+                  Update: {
+                    "auth_token_hash"?: string | null,"claimed_at"?: string | null,"environment"?: string,"id"?: string,"order_id"?: string,"status"?: string,"tid"?: string | null
+                  }
+                  Relationships: [{
+                    foreignKeyName: "nicepay_attempts_order_id_fkey"
+                    columns: ["order_id"]
+                    isOneToOne: false
+                    referencedRelation: "orders"
+                    referencedColumns: ["id"]
+                  }]
                 },"order_lessons": {
                   Row: {
                     "duration_seconds": number,"lesson_id": string,"order_id": string,"preview": boolean,"user_id": string
@@ -275,14 +293,14 @@ isOneToOne: false
                   ]
                 },"refunds": {
                   Row: {
-                    "amount": number,"completed_at": string | null,"order_id": string,"reason": string | null,"request_key": string,"requested_at": string,"status": string,"used_seconds": number,"user_id": string
+                    "amount": number,"completed_at": string | null,"nicepay_cancel_started": boolean,"nicepay_cancel_tid": string | null,"order_id": string,"reason": string | null,"request_key": string,"requested_at": string,"status": string,"used_seconds": number,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount": number,"completed_at"?: string | null,"order_id": string,"reason"?: string | null,"request_key": string,"requested_at"?: string,"status": string,"used_seconds": number,"user_id": string
+                    "amount": number,"completed_at"?: string | null,"nicepay_cancel_started"?: boolean,"nicepay_cancel_tid"?: string | null,"order_id": string,"reason"?: string | null,"request_key": string,"requested_at"?: string,"status": string,"used_seconds": number,"user_id": string
                   }
                   Update: {
-                    "amount"?: number,"completed_at"?: string | null,"order_id"?: string,"reason"?: string | null,"request_key"?: string,"requested_at"?: string,"status"?: string,"used_seconds"?: number,"user_id"?: string
+                    "amount"?: number,"completed_at"?: string | null,"nicepay_cancel_started"?: boolean,"nicepay_cancel_tid"?: string | null,"order_id"?: string,"reason"?: string | null,"request_key"?: string,"requested_at"?: string,"status"?: string,"used_seconds"?: number,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -367,6 +385,10 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"complete_nicepay_payment":
+{ Args: { "p_amount": number,"p_attempt": string,"p_paid": string,"p_tid": string }; Returns: boolean },
+"create_nicepay_attempt":
+{ Args: { "p_environment": string,"p_key": string,"p_product": string,"p_user": string }; Returns: { "amount": number,"attempt_id": string,"title": string }[] },
             "complete_payment":
 { Args: { "p_amount": number,"p_order": string,"p_paid": string,"p_payment": string }; Returns: undefined
                            },
@@ -427,6 +449,8 @@ isOneToOne: false
 { Args: { "p_amount": number,"p_expires": string,"p_key": string,"p_order": string,"p_used": number,"p_user": string }; Returns: {
               "amount": number,
 "completed_at": string | null,
+"nicepay_cancel_started": boolean,
+"nicepay_cancel_tid": string | null,
 "order_id": string,
 "reason": string | null,
 "request_key": string,
@@ -458,6 +482,8 @@ isOneToOne: false
 { Args: { "p_amount": number,"p_approve": boolean,"p_order": string,"p_reason": string }; Returns: {
               "amount": number,
 "completed_at": string | null,
+"nicepay_cancel_started": boolean,
+"nicepay_cancel_tid": string | null,
 "order_id": string,
 "reason": string | null,
 "request_key": string,

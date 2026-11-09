@@ -1,16 +1,35 @@
-import { mutate } from '@/lib/http';
-type Checkout = { orderId:string;orderName:string;amount:number;customerKey:string;clientKey:string };
-type Toss = (key:string) => {payment: (options:{customerKey:string}) => {requestPayment:(options: {method:'CARD';amount:{currency:'KRW';value:number};orderId:string;orderName:string;successUrl:string;failUrl:string})=>Promise<void>}};
-let sdk:Promise<Toss> | undefined;
-function loadToss() {
-  return sdk ??= new Promise<Toss>((resolve,reject) => {
-    const script=document.createElement('script');script.src='https://js.tosspayments.com/v2/standard';
-    script.onload=()=> { const toss=(window as Window & {TossPayments?:Toss}).TossPayments; if(toss) resolve(toss); else reject(new Error('Payment SDK unavailable')); };
-    script.onerror=()=> { sdk=undefined; script.remove(); reject(new Error('Payment SDK unavailable')); };document.head.append(script);
+import { mutate, RequestError } from '@/lib/http';
+
+type Checkout = { clientId:string; orderId:string; amount:number; goodsName:string; returnUrl:string };
+type Nicepay = { requestPay(options: Checkout & { method:'card'; fnError:()=>void }): false | void };
+
+let sdk:Promise<Nicepay> | undefined;
+
+function loadNicepay() {
+  return sdk ??= new Promise<Nicepay>((resolve,reject) => {
+    const script=document.createElement('script');
+    script.src='https://pay.nicepay.co.kr/v1/js/';
+    const unavailable=()=> { sdk=undefined; script.remove(); reject(new Error('Payment SDK unavailable')); };
+    script.onload=()=> {
+      const nicepay=(window as Window & {AUTHNICE?:Nicepay}).AUTHNICE;
+      if (nicepay) resolve(nicepay);
+      else unavailable();
+    };
+    script.onerror=unavailable;
+    document.head.append(script);
   });
 }
+
 export async function checkout(productId:string,requestKey:string) {
-  const order=await mutate<Checkout>('orders',{productId,requestKey});
-  const toss=await loadToss();
-  await toss(order.clientKey).payment({customerKey:order.customerKey}).requestPayment({method:'CARD',amount:{currency:'KRW',value:order.amount},orderId:order.orderId,orderName:order.orderName,successUrl:location.origin+'/payments/success',failUrl:location.origin+'/payments/failure'});
+  const order=await mutate<Checkout>('orders',{productId,requestKey}).catch(error=> {
+    if (!(error instanceof RequestError) || error.code!=='payment_outcome_unknown') throw error;
+  });
+  if (!order) return;
+
+  const nicepay=await loadNicepay();
+  // The SDK posts to returnUrl on success and calls fnError if the payment window closes with an error.
+  await new Promise<void>((_,reject)=> {
+    const fnError=()=>reject(new Error('Payment window closed'));
+    if (nicepay.requestPay({...order,method:'card',fnError})===false) fnError();
+  });
 }

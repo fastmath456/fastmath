@@ -175,13 +175,22 @@ for (const [file, name, props, pathname] of [
   });
 }
 
-test('payment confirmation sends session expiry only to login and retains the existing failure destination otherwise', () => {
+test('payment result sends session expiry to login and retains the failure destination otherwise', () => {
   for (const error of [unauthorized(), serverError()]) {
     const context = runtime({ error });
-    context.render('src/features/payments/payment-result.tsx', 'PaymentResult', { paymentKey: 'key', orderId: 'order', amount: '100' });
+    context.render('src/features/payments/payment-result.tsx', 'PaymentResult', { orderId: 'order' });
     context.flush();
     assert.deepEqual(context.routes, http.isUnauthorized(error) ? [['replace', '/login']] : [['location', '/payments/failure']]);
   }
+});
+
+test('payment result displays the existing PDF result from the stored payment status', () => {
+  const context = runtime({ data: { status: 'paid', kind: 'pdf' } });
+  const result = context.render('src/features/payments/payment-result.tsx', 'PaymentResult', { orderId: 'order' });
+  context.flush();
+  assert.equal(result?.type, 'result');
+  assert.equal(result.props.actions[0].href, '/orders');
+  assert.deepEqual(context.routes, []);
 });
 
 test('expired checkout goes to login while genuine checkout failures retain the failure screen', async () => {
