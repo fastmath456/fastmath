@@ -35,13 +35,13 @@ export function Checkbox({ children, ...props }: InputHTMLAttributes<HTMLInputEl
   return <label className={styles.checkLabel}><input {...props} type="checkbox" className={styles.checkbox} />{children}</label>;
 }
 
-type ResultContent = { title: string; lines: string[]; actions: { label: string; href?: string; variant?: 'primary' | 'outline' | 'secondary' }[] };
+type ResultContent = { title: string; lines: string[]; actions: { label: string; href?: string; onClick?: () => void; variant?: 'primary' | 'outline' | 'secondary' }[] };
 
 function ResultBody({ title, lines, actions, className = '' }: ResultContent & { className?: string }) {
   return <div className={`${styles.resultBody} ${className}`}><div className={styles.resultText}><h1 className={styles.title}>{title}</h1><div>{lines.map(line => <p key={line}>{line}</p>)}</div></div><div className={styles.resultActions}>{actions.map((action, i) => {
     const variant = action.variant === 'outline' ? styles.outline : action.variant === 'secondary' || (!action.variant && i === 0) ? styles.secondary : '';
     const actionClass = `${styles.button} ${variant}`;
-    return action.href ? <Link key={action.label} href={action.href} className={actionClass}>{action.label}</Link> : <button key={action.label} type="button" className={actionClass}>{action.label}</button>;
+    return action.href ? <Link key={action.label} href={action.href} className={actionClass}>{action.label}</Link> : <button key={action.label} type="button" className={actionClass} onClick={action.onClick}>{action.label}</button>;
   })}</div></div>;
 }
 

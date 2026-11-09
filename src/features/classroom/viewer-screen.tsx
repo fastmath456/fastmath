@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ConfirmationDialog, SiteFooter, SiteHeader } from '@/components/site';
 import { useProfile } from '@/features/account';
-import { checkout } from '@/features/catalog';
+import { checkout, coursePaymentFailureHref } from '@/features/catalog';
 import { useLoginRedirect } from '@/features/auth';
 import { getViewer } from './api';
 import { ViewerLoading } from './classroom-skeletons';
@@ -57,9 +57,9 @@ export function ViewerScreen({ courseId, lessonId, state = '', preview = false }
     setPaymentOpen(false);
     if (isUnauthorized(profile.error)) { router.push('/login'); return; }
     if (purchase.current) return;
-    requestKey.current ||= crypto.randomUUID();
-    purchase.current = checkout(courseId, requestKey.current)
-      .catch(error => { if (!redirectIfUnauthorized(error)) router.push('/payments/failure?kind=vod'); })
+    const key = requestKey.current ||= crypto.randomUUID();
+    purchase.current = checkout(courseId, key)
+      .catch(error => { if (!redirectIfUnauthorized(error)) router.push(coursePaymentFailureHref(courseId, key)); })
       .finally(() => { purchase.current = null; });
   }
   if (requiresLogin) return null;

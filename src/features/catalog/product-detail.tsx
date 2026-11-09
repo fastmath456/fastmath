@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { checkout } from './checkout';
+import { checkout, coursePaymentFailureHref } from './checkout';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -96,9 +96,11 @@ export function ProductDetailScreen({ slug, kind, state = '', view = '' }: { slu
     }
     event?.preventDefault();
     if (purchase.current) return;
-    requestKey.current ||= crypto.randomUUID();
-    purchase.current = checkout(product.id, requestKey.current)
-      .catch(error => { if (!redirectIfUnauthorized(error)) router.push(`/payments/failure?kind=${kind}`); })
+    const key = requestKey.current ||= crypto.randomUUID();
+    purchase.current = checkout(product.id, key)
+      .catch(error => {
+        if (!redirectIfUnauthorized(error)) router.push(kind === 'vod' ? coursePaymentFailureHref(product.id, key) : '/payments/failure?kind=pdf');
+      })
       .finally(() => { purchase.current = null; });
   };
   function selectLesson(id: string) {

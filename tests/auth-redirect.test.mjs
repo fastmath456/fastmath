@@ -94,6 +94,7 @@ test('mutations preserve the error without retrying or changing the request cont
 // Render component functions with isolated hooks and requests; no browser, payment SDK, or live account is used.
 function runtime({ error = null, profileError = null, quoteError = null, data, quote, pending = false, quotePending = false, profilePending = false, pathname = '/classroom', mutateError = unauthorized(), draft, state, reducedMotion = false } = {}) {
   const routes = [], effects = [], cleanups = [], writes = [], requests = [], refetches = [], events = {}, players = [], draftWrites = [];
+  const retryStorage = new Map();
   const router = { replace: path => routes.push(['replace', path]), push: path => routes.push(['push', path]), refresh() {} };
   const react = {
     useId: () => 'test-menu', useEffect: effect => effects.push(effect), useCallback: callback => callback, useRef: value => ({ current: value }),
@@ -105,9 +106,14 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     window: { addEventListener() {}, removeEventListener() {}, matchMedia: () => ({ matches: reducedMotion }), Vimeo: { Player: class { constructor(_container, options) { players.push(options); } on(name, callback) { events[name] = callback; } ready() { return new Promise(resolve => { events.ready = resolve; }); } async destroy() {} } } },
     document: { addEventListener() {}, removeEventListener() {}, getElementById: () => null, createElement: () => ({}), head: { append: script => queueMicrotask(() => script.onload()) } },
     performance: { now: () => 6000 }, crypto: { randomUUID: () => 'test-request-key' },
+    sessionStorage: { setItem: (key, value) => retryStorage.set(key, value) },
     fetch: async () => new Response('image'),
   };
   const hook = load('src/features/auth/use-login-redirect.ts', { react, 'next/navigation': { useRouter: () => router }, '@/lib/http': http });
+  const checkout = {
+    ...load('src/features/catalog/checkout.ts', { '@/lib/http': http }, globals),
+    checkout: async () => { requests.push('checkout'); throw mutateError; },
+  };
   const profile = { isPending: profilePending, error: profileError, data: profilePending ? undefined : { name: '테스트', email: 'test@example.com', birthday: '20000101', phone: '01012345678', image: '', avatar: '', marketing: false, revision: 1 } };
   const query = { isPending: pending, error, isError: Boolean(error), data, refetch: () => refetches.push('query') };
   const modules = {
@@ -124,11 +130,11 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     './product-skeletons': { ProductDetailLoading: 'product-loading', ProductListSkeleton: 'list-loading' },
     './classroom-skeletons': { ViewerLoading: 'viewer-loading', ClassroomSkeleton: 'classroom-loading' },
     './account-skeletons': { OrdersSkeletonRows: 'orders-loading', ProfileLoading: 'profile-loading', RefundQuoteSkeleton: 'quote-loading' },
-    './checkout': { checkout: async () => { requests.push('checkout'); throw mutateError; } },
-    '@/features/catalog': { checkout: async () => { requests.push('checkout'); throw mutateError; } },
+    './checkout': checkout,
+    '@/features/catalog': checkout,
   };
   return {
-    routes, writes, requests, refetches, events, players, hook, draftWrites,
+    routes, writes, requests, refetches, events, players, hook, draftWrites, retryStorage,
     render(file, name, props = {}) { return load(file, modules, globals)[name](props); },
     flush() { for (const effect of effects.splice(0)) { const cleanup = effect(); if (cleanup) cleanups.push(cleanup); } },
     unmount() { for (const cleanup of cleanups.splice(0)) cleanup(); },
@@ -200,7 +206,9 @@ test('expired checkout goes to login while genuine checkout failures retain the 
     context.flush();
     find(tree, node => node.props.children === '수강 신청하기').props.onClick({ preventDefault() {} });
     await settle();
-    assert.deepEqual(context.routes, http.isUnauthorized(error) ? [['replace', '/login']] : [['push', '/payments/failure?kind=vod']]);
+    const needsLogin = http.isUnauthorized(error);
+    assert.deepEqual(context.routes, needsLogin ? [['replace', '/login']] : [['push', '/payments/failure?kind=vod&requestKey=test-request-key']]);
+    assert.deepEqual([...context.retryStorage.values()], needsLogin ? [] : ['course']);
     assert.deepEqual(context.requests, ['checkout']);
   }
 });

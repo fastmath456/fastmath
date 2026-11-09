@@ -4,7 +4,7 @@ import { adminDb, ApiError, body, bytes, dbError, integer, uuid, string, require
 import type { Database } from './database.types';
 import { approvalTimeout, nicepayCallbackAttempt, nicepayConfig, nicepayGoodsName, nicepayRequest, nicepayReturnUrl, readNicepayPayment, requireNicepayWrites, validNicepaySignature, type NicepayPayment } from './nicepay';
 
-type OrderRow={id:string;user_id:string;product_id:string;title:string;kind:'vod'|'pdf';amount:number;status:string;payment_key:string|null;paid_at:string|null;total_paid_seconds:number};
+type OrderRow={id:string;user_id:string;product_id:string;request_key:string;title:string;kind:'vod'|'pdf';amount:number;status:string;payment_key:string|null;paid_at:string|null;total_paid_seconds:number};
 type Quote={orderId:string;title:string;amount:number;paidAmount:number;usedSeconds:number;totalSeconds:number;manual:boolean;version:string;expiresAt:string};
 type Refund=Database['public']['Tables']['refunds']['Row'];
 type Attempt=Database['public']['Tables']['nicepay_attempts']['Row'];
@@ -16,9 +16,11 @@ export async function ownOrder(ctx:Context,id:string) {
 export async function createOrder(ctx:Context) {
   const user=await ctx.user(), input=await body(ctx.request), config=nicepayConfig();
   requireNicepayWrites(config);
+  const retry=input.retryOrderId===undefined ? undefined : await ownOrder(ctx,uuid(input.retryOrderId,'retryOrderId'));
+  if (retry && (retry.kind!=='vod' || retry.status!=='pending')) throw new ApiError(409,'payment_conflict');
   const {data,error}=await adminDb().rpc('create_nicepay_attempt',{
-    p_user:user.id, p_product:string(input.productId,'productId',100),
-    p_key:uuid(input.requestKey,'requestKey'), p_environment:config.environment,
+    p_user:user.id, p_product:retry?.product_id ?? string(input.productId,'productId',100),
+    p_key:retry?.request_key ?? uuid(input.requestKey,'requestKey'), p_environment:config.environment,
   }).single();
   dbError(error);
   if (!data) throw new ApiError(500,'database_error');
@@ -85,6 +87,7 @@ async function closeAttempt(attempt:Attempt) {
 function paymentRedirect(order:OrderRow, paid:boolean) {
   const url=new URL(paid?'/payments/success':'/payments/failure',setting('APP_ORIGIN'));
   url.searchParams.set(paid?'orderId':'kind',paid?order.id:order.kind);
+  if (!paid && order.kind==='vod') url.searchParams.set('orderId',order.id);
   return NextResponse.redirect(url,303);
 }
 

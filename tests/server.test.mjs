@@ -249,6 +249,12 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
   assert.equal(first.amount,99000);
   assert.equal('secretKey' in first,false);
   state=transaction(first,'timeout-'+run);
+  const failure=await callback(first,{authResultCode:'9999'});
+  assert.equal(failure.status,303);
+  assert.equal(failure.headers.get('location'),`${base}/payments/failure?kind=vod&orderId=${o.id}`);
+  await assert.rejects(code.createOrder(ctx({retryOrderId:o.id},a)),e=>e.code==='not_found');
+  const reopened=await code.createOrder(ctx({retryOrderId:o.id,productId:'different-course'}));
+  assert.equal(reopened.orderId,first.orderId);
   await assert.rejects(callback(first,{amount:'1'}),e=>e.code==='invalid_payment_signature');
   await assert.rejects(callback(first,{},first.returnUrl+'x'),e=>e.code==='invalid_payment_state');
   assert.equal(approvals,0);
@@ -258,7 +264,7 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
   assert.equal(await (await webhook()).text(),'OK');
   assert.equal((await db.from('entitlements').select('*').eq('order_id',o.id)).data.length,0);
 
-  const next=await start();
+  const next=await code.createOrder(ctx({retryOrderId:o.id}));
   assert.notEqual(next.orderId,first.orderId);
   state=transaction(next,'approved-'+run);
   const callbacks=await Promise.allSettled([callback(next),callback(next)]);
@@ -274,6 +280,7 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
   const success=await callback(next);
   assert.equal(success.status,303);
   assert.equal(success.headers.get('location'),`${base}/payments/success?orderId=${o.id}`);
+  await assert.rejects(code.createOrder(ctx({retryOrderId:o.id})),e=>e.code==='payment_conflict');
   assert.equal((await db.from('entitlements').select('*').eq('order_id',o.id)).data.length,1);
   const delayedApproval=reply();
   const q=await code.refundQuote(ctx({}));
