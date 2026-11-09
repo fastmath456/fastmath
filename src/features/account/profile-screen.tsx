@@ -86,7 +86,8 @@ function ProfileForm({ profile }: { profile: Profile }) {
       await mutate(`auth/${action}`);
       allowLeave.current = true;
       await client.cancelQueries(); client.clear();
-      router.replace('/login'); router.refresh();
+      // Discard guest-route redirects cached before the session ended.
+      location.replace('/login');
     } catch (error) {
       if (!redirectIfUnauthorized(error)) setMessage(requestFailure);
     } finally {

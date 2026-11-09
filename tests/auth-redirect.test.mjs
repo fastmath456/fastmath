@@ -654,7 +654,7 @@ test('admin data skeleton appears only after access succeeds and clears when dat
 });
 
 
-test('logout sends one request, clears cached account data and replaces the route with login', async () => {
+test('logout sends one request, clears cached account data and loads a fresh login document', async () => {
   const context = runtime({ mutateError: null });
   const screen = context.render('src/features/account/profile-screen.tsx', 'ProfileScreen');
   const node = find(screen, item => typeof item.type === 'function');
@@ -662,7 +662,7 @@ test('logout sends one request, clears cached account data and replaces the rout
   const action = find(form, item => item.props.children === '로그아웃');
   action.props.onClick(); action.props.onClick(); await settle();
   assert.deepEqual(context.requests, ['auth/logout']);
-  expectLogin(context);
+  assert.deepEqual(context.routes, [['location', '/login']]);
   assert.ok(context.writes.indexOf('cancel-queries') < context.writes.indexOf('clear-cache'));
 });
 
@@ -675,6 +675,7 @@ test('withdrawal requires confirmation and submits only the signed-in account ac
   assert.ok(dialog); assert.deepEqual(context.requests, []);
   assert.equal(dialog.props.actions[0].cancel, true);
   dialog.props.actions[1].onClick(); dialog.props.actions[1].onClick(); await settle();
-  assert.deepEqual(context.requests, ['auth/withdraw']); expectLogin(context);
+  assert.deepEqual(context.requests, ['auth/withdraw']);
+  assert.deepEqual(context.routes, [['location', '/login']]);
   assert.ok(context.writes.includes('clear-cache'));
 });
