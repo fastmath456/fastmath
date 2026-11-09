@@ -1,0 +1,7 @@
+.courseResult > img {
+  object-fit: cover;
+}
+
+.courseResult + footer {
+  padding-inline: 20px;
+}
