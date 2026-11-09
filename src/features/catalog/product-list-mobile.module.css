@@ -26,6 +26,8 @@
     letter-spacing: -.7px;
   }
 
+  .sortControl { letter-spacing: inherit; }
+
   .select {
     font-size: 14px;
     font-weight: 500;

@@ -265,14 +265,14 @@ isOneToOne: false
                   ]
                 },"products": {
                   Row: {
-                    "base_price": number | null,"id": string,"image": string,"kind": string,"license_days": number,"pdf_path": string | null,"poster": string,"price": number,"published_at": string,"selling": boolean,"slug": string,"tags": (string)[],"title": string
+                    "base_price": number | null,"display_order": number | null,"id": string,"image": string,"kind": string,"license_days": number,"pdf_path": string | null,"poster": string,"price": number,"published_at": string,"selling": boolean,"slug": string,"tags": (string)[],"title": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "base_price"?: number | null,"id": string,"image": string,"kind": string,"license_days"?: number,"pdf_path"?: string | null,"poster"?: string,"price": number,"published_at"?: string,"selling"?: boolean,"slug": string,"tags"?: (string)[],"title": string
+                    "base_price"?: number | null,"display_order"?: number | null,"id": string,"image": string,"kind": string,"license_days"?: number,"pdf_path"?: string | null,"poster"?: string,"price": number,"published_at"?: string,"selling"?: boolean,"slug": string,"tags"?: (string)[],"title": string
                   }
                   Update: {
-                    "base_price"?: number | null,"id"?: string,"image"?: string,"kind"?: string,"license_days"?: number,"pdf_path"?: string | null,"poster"?: string,"price"?: number,"published_at"?: string,"selling"?: boolean,"slug"?: string,"tags"?: (string)[],"title"?: string
+                    "base_price"?: number | null,"display_order"?: number | null,"id"?: string,"image"?: string,"kind"?: string,"license_days"?: number,"pdf_path"?: string | null,"poster"?: string,"price"?: number,"published_at"?: string,"selling"?: boolean,"slug"?: string,"tags"?: (string)[],"title"?: string
                   }
                   Relationships: [
                     

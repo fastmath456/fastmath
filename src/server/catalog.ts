@@ -1,6 +1,6 @@
 import { adminDb, ApiError, body, dbError, integer, requireAdmin, string, date, type Context } from './http';
 import { profile } from './profile';
-import type { Product, Chapter } from '../features/catalog/types';
+import { parseSort, type Product, type Chapter } from '../features/catalog';
 const columns='id,slug,kind,title,tags,price,base_price,image,published_at,selling';
 const detailColumns='id,slug,kind,title,tags,price,base_price,image,published_at,selling,license_days';
 type Row={id:string;slug:string;kind:'vod'|'pdf';title:string;tags:string[];price:number;base_price:number|null;image:string;published_at:string;selling:boolean};
@@ -8,10 +8,17 @@ type DetailRow=Row&{license_days:number|null};
 type ProductAssetRow={role:'thumbnail'|'detailImage'|'material';position:number;asset_id:string;admin_course_assets:{id:string;name:string;size_bytes:number;content_type:string;width:number|null;height:number|null}|{id:string;name:string;size_bytes:number;content_type:string;width:number|null;height:number|null}[]|null};
 const product=(p:Row):Product=>({id:p.id,slug:p.slug,kind:p.kind,title:p.title,tags:p.tags,price:p.price,...(p.base_price?{basePrice:p.base_price}:{}),image:p.image,publishedOrder:-new Date(p.published_at).getTime()});
 export async function products(ctx: Context) {
-  const sort=ctx.request.nextUrl.searchParams.get('sort');
+  const sortValues = ctx.request.nextUrl.searchParams.getAll('sort');
+  const sort = parseSort(sortValues.length === 1 ? sortValues[0] : undefined);
   // shortcut: hide the production QA item until catalog visibility is managed explicitly.
-  let query=ctx.db.from('products').select(columns).neq('id','course-9664ad3b74f94f7a834a53cff0d16188').order(sort==='price-asc'||sort==='price-desc'?'price':'published_at',{ascending:sort==='price-asc'}).order('id');
-  query=query.limit(1000); const {data,error}=await query; dbError(error);
+  let query = ctx.db.from('products').select(columns).neq('id','course-9664ad3b74f94f7a834a53cff0d16188');
+  if (sort === 'default') {
+    query = query.order('display_order', { ascending: true, nullsFirst: false });
+  } else if (sort === 'price-asc' || sort === 'price-desc') {
+    query = query.order('price', { ascending: sort === 'price-asc' });
+  }
+  const { data, error } = await query.order('published_at', { ascending: false }).order('id').limit(1000);
+  dbError(error);
   const user=await ctx.optionalUser(),current=user?await profile(ctx):null;
   return {items:(data as unknown as Row[]).map(product),count:data!.length,...(current?{profile:{name:current.name,image:current.avatar}}:{})};
 }

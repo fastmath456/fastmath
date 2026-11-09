@@ -1,6 +1,8 @@
 import type { ProductDetail, ProductList, ProductSort } from './types';
 
-export function parseSort(value?: string): ProductSort { return value === 'price-asc' || value === 'price-desc' ? value : 'latest'; }
+export function parseSort(value?: string): ProductSort {
+  return value === 'latest' || value === 'price-asc' || value === 'price-desc' ? value : 'default';
+}
 export function discountPercent(base: number, price: number) { return Math.floor((base - price) * 100 / base); }
 export async function getProducts(sort: ProductSort): Promise<ProductList> {
   const response = await fetch(`/api/products?sort=${sort}`);
