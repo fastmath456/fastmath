@@ -16,26 +16,21 @@ export function PaymentResult({orderId}:{orderId?:string}) {
   const { requiresLogin } = useLoginRedirect(query.error);
   useEffect(()=> { if(!requiresLogin && (query.isError||!orderId)) location.replace('/payments/failure'); },[query.isError,requiresLogin,orderId]);
   if (requiresLogin || query.data?.status!=='paid') return null;
-  const pdf = query.data.kind === 'pdf';
-  const successContent = {
-    title: '결제에 성공했습니다',
-    lines: ['구매하신 상품을 이제 이용하실 수 있어요.', '빠른수학과 함께 수학 공부를 시작해 보세요.'],
-    actions: [
-      { label: '내 수강실로', href: pdf ? '/orders' : '/classroom', variant: 'primary' as const },
-      { label: '다른 강의보기', href: '/courses', variant: 'outline' as const },
-    ],
-  };
-  const desktopContent = pdf
-    ? { title: '결제가 완료되었습니다.', lines: [], actions: [{ label: '구매 내역 보기', href: '/orders' }] }
-    : successContent;
+  const primaryAction = query.data.kind === 'pdf'
+    ? { label: '구매 내역 보기', href: '/orders' }
+    : { label: '내 수강실로', href: '/classroom' };
 
   return (
     <ResultScreen
-      {...desktopContent}
+      title="결제에 성공했습니다"
+      lines={['구매하신 상품을 이제 이용하실 수 있어요.', '빠른수학과 함께 수학 공부를 시작해 보세요.']}
+      actions={[
+        { ...primaryAction, variant: 'primary' },
+        { label: '다른 강의보기', href: '/courses', variant: 'outline' },
+      ]}
       image="/assets/pay-complete-imgRectangle5.png"
       mobileTitle="결제완료"
-      mobileContent={pdf ? successContent : undefined}
-      className={pdf ? undefined : styles.courseResult}
+      className={styles.courseResult}
     />
   );
 }

@@ -190,13 +190,28 @@ test('payment result sends session expiry to login and retains the failure desti
   }
 });
 
-test('payment result displays the existing PDF result from the stored payment status', () => {
-  const context = runtime({ data: { status: 'paid', kind: 'pdf' } });
-  const result = context.render('src/features/payments/payment-result.tsx', 'PaymentResult', { orderId: 'order' });
-  context.flush();
-  assert.equal(result?.type, 'result');
-  assert.equal(result.props.actions[0].href, '/orders');
-  assert.deepEqual(context.routes, []);
+test('payment result shares the success UI and keeps the destination for each paid product', () => {
+  for (const [kind, primaryLabel, primaryHref] of [
+    ['vod', '내 수강실로', '/classroom'],
+    ['pdf', '구매 내역 보기', '/orders'],
+  ]) {
+    const context = runtime({ data: { status: 'paid', kind } });
+    const result = context.render('src/features/payments/payment-result.tsx', 'PaymentResult', { orderId: 'order' });
+    context.flush();
+    assert.equal(result?.type, 'result');
+    assert.deepEqual(context.routes, []);
+    for (const content of [result.props, result.props.mobileContent ?? result.props]) {
+      assert.equal(content.title, '결제에 성공했습니다');
+      assert.deepEqual(Array.from(content.lines), [
+        '구매하신 상품을 이제 이용하실 수 있어요.',
+        '빠른수학과 함께 수학 공부를 시작해 보세요.',
+      ]);
+      assert.deepEqual(Array.from(content.actions, ({ label, href, variant }) => [label, href, variant]), [
+        [primaryLabel, primaryHref, 'primary'],
+        ['다른 강의보기', '/courses', 'outline'],
+      ]);
+    }
+  }
 });
 
 test('expired checkout goes to login while genuine checkout failures retain the failure screen', async () => {
