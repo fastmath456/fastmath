@@ -10,6 +10,10 @@
   display: none;
 }
 
+.detailContent[id='info'] {
+  scroll-margin-top: 104px;
+}
+
 @media (width <= 1080px) {
   .detail {
     flex-direction: column;
