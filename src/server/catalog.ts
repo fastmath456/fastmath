@@ -2,11 +2,36 @@ import { adminDb, ApiError, body, dbError, integer, requireAdmin, string, date, 
 import { profile } from './profile';
 import { parseSort, type Product, type Chapter } from '../features/catalog';
 const columns='id,slug,kind,title,tags,price,base_price,image,published_at,selling';
-const detailColumns='id,slug,kind,title,tags,price,base_price,image,published_at,selling,license_days';
+const detailColumns='id,slug,kind,title,tags,price,base_price,image,published_at,selling,license_days,pdf_path';
 type Row={id:string;slug:string;kind:'vod'|'pdf';title:string;tags:string[];price:number;base_price:number|null;image:string;published_at:string;selling:boolean};
 type DetailRow=Row&{license_days:number|null};
 type ProductAssetRow={role:'thumbnail'|'detailImage'|'material';position:number;asset_id:string;admin_course_assets:{id:string;name:string;size_bytes:number;content_type:string;width:number|null;height:number|null}|{id:string;name:string;size_bytes:number;content_type:string;width:number|null;height:number|null}[]|null};
-const product=(p:Row):Product=>({id:p.id,slug:p.slug,kind:p.kind,title:p.title,tags:p.tags,price:p.price,...(p.base_price?{basePrice:p.base_price}:{}),image:p.image,publishedOrder:-new Date(p.published_at).getTime()});
+function product(p: Row, hasMaterial: boolean): Product {
+  const typeTags = p.kind === 'pdf' ? ['#교재'] : hasMaterial ? ['#강의', '#교재'] : ['#강의'];
+  const tags = [...typeTags, ...p.tags.filter(tag => tag !== '#강의' && tag !== '#교재')];
+  return {id:p.id,slug:p.slug,kind:p.kind,title:p.title,tags,price:p.price,...(p.base_price?{basePrice:p.base_price}:{}),image:p.image,publishedOrder:-new Date(p.published_at).getTime()};
+}
+
+async function coursesWithMaterials(courseIds: string[]) {
+  const matches = new Set<string>();
+  if (courseIds.length === 0) return matches;
+  const db = adminDb();
+  // Keep the ID filter within the Data API URL length.
+  const batchSize = 50;
+  for (let offset = 0; offset < courseIds.length; offset += batchSize) {
+    const { data, error } = await db.from('products').select('id,pdf_path,product_assets(role)')
+      .in('id', courseIds.slice(offset, offset + batchSize))
+      .eq('product_assets.role', 'material')
+      .limit(1, { referencedTable: 'product_assets' });
+    dbError(error);
+    const courses = data as unknown as { id: string; pdf_path: string | null; product_assets: { role: string }[] }[];
+    for (const course of courses) {
+      if (course.pdf_path || course.product_assets.length > 0) matches.add(course.id);
+    }
+  }
+  return matches;
+}
+
 export async function products(ctx: Context) {
   const sortValues = ctx.request.nextUrl.searchParams.getAll('sort');
   const sort = parseSort(sortValues.length === 1 ? sortValues[0] : undefined);
@@ -19,8 +44,13 @@ export async function products(ctx: Context) {
   }
   const { data, error } = await query.order('published_at', { ascending: false }).order('id').limit(1000);
   dbError(error);
-  const user=await ctx.optionalUser(),current=user?await profile(ctx):null;
-  return {items:(data as unknown as Row[]).map(product),count:data!.length,...(current?{profile:{name:current.name,image:current.avatar}}:{})};
+  const rows = data as unknown as Row[];
+  const [withMaterial, user] = await Promise.all([
+    coursesWithMaterials(rows.filter(row => row.kind === 'vod').map(row => row.id)),
+    ctx.optionalUser(),
+  ]);
+  const current=user?await profile(ctx):null;
+  return {items:rows.map(row => product(row, withMaterial.has(row.id))),count:rows.length,...(current?{profile:{name:current.name,image:current.avatar}}:{})};
 }
 
 export async function checkoutProductReturnHref(productId: unknown, kind: 'vod' | 'pdf') {
@@ -60,7 +90,8 @@ export async function productDetail(ctx: Context) {
   const detailImage=detailAsset?{id:detailAsset.id,name:detailAsset.name,size:detailAsset.size,type:detailAsset.type,width:detailAsset.width,height:detailAsset.height,url:'/api/course-assets/'+detailAsset.id}:null;
   const materials=productAssets.filter(asset=>asset.role==='material').map(asset=>({id:asset.id,name:asset.name,size:asset.size,type:asset.type,width:asset.width,height:asset.height}));
   const licenseDays=Number.isSafeInteger(data.license_days)&&data.license_days>0?data.license_days:60;
-  return {...product(data as DetailRow),chapters:curriculum,reviews:reviews.data!.map(r=>({body:r.body,author:r.author,date:date(r.created_at),rating:Number(r.rating)})),selling:data.selling,ownership:ownership.data?.length?'owned':'none',admin:role.data?.role==='admin',licenseDays,detailImage,materials,...(account?{profile:{name:account.name,image:account.avatar}}:{})};
+  const hasMaterial = materials.length > 0 || Boolean(data.pdf_path);
+  return {...product(data as DetailRow, hasMaterial),chapters:curriculum,reviews:reviews.data!.map(r=>({body:r.body,author:r.author,date:date(r.created_at),rating:Number(r.rating)})),selling:data.selling,ownership:ownership.data?.length?'owned':'none',admin:role.data?.role==='admin',licenseDays,detailImage,materials,...(account?{profile:{name:account.name,image:account.avatar}}:{})};
 }
 export async function manageProduct(ctx: Context) {
   await requireAdmin(ctx); const input=await body(ctx.request);
