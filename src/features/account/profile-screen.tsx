@@ -19,6 +19,7 @@ import accountStyles from './account.module.css';
 const editable = ['name','birthday','phone'] as const;
 const maxProfileNameLength = 80;
 const maxProfilePhoneLength = 30;
+const saveCompleteMessage = '내 정보가 변경되었습니다.';
 type NavigationEvent = Event & { navigationType: string; destination: { url: string; key: string } };
 type BrowserNavigation = EventTarget & { traverseTo: (key: string) => { finished: Promise<unknown> } };
 type ProfileDraft = { values: AuthValues; marketing: boolean; baseline: Profile; selectedFile?: { name: string; preview: string }; imageChanged: boolean };
@@ -43,6 +44,8 @@ function ProfileForm({ profile }: { profile: Profile }) {
   const visitingTerms = useRef(false);
   const accountRequest = useRef(false);
   const [withdrawConfirm, setWithdrawConfirm] = useState(false);
+  const [saveComplete, setSaveComplete] = useState(false);
+  const saveButton = useRef<HTMLButtonElement>(null);
   const currentImage = imageChanged ? selectedFile?.preview ?? '' : profile.image;
   const displayedPhone = /^\d{11}$/.test(values.phone) ? formatPhone(values.phone) : values.phone;
   const changed = values.name.trim() !== baseline.name || values.birthday !== baseline.birthday || values.phone.replace(/[-\s]/g,'') !== baseline.phone || imageChanged || marketing !== baseline.marketing;
@@ -127,8 +130,12 @@ function ProfileForm({ profile }: { profile: Profile }) {
     try {
       let path = currentImage ? profile.imagePath : '';
       if(selectedFile) { const form = new FormData(); form.set('file',await (await fetch(selectedFile.preview)).blob(),selectedFile.name); path=(await mutate<{path:string}>('profile/image',form)).path; }
-      const saved = await mutate<Profile>('profile',{name:values.name,birthday:values.birthday,phone:values.phone,marketing,imagePath:path,revision:baseline.revision},'PATCH'); setDraft(current => ({ ...current, baseline: saved }));
-      await client.invalidateQueries({queryKey:['profile']}); setDraft(current => ({ ...current, imageChanged: false, selectedFile: undefined }));
+      const saved = await mutate<Profile>('profile',{name:values.name,birthday:values.birthday,phone:values.phone,marketing,imagePath:path,revision:baseline.revision},'PATCH');
+      await client.cancelQueries({ queryKey: ['profile'] });
+      client.setQueriesData({ queryKey: ['profile'] }, saved);
+      setDraft(current => ({ ...current, baseline: saved, imageChanged: false, selectedFile: undefined }));
+      saveButton.current?.focus({ preventScroll: true });
+      setSaveComplete(true);
     } catch (error) { if (!redirectIfUnauthorized(error)) setMessage(requestFailure); }
   }
   async function choose(file: File | undefined) {
@@ -156,7 +163,14 @@ function ProfileForm({ profile }: { profile: Profile }) {
     <FormField id="profile-email" label="이메일" value={profile.email} readOnly type="text" autoComplete="email" />
     {editable.map(field => <FormField key={field} id={`profile-${field}`} label={fieldLabels[field]} value={field === 'phone' ? displayedPhone : values[field]} error={errors[field]} onChange={event => changeInput(field,event)} onBlur={() => { if (errors[field]) setErrors(current => ({...current,[field]:validateProfileField(field,values)})); }} inputMode={field === 'name' ? undefined : 'numeric'} maxLength={field === 'birthday' ? 8 : undefined} autoComplete={field === 'phone' ? 'tel' : field === 'birthday' ? 'bday' : 'name'} />)}
     <div className={styles.marketing}><strong>마케팅 수신 동의</strong><div><Checkbox checked={marketing} onChange={event => { const marketing = event.target.checked; setDraft(current => ({ ...current, marketing })); setMessage(''); }}>[선택] 마케팅 정보 수신에 동의합니다.</Checkbox><Link href="/term/marketing">보기</Link></div></div>
-  </div>{message && <p role="status">{message}</p>}<div className={styles.submitGroup}><button className={styles.submit} type="submit">정보수정</button><div className={styles.accountActions}><button type="button" onClick={() => { void endAccount('logout'); }}>로그아웃</button><button type="button" onClick={() => setWithdrawConfirm(true)}>회원탈퇴</button></div></div>{withdrawConfirm && <ConfirmationDialog label="회원탈퇴 확인" onCancel={() => { if (!accountRequest.current) setWithdrawConfirm(false); }} actions={[{label:'취소',cancel:true},{label:'회원탈퇴',onClick:() => { void endAccount('withdraw'); }}]}><p>회원탈퇴하시겠어요?</p><p>탈퇴하면 구매·수강권이 즉시 종료됩니다. 주문·결제 기록은 보존됩니다.</p></ConfirmationDialog>}{leaving && <ConfirmationDialog label="저장 전 화면 이동 확인" onCancel={() => setLeaving(null)} actions={[{label:'계속 수정',cancel:true},{label:'나가기',onClick:leave}]}><p>수정한 내용을 저장하지 않고 나가시겠어요?</p></ConfirmationDialog>}</form>;
+  </div>{message && <p role="status">{message}</p>}
+    <div className={styles.submitGroup}><button ref={saveButton} className={styles.submit} type="submit">정보수정</button><div className={styles.accountActions}><button type="button" onClick={() => { void endAccount('logout'); }}>로그아웃</button><button type="button" onClick={() => setWithdrawConfirm(true)}>회원탈퇴</button></div></div>
+    {withdrawConfirm && <ConfirmationDialog label="회원탈퇴 확인" onCancel={() => { if (!accountRequest.current) setWithdrawConfirm(false); }} actions={[{label:'취소',cancel:true},{label:'회원탈퇴',onClick:() => { void endAccount('withdraw'); }}]}><p>회원탈퇴하시겠어요?</p><p>탈퇴하면 구매·수강권이 즉시 종료됩니다. 주문·결제 기록은 보존됩니다.</p></ConfirmationDialog>}
+    {leaving && <ConfirmationDialog label="저장 전 화면 이동 확인" onCancel={() => setLeaving(null)} actions={[{label:'계속 수정',cancel:true},{label:'나가기',onClick:leave}]}><p>수정한 내용을 저장하지 않고 나가시겠어요?</p></ConfirmationDialog>}
+    {saveComplete && <ConfirmationDialog label={saveCompleteMessage} dimmed onCancel={() => setSaveComplete(false)} actions={[{ label: '확인', cancel: true, primary: true }]}>
+      <p>{saveCompleteMessage}</p>
+    </ConfirmationDialog>}
+  </form>;
 }
 export function ProfileScreen({ state = '' }: { state?: string }) {
   const query = useProfile(state);
