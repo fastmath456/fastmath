@@ -5,7 +5,6 @@ type CheckoutInput = { productId:string; requestKey:string } | { retryOrderId:st
 type Nicepay = { requestPay(options: Checkout & { method:'card'; fnError:()=>void }): false | void };
 
 let sdk:Promise<Nicepay> | undefined;
-const courseFailure = '/payments/failure?kind=vod';
 const retryStoragePrefix = 'course-checkout:';
 
 function loadNicepay() {
@@ -43,10 +42,11 @@ export function checkout(productId: string, requestKey: string) {
 }
 
 export function coursePaymentFailureHref(productId: string, requestKey: string) {
-  // Keep the product in the originating tab so a shared URL cannot choose it.
+  const failureHref = `/payments/failure?kind=vod&productId=${encodeURIComponent(productId)}`;
+  // Retries use the originating tab's product instead of trusting the URL.
   try { sessionStorage.setItem(retryStoragePrefix + requestKey, productId); }
-  catch { return courseFailure; }
-  return `${courseFailure}&requestKey=${encodeURIComponent(requestKey)}`;
+  catch { return failureHref; }
+  return `${failureHref}&requestKey=${encodeURIComponent(requestKey)}`;
 }
 
 export async function retryCourseCheckout({ orderId, requestKey }: { orderId?: string; requestKey?: string }, signal: AbortSignal) {

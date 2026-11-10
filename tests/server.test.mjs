@@ -251,7 +251,7 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
   state=transaction(first,'timeout-'+run);
   const failure=await callback(first,{authResultCode:'9999'});
   assert.equal(failure.status,303);
-  assert.equal(failure.headers.get('location'),`${base}/payments/failure?kind=vod&orderId=${o.id}`);
+  assert.equal(failure.headers.get('location'),`${base}/payments/failure?kind=vod&orderId=${o.id}&productId=${productId}`);
   await assert.rejects(code.createOrder(ctx({retryOrderId:o.id},a)),e=>e.code==='not_found');
   const reopened=await code.createOrder(ctx({retryOrderId:o.id,productId:'different-course'}));
   assert.equal(reopened.orderId,first.orderId);

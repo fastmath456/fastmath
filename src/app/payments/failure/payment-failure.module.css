@@ -1,4 +1,4 @@
-.ebookFailure a:first-child {
+.failureResult a {
   white-space: nowrap;
 }
 

@@ -214,9 +214,9 @@ test('payment result shares the success UI and keeps the destination for each pa
   }
 });
 
-test('expired checkout goes to login and failure retains the course retry or ebook product', async () => {
+test('expired checkout goes to login and failure retains the product and course retry', async () => {
   for (const [kind, id, buyLabel, failureHref] of [
-    ['vod', 'course', '수강 신청하기', '/payments/failure?kind=vod&requestKey=test-request-key'],
+    ['vod', 'course', '수강 신청하기', '/payments/failure?kind=vod&productId=course&requestKey=test-request-key'],
     ['pdf', 'ebook-id', '전자책 구매하기', '/payments/failure?kind=pdf&productId=ebook-id'],
   ]) {
     for (const error of [unauthorized(), forbidden()]) {
@@ -230,6 +230,46 @@ test('expired checkout goes to login and failure retains the course retry or ebo
       assert.deepEqual([...context.retryStorage.values()], !needsLogin && kind === 'vod' ? [id] : []);
       assert.deepEqual(context.requests, ['checkout']);
     }
+  }
+});
+
+test('payment failure returns to the identified product or the catalog', async () => {
+  const page = load('src/app/payments/failure/page.tsx', {
+    react: { Suspense: 'suspense' },
+    'react/jsx-runtime': { jsx: (type, props) => ({ type, props }) },
+    '@/components/site': { ResultScreen: 'result' },
+    '@/features/payments/payment-failure': { PaymentFailure: 'payment-failure' },
+    '@/server': { checkoutProductReturnHref: async (id, kind) => {
+      if (id === 'course' && kind === 'vod') return '/courses/course-slug';
+      if (id === 'book' && kind === 'pdf') return '/books/book-slug';
+      return null;
+    } },
+  }).default;
+  const screen = params => {
+    const child = page({ searchParams: Promise.resolve(params) }).props.children;
+    return child.type(child.props);
+  };
+
+  for (const params of [{}, { kind: 'vod' }]) {
+    const { props } = await screen(params);
+    assert.equal(props.mobileBackHref, '/courses');
+    for (const actions of [props.actions, props.mobileContent.actions]) {
+      assert.deepEqual(Array.from(actions, ({ label, href }) => [label, href]), [['다른 강의보기', '/courses']]);
+    }
+  }
+
+  const courseFailure = await screen({ kind: 'vod', orderId: 'order', productId: 'course' });
+  assert.equal(courseFailure.props.backHref, '/courses/course-slug');
+  assert.equal(courseFailure.props.retryOrder.orderId, 'order');
+  assert.equal((await screen({ kind: 'vod', orderId: 'order' })).props.backHref, '/courses');
+  assert.equal((await screen({ kind: 'pdf', productId: 'book' })).props.backHref, '/books/book-slug');
+
+  for (const [kind, productId, expected] of [
+    ['vod', 'course', '/courses/course-slug'], ['pdf', 'book', '/books/book-slug'], ['pdf', 'course', '/courses'],
+  ]) {
+    const { props } = await screen({ kind, productId, state: 'cancelled' });
+    assert.equal(props.actions[0].href, expected);
+    assert.equal(props.mobileBackHref, expected);
   }
 });
 

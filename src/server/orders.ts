@@ -89,7 +89,7 @@ function paymentRedirect(order:OrderRow, paid:boolean) {
   url.searchParams.set(paid?'orderId':'kind',paid?order.id:order.kind);
   if (!paid) {
     if (order.kind==='vod') url.searchParams.set('orderId',order.id);
-    else url.searchParams.set('productId',order.product_id);
+    url.searchParams.set('productId',order.product_id);
   }
   return NextResponse.redirect(url,303);
 }

@@ -23,15 +23,16 @@ export async function products(ctx: Context) {
   return {items:(data as unknown as Row[]).map(product),count:data!.length,...(current?{profile:{name:current.name,image:current.avatar}}:{})};
 }
 
-export async function ebookCheckoutReturnHref(productId: unknown) {
+export async function checkoutProductReturnHref(productId: unknown, kind: 'vod' | 'pdf') {
   if (typeof productId !== 'string' || !productId || productId.length > 100) return null;
   try {
-    const { data, error } = await adminDb().from('products').select('slug').eq('id', productId).eq('kind', 'pdf').maybeSingle();
+    const { data, error } = await adminDb().from('products').select('slug').eq('id', productId).eq('kind', kind).maybeSingle();
     dbError(error);
     const slug = data?.slug;
-    return slug && slug !== '.' && slug !== '..' ? `/books/${encodeURIComponent(slug)}` : null;
+    if (!slug || slug === '.' || slug === '..') return null;
+    return `/${kind === 'vod' ? 'courses' : 'books'}/${encodeURIComponent(slug)}`;
   } catch (error) {
-    console.error('Ebook checkout return lookup failed:', error instanceof ApiError ? error.code : error instanceof Error ? error.name : 'unknown');
+    console.error('Checkout return lookup failed:', error instanceof ApiError ? error.code : error instanceof Error ? error.name : 'unknown');
     return null;
   }
 }

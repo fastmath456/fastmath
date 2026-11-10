@@ -1,40 +1,37 @@
 import { Suspense } from 'react';
 import { ResultScreen } from '@/components/site';
 import { PaymentFailure } from '@/features/payments/payment-failure';
-import { ebookCheckoutReturnHref } from '@/server';
+import { checkoutProductReturnHref } from '@/server';
 import styles from './payment-failure.module.css';
 
 async function Screen({ searchParams }: { searchParams: Promise<Record<string,string|string[]|undefined>> }) {
   const params = await searchParams;
-  const pdf = params.kind === 'pdf';
+  const { kind } = params;
   const cancelled = params.state === 'cancelled';
-  const productHref = pdf ? '/books/exponential-logarithmic-workbook' : '/courses/exponential-logarithmic-core';
+  const productHref = kind === 'vod' || kind === 'pdf' ? await checkoutProductReturnHref(params.productId, kind) : null;
+  const backHref = productHref ?? '/courses';
 
-  if (params.kind === 'vod' && !cancelled) {
-    const orderId = typeof params.orderId === 'string' ? params.orderId : undefined;
-    const requestKey = typeof params.requestKey === 'string' ? params.requestKey : undefined;
-    return <PaymentFailure key={orderId ?? requestKey} retryOrder={{ orderId, requestKey }} backHref={productHref} className={styles.failureResult} />;
+  if (!cancelled) {
+    const orderId = kind === 'vod' && typeof params.orderId === 'string' ? params.orderId : undefined;
+    const requestKey = kind === 'vod' && typeof params.requestKey === 'string' ? params.requestKey : undefined;
+    const retryOrder = orderId || requestKey ? { orderId, requestKey } : undefined;
+    if (kind === 'pdf' || productHref || retryOrder) {
+      return <PaymentFailure key={orderId ?? requestKey} retryOrder={retryOrder} backHref={backHref} className={styles.failureResult} />;
+    }
   }
 
-  if (pdf && !cancelled) {
-    const backHref = await ebookCheckoutReturnHref(params.productId) ?? '/courses';
-    return <PaymentFailure backHref={backHref} className={`${styles.failureResult} ${styles.ebookFailure}`} />;
-  }
-
+  const browseActions = [{ label: '다른 강의보기', href: '/courses', variant: 'outline' as const }];
   return <ResultScreen
     title={cancelled ? '결제가 취소되었습니다.' : '결제를 완료하지 못했습니다.'}
     lines={[]}
     image="/assets/pay-failed-imgRectangle5.png"
-    actions={[{ label: '상품으로 돌아가기', href: productHref }]}
+    actions={cancelled ? [{ label: '상품으로 돌아가기', href: backHref }] : browseActions}
     mobileTitle="결제실패"
-    mobileBackHref={productHref}
+    mobileBackHref={backHref}
     mobileContent={cancelled ? undefined : {
       title: '결제에 실패했습니다',
       lines: ['결제를 완료하지 못했어요.', '결제 정보를 확인한 후 다시 시도해 주세요.'],
-      actions: [
-        { label: '다시 결제하기', variant: 'primary' },
-        { label: '다른 강의보기', href: '/courses', variant: 'outline' },
-      ],
+      actions: browseActions,
     }}
     className={styles.failureResult}
   />;
