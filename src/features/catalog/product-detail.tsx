@@ -99,7 +99,10 @@ export function ProductDetailScreen({ slug, kind, state = '', view = '' }: { slu
     const key = requestKey.current ||= crypto.randomUUID();
     purchase.current = checkout(product.id, key)
       .catch(error => {
-        if (!redirectIfUnauthorized(error)) router.push(kind === 'vod' ? coursePaymentFailureHref(product.id, key) : '/payments/failure?kind=pdf');
+        if (redirectIfUnauthorized(error)) return;
+        router.push(kind === 'vod'
+          ? coursePaymentFailureHref(product.id, key)
+          : `/payments/failure?kind=pdf&productId=${encodeURIComponent(product.id)}`);
       })
       .finally(() => { purchase.current = null; });
   };

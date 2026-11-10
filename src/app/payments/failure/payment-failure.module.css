@@ -1,3 +1,7 @@
+.ebookFailure a:first-child {
+  white-space: nowrap;
+}
+
 @media (width < 768px) {
   .failureResult {
     padding-block: 144px;

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { ResultScreen } from '@/components/site';
-import { CoursePaymentFailure } from '@/features/payments/course-payment-failure';
+import { PaymentFailure } from '@/features/payments/payment-failure';
+import { ebookCheckoutReturnHref } from '@/server';
 import styles from './payment-failure.module.css';
 
 async function Screen({ searchParams }: { searchParams: Promise<Record<string,string|string[]|undefined>> }) {
@@ -12,7 +13,12 @@ async function Screen({ searchParams }: { searchParams: Promise<Record<string,st
   if (params.kind === 'vod' && !cancelled) {
     const orderId = typeof params.orderId === 'string' ? params.orderId : undefined;
     const requestKey = typeof params.requestKey === 'string' ? params.requestKey : undefined;
-    return <CoursePaymentFailure key={orderId ?? requestKey} orderId={orderId} requestKey={requestKey} backHref={productHref} className={styles.failureResult} />;
+    return <PaymentFailure key={orderId ?? requestKey} retryOrder={{ orderId, requestKey }} backHref={productHref} className={styles.failureResult} />;
+  }
+
+  if (pdf && !cancelled) {
+    const backHref = await ebookCheckoutReturnHref(params.productId) ?? '/courses';
+    return <PaymentFailure backHref={backHref} className={`${styles.failureResult} ${styles.ebookFailure}`} />;
   }
 
   return <ResultScreen

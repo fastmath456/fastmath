@@ -87,7 +87,10 @@ async function closeAttempt(attempt:Attempt) {
 function paymentRedirect(order:OrderRow, paid:boolean) {
   const url=new URL(paid?'/payments/success':'/payments/failure',setting('APP_ORIGIN'));
   url.searchParams.set(paid?'orderId':'kind',paid?order.id:order.kind);
-  if (!paid && order.kind==='vod') url.searchParams.set('orderId',order.id);
+  if (!paid) {
+    if (order.kind==='vod') url.searchParams.set('orderId',order.id);
+    else url.searchParams.set('productId',order.product_id);
+  }
   return NextResponse.redirect(url,303);
 }
 

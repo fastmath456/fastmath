@@ -214,17 +214,22 @@ test('payment result shares the success UI and keeps the destination for each pa
   }
 });
 
-test('expired checkout goes to login while genuine checkout failures retain the failure screen', async () => {
-  for (const error of [unauthorized(), forbidden()]) {
-    const context = runtime({ data: { id: 'course', title: '강의', price: 100, tags: [], chapters: [], reviews: [], selling: true, profile: { name: '회원' } }, mutateError: error });
-    const tree = context.render('src/features/catalog/product-detail.tsx', 'ProductDetailScreen', { slug: 'course', kind: 'vod' });
-    context.flush();
-    find(tree, node => node.props.children === '수강 신청하기').props.onClick({ preventDefault() {} });
-    await settle();
-    const needsLogin = http.isUnauthorized(error);
-    assert.deepEqual(context.routes, needsLogin ? [['replace', '/login']] : [['push', '/payments/failure?kind=vod&requestKey=test-request-key']]);
-    assert.deepEqual([...context.retryStorage.values()], needsLogin ? [] : ['course']);
-    assert.deepEqual(context.requests, ['checkout']);
+test('expired checkout goes to login and failure retains the course retry or ebook product', async () => {
+  for (const [kind, id, buyLabel, failureHref] of [
+    ['vod', 'course', '수강 신청하기', '/payments/failure?kind=vod&requestKey=test-request-key'],
+    ['pdf', 'ebook-id', '전자책 구매하기', '/payments/failure?kind=pdf&productId=ebook-id'],
+  ]) {
+    for (const error of [unauthorized(), forbidden()]) {
+      const context = runtime({ data: { id, title: '상품', price: 100, tags: [], chapters: [], reviews: [], selling: true, profile: { name: '회원' } }, mutateError: error });
+      const tree = context.render('src/features/catalog/product-detail.tsx', 'ProductDetailScreen', { slug: 'product-slug', kind });
+      context.flush();
+      find(tree, node => node.props.children === buyLabel).props.onClick({ preventDefault() {} });
+      await settle();
+      const needsLogin = http.isUnauthorized(error);
+      assert.deepEqual(context.routes, needsLogin ? [['replace', '/login']] : [['push', failureHref]]);
+      assert.deepEqual([...context.retryStorage.values()], !needsLogin && kind === 'vod' ? [id] : []);
+      assert.deepEqual(context.requests, ['checkout']);
+    }
   }
 });
 

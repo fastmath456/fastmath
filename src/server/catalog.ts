@@ -22,6 +22,20 @@ export async function products(ctx: Context) {
   const user=await ctx.optionalUser(),current=user?await profile(ctx):null;
   return {items:(data as unknown as Row[]).map(product),count:data!.length,...(current?{profile:{name:current.name,image:current.avatar}}:{})};
 }
+
+export async function ebookCheckoutReturnHref(productId: unknown) {
+  if (typeof productId !== 'string' || !productId || productId.length > 100) return null;
+  try {
+    const { data, error } = await adminDb().from('products').select('slug').eq('id', productId).eq('kind', 'pdf').maybeSingle();
+    dbError(error);
+    const slug = data?.slug;
+    return slug && slug !== '.' && slug !== '..' ? `/books/${encodeURIComponent(slug)}` : null;
+  } catch (error) {
+    console.error('Ebook checkout return lookup failed:', error instanceof ApiError ? error.code : error instanceof Error ? error.name : 'unknown');
+    return null;
+  }
+}
+
 export async function productDetail(ctx: Context) {
   const db=adminDb(); const {data,error}=await db.from('products').select(detailColumns).eq('slug',ctx.params.slug).maybeSingle(); dbError(error); if(!data) throw new ApiError(404,'not_found');
   const user=await ctx.optionalUser();
