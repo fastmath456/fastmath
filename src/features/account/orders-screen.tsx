@@ -28,13 +28,11 @@ export function OrdersScreen({ state = '' }: { state?: string }) {
     previousId.current = refundId;
   }, [refundId]);
   function cancel() { window.history.replaceState(null,'',`/orders${state ? '?state='+encodeURIComponent(state) : ''}`); }
-  const mixed = query.data?.items.some(item => item.kind === 'pdf') && query.data.items.some(item => item.kind === 'vod');
-  const periodTitle = mixed ? '이용기간' : query.data?.items.length && query.data.items.every(item => item.kind === 'pdf') ? '다운로드기간' : '수강기간';
   if (requiresLogin) return null;
   return <AccountShell profileLoading={profile.isPending} profile={profile.data} section="orders">
     <div><h1 className={accountStyles.title} aria-label={query.isPending ? '내 결제내역' : undefined}>{query.isPending ? <Skeleton className={loading.text}>내 결제내역(00)</Skeleton> : <>내 결제내역{query.data ? `(${query.data.count})` : ''}</>}</h1><p className={accountStyles.subtitle}>구매한 강의와 교재 결제내역을 확인하세요.</p></div>
     <div className={styles.table} role="table" aria-label="내 결제내역" aria-busy={query.isPending}>
-      <div className={styles.header} role="row">{['상품명','상태','결제금액',periodTitle,'진도율','결제일','환불'].map((label, index) => <div role="columnheader" key={index}>{query.isPending && index === 3 ? <Skeleton className={loading.text}>수강기간</Skeleton> : label}</div>)}</div>
+      <div className={styles.header} role="row">{['상품명','상태','결제금액','수강기간','진도율','결제일','환불'].map((label, index) => <div role="columnheader" key={index}>{query.isPending && index === 3 ? <Skeleton className={loading.text}>수강기간</Skeleton> : label}</div>)}</div>
       {query.isPending ? <OrdersSkeletonRows /> : query.isError ? <div className={accountStyles.error}><p>결제내역을 불러오지 못했습니다. 다시 시도해주세요.</p><button onClick={() => query.refetch()}>다시 시도</button></div> : query.data?.count === 0 ? <div className={accountStyles.empty}><p>아직 구매한 강의·교재가 없습니다.</p></div> : query.data && <div className={styles.rows} role="rowgroup">{query.data.items.map((item,index) => <Fragment key={item.id}>{index > 0 && <div className={styles.divider} role="presentation" />}<div className={styles.row} role="row">
         <div className={styles.status} role="cell"><span className={styles.statusBadge}>{item.status}</span></div>
         <div className={styles.mobileContent}>
@@ -42,9 +40,9 @@ export function OrdersScreen({ state = '' }: { state?: string }) {
           <div className={styles.mobileAction}>
             <div className={styles.details}>
               <div className={styles.detail} role="cell"><span className={styles.mobileLabel}>결제금액</span><span>{item.amount.toLocaleString('ko-KR')}원</span></div>
-              <div className={styles.detail} role="cell"><span className={styles.mobileLabel}>{item.kind === 'vod' ? '수강기간' : '다운로드기간'}</span><span>{mixed && <span className={styles.periodKind}>{item.kind === 'vod' ? '수강' : '다운로드'}</span>}~ {item.endDate}</span></div>
-              <div className={styles.detail} role="cell"><span className={styles.mobileLabel}>진도율</span><span>{item.progress}</span></div>
-              <div className={styles.detail} role="cell"><span className={styles.mobileLabel}>결제일시</span><span>{item.paidDate}</span></div>
+              <div className={styles.detail} role="cell"><span className={styles.mobileLabel}>{item.kind === 'vod' ? '수강기간' : '다운로드기간'}</span><span className={styles.date}>~ {item.endDate.replaceAll('.', '. ')}</span></div>
+              <div className={styles.detail} role="cell"><span className={styles.mobileLabel}>진도율</span><span>{item.kind === 'pdf' ? '—' : item.progress}</span></div>
+              <div className={styles.detail} role="cell"><span className={styles.mobileLabel}>결제일시</span><span className={styles.date}>{item.paidDate.replaceAll('.', '. ')}</span></div>
             </div>
             <div className={styles.refundCell} role="cell"><button type="button" data-order-id={item.id} className={styles.refund} disabled={!item.refundable || refundId === item.id} onClick={() => window.history.pushState(null,'',`/orders/${encodeURIComponent(item.id)}/refund${state ? '?state='+encodeURIComponent(state) : ''}`)}>{item.refundLabel}</button></div>
           </div>
