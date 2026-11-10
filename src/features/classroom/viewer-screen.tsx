@@ -18,7 +18,7 @@ import mobileStyles from './viewer-mobile.module.css';
 
 export function ViewerScreen({ courseId, lessonId, state = '', preview = false }: { courseId: string; lessonId?: string; state?: string; preview?: boolean }) {
   const profile = useProfile(), router = useRouter();
-  const query = useQuery({ queryKey: ['viewer',courseId,state,preview,preview ? lessonId : undefined], queryFn: () => getViewer(courseId,preview,lessonId) });
+  const query = useQuery({ queryKey: ['viewer',courseId,state,preview,preview ? lessonId : undefined], queryFn: () => getViewer(courseId,preview,lessonId), gcTime: preview ? undefined : 0 });
   const { requiresLogin, redirectIfUnauthorized } = useLoginRedirect(preview ? undefined : profile.error, query.error);
   const requestKey = useRef(''), purchase = useRef<Promise<void> | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);

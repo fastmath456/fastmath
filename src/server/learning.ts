@@ -25,14 +25,18 @@ export async function viewer(ctx:Context) {
   if(!ent.data||(ent.data.orders as unknown as {status:string}).status!=='paid') throw new ApiError(403,'no_access');
   const [orderLessons,progress]=await Promise.all([
     db.from('order_lessons').select('lesson_id').eq('order_id',ent.data.order_id),
-    db.from('lesson_progress').select('lesson_id').eq('order_id',ent.data.order_id).order('updated_at',{ascending:false}).limit(1),
+    db.from('lesson_progress').select('lesson_id,completed').eq('order_id',ent.data.order_id).order('updated_at',{ascending:false}).limit(1),
   ]);[orderLessons,progress].forEach(r=>dbError(r.error));
   const lessonIds=orderLessons.data!.map(row=>row.lesson_id);
   const lessons=lessonIds.length?await db.from('lessons').select('id,title,chapter_id,position').eq('product_id',ctx.params.courseId).in('id',lessonIds).order('position'):{data:[],error:null}; dbError(lessons.error);
   const chapterIds=[...new Set(lessons.data!.map(lesson=>lesson.chapter_id))];
   const chapters=chapterIds.length?await db.from('chapters').select('id,title,position').eq('product_id',ctx.params.courseId).in('id',chapterIds).order('position'):{data:[],error:null}; dbError(chapters.error);
   const product=ent.data.products as unknown as {title:string;poster:string};
-  return {courseId:ctx.params.courseId,title:product.title,poster:product.poster,orderId:ent.data.order_id,recentLessonId:progress.data?.[0]?.lesson_id??lessons.data?.[0]?.id??'',chapters:chapters.data!.map(c=>({...c,lessons:lessons.data!.filter(l=>l.chapter_id===c.id).map(l=>({id:l.id,title:l.title}))}))};
+  const curriculum=chapters.data!.map(c=>({...c,lessons:lessons.data!.filter(l=>l.chapter_id===c.id).map(l=>({id:l.id,title:l.title}))}));
+  const orderedLessons=curriculum.flatMap(chapter=>chapter.lessons),recent=progress.data?.[0];
+  const recentIndex=orderedLessons.findIndex(lesson=>lesson.id===recent?.lesson_id);
+  const nextLesson=recent?.completed&&recentIndex>=0?orderedLessons[recentIndex+1]:undefined;
+  return {courseId:ctx.params.courseId,title:product.title,poster:product.poster,orderId:ent.data.order_id,recentLessonId:nextLesson?.id??recent?.lesson_id??lessons.data?.[0]?.id??'',chapters:curriculum};
 }
 export async function previewViewer(ctx:Context) {
   const db=adminDb(),courseId=string(ctx.params.courseId,'courseId',100);
