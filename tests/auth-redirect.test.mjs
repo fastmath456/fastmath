@@ -582,6 +582,32 @@ test('preview opens the selected lesson, unpaid lessons prompt, and owned lesson
   }
 });
 
+test('viewer shows only navigation to neighboring lessons', () => {
+  const [firstChapter] = previewCourse.chapters;
+  const chapters = [firstChapter, { id: 'second-chapter', title: '두 번째 챕터', lessons: [{ id: 'last', title: '마지막 영상' }] }];
+  const singleLesson = [{ ...firstChapter, lessons: firstChapter.lessons.slice(0, 1) }];
+
+  for (const [lessonId, curriculum, previous, next] of [
+    ['free', chapters, null, 'paid'],
+    ['paid', chapters, 'free', 'last'],
+    ['last', chapters, 'paid', null],
+    ['free', singleLesson, null, null],
+    ['missing', chapters, null, null],
+    [undefined, [], null, null],
+  ]) {
+    const context = runtime({ data: { ...previewCourse, chapters: curriculum } });
+    const tree = context.render('src/features/classroom/viewer-screen.tsx', 'ViewerScreen', { courseId: 'course-id', lessonId });
+    for (const [label, target] of [['이전 강의', previous], ['다음 강의', next]]) {
+      const button = find(tree, node => node.type === 'button' && node.props.children === label);
+      assert.equal(Boolean(button), Boolean(target), `${lessonId}: ${label}`);
+      button?.props.onClick();
+    }
+    const exit = find(tree, node => node.type === 'link' && node.props.children === '나가기');
+    assert.equal(exit.props.href, '/classroom');
+    assert.deepEqual(context.routes, [previous, next].filter(Boolean).map(target => ['push', `/classroom/courses/course-id?lesson=${target}`]));
+  }
+});
+
 test('anonymous preview viewing remains available and paid selection keeps the preview in place', () => {
   const context = runtime({ profileError: unauthorized(), data: { ...previewCourse, courseId: 'course-id', recentLessonId: 'free', previewUrl: 'https://player.vimeo.com/video/123456' } });
   const tree = context.render('src/features/classroom/viewer-screen.tsx', 'ViewerScreen', { courseId: 'course-id', lessonId: 'free', preview: true });

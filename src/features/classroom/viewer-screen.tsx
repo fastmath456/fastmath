@@ -97,7 +97,13 @@ export function ViewerScreen({ courseId, lessonId, state = '', preview = false }
           <div className={mobileStyles.media}>
             {query.isError ? <div className={styles.videoEmpty}><div><p>수강 권한을 확인하지 못했습니다.</p><button onClick={() => query.refetch()}>다시 시도</button></div></div> : data && (lessons.length === 0 ? <div className={styles.videoEmpty}>아직 공개된 강의가 없습니다.</div> : !lesson ? <div className={styles.videoEmpty}>강의를 찾을 수 없습니다.</div> : (data.orderId || data.previewUrl) ? (data.orderId ? <VideoPlayer key={lesson.id} orderId={data.orderId} lessonId={lesson.id} /> : <VideoPlayer key={lesson.id} previewUrl={data.previewUrl!} lessonId={lesson.id} />) : null)}
           </div>
-          <div className={`${styles.videoActions} ${mobileStyles.videoActions}`}><Link href="/classroom">나가기</Link><div><button type="button" disabled={index <= 0} onClick={() => select(lessons[index-1].id)}>이전 강의</button><button type="button" disabled={index < 0 || index === lessons.length - 1} onClick={() => select(lessons[index + 1].id)}>다음 강의</button></div></div>
+          <div className={`${styles.videoActions} ${mobileStyles.videoActions}`}>
+            <Link href="/classroom">나가기</Link>
+            <div>
+              {index > 0 && <button type="button" onClick={() => select(lessons[index - 1].id)}>이전 강의</button>}
+              {index >= 0 && index < lessons.length - 1 && <button type="button" onClick={() => select(lessons[index + 1].id)}>다음 강의</button>}
+            </div>
+          </div>
         </div>
       </div>
     </main>
