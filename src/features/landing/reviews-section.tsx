@@ -29,7 +29,7 @@ export function ReviewsSection() {
       animation.current?.cancel();
       animation.current = null;
       if (!reducedMotion.matches && items.length) {
-        animation.current = element!.animate(reviewKeyframes(items.length), { duration: items.length * 2000, iterations: Infinity });
+        animation.current = element!.animate(reviewKeyframes(items.length), { duration: items.length * 2500, iterations: Infinity });
         if (paused.current) animation.current.pause();
       }
     }
