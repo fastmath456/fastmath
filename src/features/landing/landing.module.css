@@ -918,6 +918,11 @@
     align-self: flex-end;
   }
 
+  .reviewBanner {
+    width: calc(100% - 20px);
+    margin-left: 20px;
+  }
+
   .reviewCard {
     flex-basis: min(350px, calc(100vw - 40px));
     width: min(350px, calc(100vw - 40px));
