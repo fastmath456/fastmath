@@ -118,7 +118,7 @@ export function BasicInformation({ basic, errors, uploading, uploadErrors, onCha
     {textField('displayOrder')}
     <div className={styles.field}>
       <h2 className={styles.label}>후기 등록</h2>
-      <div className={styles.reviewList}>{basic.reviews.map(review => {
+      <div className={styles.reviewList} data-guide="course-reviews">{basic.reviews.map(review => {
         const reviewErrors = errors.reviews?.[review.id] ?? {};
         const prefix = `review-${review.id}`;
         return <div className={styles.review} key={review.id}>

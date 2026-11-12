@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AdminGuide } from '@/features/admin-guide';
 import { ConfirmationDialog } from '@/components/site';
 import { RequestError } from '@/lib/http';
 import { checkAccess, getEditableCourse } from './api';
@@ -49,8 +50,9 @@ export function AdminCourseActions({ courseId }: { courseId: string }) {
 
   return <>
     {!hidden && <nav className={styles.actions} aria-label="관리자 작업">
-      <button type="button" disabled={pending} onClick={() => void open('edit')}>해당 강의 편집하기</button>
-      <button type="button" disabled={pending} onClick={() => void open('new')}>새로운 강의 등록하기</button>
+      <button data-guide="edit-course" type="button" disabled={pending} onClick={() => void open('edit')}>해당 강의 편집하기</button>
+      <button data-guide="new-course" type="button" disabled={pending} onClick={() => void open('new')}>새로운 강의 등록하기</button>
+      <AdminGuide guide="course-actions" admin={!hidden} paused={pending || Boolean(notice)} />
     </nav>}
     {notice === 'forbidden' && <ConfirmationDialog label="관리자 권한 안내" onCancel={closeNotice} actions={[{ label: '확인', cancel: true }]}><p>관리자만 이용할 수 있습니다.</p></ConfirmationDialog>}
     {notice === 'not-found' && <ConfirmationDialog label="강의 조회 안내" onCancel={closeNotice} actions={[{ label: '강의·교재 목록', onClick: () => router.push('/courses') }]}><p>강의를 찾을 수 없습니다.</p></ConfirmationDialog>}

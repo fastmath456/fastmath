@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { AdminGuide } from '@/features/admin-guide';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ConfirmationDialog, FormField } from '@/components/site';
 import { mutate } from '@/lib/http';
@@ -139,17 +140,17 @@ export function ReviewEditorDialog({ reviews, onClose, onSaved }: { reviews: Sou
   }
 
   return <>
-    <dialog ref={dialog} className={styles.dialog} aria-labelledby="review-editor-title" onCancel={event => { event.preventDefault(); move(onClose); }} onKeyDown={event => {
-      if (event.key !== 'Tab') return;
+    <dialog ref={dialog} className={styles.dialog} aria-labelledby="review-editor-title" onCancel={event => { event.preventDefault(); if (!dialog.current?.querySelector('.driver-popover')) move(onClose); }} onKeyDown={event => {
+      if (event.key !== 'Tab' || (event.target instanceof Element && event.target.closest('.driver-popover'))) return;
       const controls = event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
       const first = controls[0], last = controls[controls.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     }}>
-      <h2 id="review-editor-title" className={styles.title}>리뷰 관리</h2>
+      <div className={styles.heading}><h2 id="review-editor-title" className={styles.title}>리뷰 관리</h2><AdminGuide guide="landing-review-editor" admin={true} paused={pending || Boolean(discard)} /></div>
       <form className={styles.form} onSubmit={save} aria-busy={pending}>
         <fieldset disabled={pending} className={styles.body}>
-          <div className={styles.sidebar}>
+          <div data-guide="landing-review-list" className={styles.sidebar}>
             <button type="button" className={styles.add} onClick={() => select(null)}>리뷰 추가</button>
             <div className={styles.list}>{reviews.map(item => <button key={item.id} type="button" aria-current={selected?.id === item.id ? 'true' : undefined} onClick={() => { if (selected?.id !== item.id) select(item); }}>{item.author}</button>)}</div>
           </div>
@@ -168,7 +169,7 @@ export function ReviewEditorDialog({ reviews, onClose, onSaved }: { reviews: Sou
                 const file = event.target.files?.[0];
                 chooseImage(file);
               }} />
-              <button type="button" className={uploadStyles.assetUpload} onClick={() => imageInput.current?.click()} aria-label={`원문 이미지 ${image || selected ? '교체' : '업로드'}`}>
+              <button type="button" data-guide="landing-review-image" className={uploadStyles.assetUpload} onClick={() => imageInput.current?.click()} aria-label={`원문 이미지 ${image || selected ? '교체' : '업로드'}`}>
                 {image ? <Image unoptimized className={uploadStyles.assetPreview} src={image.url} width={144} height={144} alt="원문 이미지 미리보기" /> : selected ? <ReviewImage part={selected.images[0]} alt="원문 이미지 미리보기" /> : <span className={uploadStyles.uploadPrompt}><span className={uploadStyles.imageIcon}><Image unoptimized src="/assets/manage-image-upload.svg" width={20} height={20} alt="" /></span><span>이미지 업로드</span></span>}
               </button>
               {imageError && <p className={uploadStyles.message} role="alert">{imageError}</p>}
@@ -176,7 +177,7 @@ export function ReviewEditorDialog({ reviews, onClose, onSaved }: { reviews: Sou
           </div>
         </fieldset>
         {failed && <p className={uploadStyles.message} role="alert">리뷰를 저장하지 못했습니다. 다시 시도해주세요.</p>}
-        <div className={styles.footer}><button type="button" className={styles.cancel} disabled={pending} onClick={() => move(onClose)}>닫기</button><button type="submit" className={styles.save} disabled={pending}>저장</button></div>
+        <div className={styles.footer}><button type="button" className={styles.cancel} disabled={pending} onClick={() => move(onClose)}>닫기</button><button type="submit" data-guide="landing-review-save" className={styles.save} disabled={pending}>저장</button></div>
       </form>
     </dialog>
     {discard && <ConfirmationDialog label="수정한 내용을 저장하지 않고 이동할까요?" onCancel={() => setDiscard(null)} actions={[{ label: '취소', cancel: true }, { label: '확인', onClick: () => { setDiscard(null); discard(); } }]}><p>수정한 내용을 저장하지 않고 이동할까요?</p></ConfirmationDialog>}

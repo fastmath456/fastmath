@@ -18,6 +18,7 @@ function load(globals = {}, modules = {}) {
       if (name === 'react') return { useEffect() {}, useRef: value => ({ current: value }), useState: value => [value, () => {}] };
       if (name === 'react/jsx-runtime') return { jsx() {}, jsxs() {} };
       if (name === 'next/image' || name.endsWith('.module.css')) return {};
+      if (name === '@/features/admin-guide') return { AdminGuide: 'admin-guide' };
       if (name === '@/components/site') return {};
       if (name === '@/lib/http') return {};
       if (name === './review-image') return {};

@@ -20,6 +20,15 @@ export const Course: Story = {
   render: () => <CoursePage params={Promise.resolve({ slug: course.slug })} searchParams={Promise.resolve({})} />,
 };
 
+export const AdminCourse: Story = {
+  ...Course, name: '강의 상세 · 관리자 안내',
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  parameters: {
+    ...Course.parameters,
+    msw: { handlers: { product: http.get(`/api/products/${course.slug}`, () => HttpResponse.json({ ...course, admin: true })) } },
+  },
+};
+
 export const LongTitleReviews: Story = {
   ...Course, name: '강의 상세 · 긴 제목과 후기 5개',
   parameters: {

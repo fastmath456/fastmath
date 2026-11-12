@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { http } from 'msw';
+import { http, HttpResponse } from 'msw';
+import { review } from '../fixtures';
 import HomePage from '@/app/page';
 import { apiError } from '../handlers';
 import { navigation } from '../navigation';
@@ -12,4 +13,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Home: Story = { name: '홈' };
+export const AdminHome: Story = {
+  name: '홈 · 관리자 안내',
+  globals: { viewport: { value: 'desktop', isRotated: false } },
+  parameters: { msw: { handlers: { reviews: http.get('/api/landing/reviews', () => HttpResponse.json({ items: [review], admin: true })) } } },
+};
 export const NarrowMobile: Story = { name: '홈 · 320px', globals: { viewport: { value: 'narrow', isRotated: false } } };

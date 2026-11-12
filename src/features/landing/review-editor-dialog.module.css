@@ -1,3 +1,4 @@
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .dialog { width: min(1000px, calc(100vw - 40px)); max-width: none; max-height: calc(100dvh - 48px); margin: auto; padding: 20px; border: 0; border-radius: 16px; background: var(--gray-00); filter: drop-shadow(0 10px 5px rgba(0,0,0,.04)); }
 .dialog[open] { display: flex; flex-direction: column; gap: 18px; }
 .dialog::backdrop { background: rgb(0 0 0 / 30%); }

@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { AdminGuide } from '@/features/admin-guide';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -268,8 +269,8 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
   return <>
     <main className={`${styles.main} ${document.step === 2 ? styles.details : ''}`}>
       <div className={styles.heading}>
-        <h1>클래스 등록</h1>
-        <div className={styles.steps} aria-label="클래스 등록 단계">
+        <div className={styles.headingRow}><h1>클래스 등록</h1><AdminGuide guide={document.step === 1 ? 'course-basic' : 'course-curriculum'} admin={phase === 'ready'} paused={busy || verifying || Boolean(confirm || nameDialog)} /></div>
+        <div className={styles.steps} data-guide="course-steps" aria-label="클래스 등록 단계">
           {document.step === 2 ? <button type="button" className={styles.step} onClick={() => guardPending(() => { setDocument(current => ({ ...current, step: 1 })); replaceUrl(draft, 1); })} disabled={busy || verifying}><span className={styles.chip}>1</span><span>기본정보</span></button> : <span className={`${styles.step} ${styles.current}`} aria-current="step"><span className={styles.chip}>1</span><span>기본정보</span></span>}
           <Image unoptimized src="/assets/manage-chevron-right.svg" alt="" width={16} height={16} />
           <span className={`${styles.step} ${document.step === 2 ? styles.current : ''}`} aria-current={document.step === 2 ? 'step' : undefined}><span className={styles.chip}>2</span><span>상세정보</span></span>
@@ -289,7 +290,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
       </fieldset>
       <div className={styles.actionGroup}>
         {message && <p className={styles.error} role="alert">{message}</p>}{notice && <p role="status">{notice}</p>}
-        <div className={styles.actions}><button type="button" className={styles.outlined} disabled={busy || verifying} onClick={() => guardDirty(() => { uploads.reset(); router.push('/courses'); })}>목록으로</button><div className={styles.rightActions}><button type="button" className={styles.outlined} disabled={busy || verifying} onClick={() => { void persist(); }}>{busy ? '저장 중' : '임시저장'}</button><button type="button" className={styles.primary} disabled={busy || verifying} onClick={document.step === 1 ? nextStep : requestPublish}>{document.step === 1 ? '다음으로' : '등록하기'}</button></div></div>
+        <div className={styles.actions}><button type="button" className={styles.outlined} disabled={busy || verifying} onClick={() => guardDirty(() => { uploads.reset(); router.push('/courses'); })}>목록으로</button><div className={styles.rightActions}><button type="button" className={styles.outlined} data-guide="save-draft" disabled={busy || verifying} onClick={() => { void persist(); }}>{busy ? '저장 중' : '임시저장'}</button><button type="button" className={styles.primary} data-guide="course-next" disabled={busy || verifying} onClick={document.step === 1 ? nextStep : requestPublish}>{document.step === 1 ? '다음으로' : '등록하기'}</button></div></div>
       </div>
     </main>
     <SiteFooter />

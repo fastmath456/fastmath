@@ -747,6 +747,7 @@ test('admin data skeleton appears only after access succeeds and clears when dat
         getDraft: id => { reads.push(['draft', id]); return loaded; },
         getEditableCourse: id => { reads.push(['course', id]); return loaded; },
       },
+      '@/features/admin-guide': { AdminGuide: 'admin-guide' },
       './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': {},
       './use-course-uploads': { useCourseUploads: () => ({}) },
       './validation': { emptyDocument: blank, validateBasic: () => ({}) },

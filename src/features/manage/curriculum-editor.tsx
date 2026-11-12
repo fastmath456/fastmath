@@ -96,7 +96,7 @@ export function CurriculumEditor({
 
   return (
     <section className={styles.editor} aria-label="커리큘럼 및 영상 업로드">
-      <aside className={styles.curriculum} aria-label="커리큘럼">
+      <aside data-guide="curriculum" className={styles.curriculum} aria-label="커리큘럼">
         {chapters.length === 0 ? <p className={styles.emptyCurriculum}>챕터를 추가해주세요.</p> : chapters.map(chapter => (
           <section className={styles.chapter} key={chapter.id} aria-label={chapter.title}>
             <div className={styles.chapterHeader}>
@@ -141,7 +141,7 @@ export function CurriculumEditor({
         </div>
       </aside>
 
-      <div className={styles.videoEditor}>
+      <div data-guide="video-editor" className={styles.videoEditor}>
         <label className={styles.label} htmlFor="vimeo-url">영상 업로드 <span aria-hidden="true">*</span></label>
         {!selectedLesson && <p className={styles.emptyVideo}>차시를 선택하거나 추가해주세요.</p>}
         <div className={styles.urlRow}>

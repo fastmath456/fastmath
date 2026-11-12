@@ -1,0 +1,27 @@
+.admin-guide-replay {
+  width: fit-content;
+  height: 32px;
+  padding-inline: 16px;
+  border-radius: 16px;
+  background: var(--brand-500);
+  color: #3c3b28;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.admin-guide-popover { font-family: inherit; color: var(--gray-800); }
+.admin-guide-popover .driver-popover-title { font-family: inherit; font-size: 18px; }
+.admin-guide-popover .driver-popover-description { font-family: inherit; font-size: 14px; line-height: 1.5; }
+.admin-guide-popover .driver-popover-navigation-btns { gap: 8px; }
+.admin-guide-popover .driver-popover-navigation-btns button {
+  font-family: inherit;
+  color: #3c3b28;
+  text-shadow: none;
+  border: 1px solid var(--gray-200);
+  background: white;
+  border-radius: 16px;
+  padding: 8px 12px;
+}
+.admin-guide-popover .driver-popover-navigation-btns .driver-popover-next-btn { background: var(--brand-500); border-color: var(--brand-500); }
+@media (width <= 1080px) {
+  .admin-guide-replay { display: none; }
+}
