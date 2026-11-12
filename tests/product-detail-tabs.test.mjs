@@ -13,10 +13,10 @@ function find(node, predicate) {
   return predicate(node) ? node : find(node.props?.children, predicate);
 }
 
-function detail(kind, { reducedMotion = false, scrollHeight = 3200 } = {}) {
+function detail(kind, { reducedMotion = false, scrollHeight = 3200, title = '수학1' } = {}) {
   const slots = [], effects = [], listeners = new Map(), moves = [], historyEntries = [];
   let cursor = 0;
-  const product = { id: 'product', title: '수학1', price: 1000, tags: [], chapters: [], selling: true,
+  const product = { id: 'product', title, price: 1000, tags: [], chapters: [], selling: true,
     reviews: [{ author: '학생', rating: 5, body: '후기', date: '2026.10.20' }] };
   const location = { hash: '' };
   const window = {
@@ -60,7 +60,7 @@ function detail(kind, { reducedMotion = false, scrollHeight = 3200 } = {}) {
     history: { pushState(_state, _title, hash) { location.hash = hash; historyEntries.push(hash); } },
     document: { getElementById: id => sections[id], documentElement: { scrollHeight } },
     getComputedStyle: () => ({ scrollMarginTop: '104px' }),
-    require(name) { if (name.endsWith('.module.css')) return {}; if (name in modules) return modules[name]; throw new Error(name); },
+    require(name) { if (name.endsWith('.module.css')) return { reviewMeta: 'reviewMeta' }; if (name in modules) return modules[name]; throw new Error(name); },
   });
   function render() {
     cursor = 0;
@@ -78,7 +78,7 @@ function detail(kind, { reducedMotion = false, scrollHeight = 3200 } = {}) {
   const dispatch = (name, event = {}) => { for (const callback of listeners.get(name) ?? []) callback(event); };
   const scroll = y => { window.scrollY = y; dispatch('scroll'); };
   render();
-  return { active, click, scroll, dispatch, moves, historyEntries, listeners,
+  return { render, active, click, scroll, dispatch, moves, historyEntries, listeners,
     unmount() { for (const slot of slots) slot?.cleanup?.(); } };
 }
 
@@ -145,5 +145,24 @@ for (const kind of ['vod', 'pdf']) {
     assert.equal(ui.moves.length, 0);
     ui.unmount();
     assert.ok([...ui.listeners.values()].every(callbacks => callbacks.size === 0));
+  });
+}
+
+for (const kind of ['vod', 'pdf']) {
+  test(`${kind}: review titles include spaces in the ten-character limit without changing the purchase title`, () => {
+    for (const [title, expected] of [
+      ['수학1 개념', '수학1 개념'],
+      ['12345 7890', '12345 7890'],
+      ['12345 78901', '12345 7890...'],
+      ['수학1 개념 완성수학1 개념 완성', '수학1 개념 완성수...'],
+      ['📚1234567890', '📚123456789...'],
+    ]) {
+      const tree = detail(kind, { title }).render();
+      const meta = find(tree, node => node.props?.className === 'reviewMeta');
+      assert.equal(meta.props.children[0].props.children, expected);
+      assert.equal(find(tree, node => node.type === 'h1').props.children, title);
+      assert.equal(meta.props.children[2].props.children, '학생');
+      assert.equal(meta.props.children[4].props.children, '2026.10.20');
+    }
   });
 }
