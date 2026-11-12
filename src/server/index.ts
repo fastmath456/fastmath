@@ -5,4 +5,4 @@ export { profile, saveProfile, uploadProfile } from './profile';
 export { products, productDetail, checkoutProductReturnHref, manageProduct, manageCurriculum, manageFile } from './catalog';
 export { orders, createOrder, nicepayCallback, paymentStatus, paymentWebhook, refundQuote, requestRefund, reviewRefund, recoverOrder } from './orders';
 export { classroom, viewer, previewViewer, hide, download, playback, progress } from './learning';
-export { courseAccess, courseDrafts, createCourseDraft, courseDraft, saveCourseDraft, persistedCourse, uploadCourseAsset, courseAssetBytes, publicCourseAsset, verifyCourseVideo, publishCourseDraft } from './manage';
+export { courseAccess, createCourseDraft, courseDraft, saveCourseDraft, persistedCourse, uploadCourseAsset, courseAssetBytes, publicCourseAsset, verifyCourseVideo, publishCourseDraft } from './manage';

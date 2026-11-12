@@ -132,16 +132,7 @@ async function hydrateDraft(row: DraftRow, ownerId: string) {
   const document=await authoringDocument(row.document,row.course_id); const assets=await authoredAssets(ownerId,document,row.course_id);
   return draft(row,hydrateDocument(document,assets));
 }
-function summary(row: DraftRow) {
-  const basic=plainObject(plainObject(row.document).basic,'basic');
-  return {id:row.id,savedAt:row.saved_at,published:row.published,slug:row.slug,title:typeof basic.title==='string'?basic.title:'',step:plainObject(row.document).step===2?2:1};
-}
-
 export async function courseAccess(ctx: Context) { await requireAdmin(ctx); return {admin:true}; }
-export async function courseDrafts(ctx: Context) {
-  const user=await requireAdmin(ctx); const result=await db().from('course_drafts').select('id,owner_id,course_id,slug,document,revision,published,saved_at').eq('owner_id',user.id).order('saved_at',{ascending:false}).limit(100);
-  manageError(result.error); return {items:(result.data as DraftRow[]).map(summary)};
-}
 export async function createCourseDraft(ctx: Context) {
   const user=await requireAdmin(ctx),input=await json(ctx.request);
   const courseId=input.courseId===undefined?null:typeof input.courseId==='string'&&input.courseId.length<=120?input.courseId:null;

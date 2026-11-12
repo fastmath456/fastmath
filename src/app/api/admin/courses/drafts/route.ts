@@ -1,3 +1,2 @@
-import { api, courseDrafts, createCourseDraft } from '@/server';
-export const GET = api(courseDrafts);
+import { api, createCourseDraft } from '@/server';
 export const POST = api(createCourseDraft);

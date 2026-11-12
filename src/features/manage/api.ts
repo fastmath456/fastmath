@@ -1,5 +1,5 @@
 import { RequestError } from '@/lib/http';
-import type { AssetSlot, CourseAsset, CourseDocument, CourseDraft, CourseVideo, DraftSummary } from './types';
+import type { AssetSlot, CourseAsset, CourseDocument, CourseDraft, CourseVideo } from './types';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch('/api/admin/courses/' + path, { ...options, credentials: 'same-origin' });
@@ -9,7 +9,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 const json = (value: unknown, method = 'POST'): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
 export const checkAccess = () => request<{ admin: true }>('access');
-export const getDrafts = () => request<{ items: DraftSummary[] }>('drafts');
 export const getDraft = (id: string) => request<{ draft: CourseDraft }>('drafts/' + encodeURIComponent(id));
 export const getEditableCourse = (id: string) => request<{ draft: CourseDraft }>(encodeURIComponent(id));
 export const saveDraft = (document: CourseDocument, draft: CourseDraft | null, courseId?: string) => draft?.id ? request<{ draft: CourseDraft }>('drafts/' + encodeURIComponent(draft.id), json({ document, revision: draft.revision }, 'PATCH')) : request<{ draft: CourseDraft }>('drafts', json({ document, ...(courseId ? { courseId } : {}) }));

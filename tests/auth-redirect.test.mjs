@@ -726,11 +726,12 @@ test('approved loading counts are eight products, three classroom cards and thre
 });
 
 test('admin data skeleton appears only after access succeeds and clears when data is ready', async () => {
-  for (const accessError of [null, forbidden()]) {
+  for (const props of [{}, { draftId: 'saved-draft' }, { courseId: 'existing-course' }]) for (const accessError of [null, forbidden()]) {
     const slots = [], effects = [];
-    let cursor = 0, allow, list, reads = 0;
+    let cursor = 0, allow, resolveDraft;
+    const reads = [];
     const access = new Promise((resolve, reject) => { allow = () => accessError ? reject(accessError) : resolve(); });
-    const listing = new Promise(resolve => { list = resolve; });
+    const loaded = new Promise(resolve => { resolveDraft = resolve; });
     const blank = () => ({ basic: {}, chapters: [], step: 1 });
     const modules = {
       react: {
@@ -739,29 +740,39 @@ test('admin data skeleton appears only after access succeeds and clears when dat
       },
       'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }), Fragment: 'fragment' },
       'next/image': 'image', 'next/navigation': { useRouter: () => ({ replace() {} }) },
+      '@tanstack/react-query': { useQueryClient: () => ({}) },
       '@/components/site': { SiteFooter: 'footer' }, '@/lib/http': http,
-      './api': { checkAccess: () => access, getDrafts: () => { reads++; return listing; } },
+      './api': {
+        checkAccess: () => access,
+        getDraft: id => { reads.push(['draft', id]); return loaded; },
+        getEditableCourse: id => { reads.push(['course', id]); return loaded; },
+      },
       './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': {},
       './use-course-uploads': { useCourseUploads: () => ({}) },
       './validation': { emptyDocument: blank, validateBasic: () => ({}) },
       './manage-course-skeleton': { ManageCourseSkeleton: 'admin-loading' },
     };
     const { ManageCourseScreen } = load('src/features/manage/manage-course-screen.tsx', modules, { window: { history: { replaceState() {} } }, URLSearchParams });
-    const render = () => { cursor = 0; return ManageCourseScreen({}); };
+    const render = () => { cursor = 0; return ManageCourseScreen(props); };
     assert.equal(render(), null);
     const cleanup = effects[0]();
-    assert.equal(reads, 0);
+    assert.deepEqual(reads, []);
     allow();
     await settle();
     if (accessError) {
-      assert.equal(reads, 0);
+      assert.deepEqual(reads, []);
       assert.equal(find(render(), node => node.type === 'admin-loading'), undefined);
     } else {
-      assert.equal(render().type, 'admin-loading');
-      assert.equal(reads, 1);
-      list({ items: [] });
-      await settle();
-      assert.ok(find(render(), node => node.type === 'basic'));
+      if (props.draftId || props.courseId) {
+        assert.equal(render().type, 'admin-loading');
+        assert.deepEqual(reads, [props.draftId ? ['draft', props.draftId] : ['course', props.courseId]]);
+        resolveDraft({ draft: { id: props.draftId ?? '', document: blank() } });
+        await settle();
+      } else assert.deepEqual(reads, []);
+      const tree = render();
+      assert.ok(find(tree, node => node.type === 'basic'));
+      assert.ok(find(tree, node => node.props.children === '임시저장'));
+      assert.equal(find(tree, node => node.props.children === '불러오기'), undefined);
     }
     cleanup();
   }

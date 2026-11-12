@@ -1,7 +1,6 @@
 .main { width: min(100%, 680px); margin-inline: auto; padding: 52px 20px; display: flex; flex-direction: column; gap: 52px; }
 .details { width: min(100%, 1000px); }
 .heading { width: 100%; display: flex; flex-direction: column; gap: 8px; }
-.headingRow { display: flex; align-items: center; justify-content: space-between; }
 .heading h1 { color: #222; font-size: 20px; font-weight: 600; line-height: 30px; letter-spacing: -1px; }
 .steps { display: flex; align-items: center; gap: 12px; }
 .step { display: flex; align-items: center; gap: 4px; padding: 0; background: transparent; color: #727262; font-size: 14px; font-weight: 600; line-height: 20px; }
@@ -16,8 +15,5 @@
 .outlined, .primary { height: 52px; padding: 8px 16px; border-radius: 16px; font-weight: 600; line-height: 20px; display: inline-flex; align-items: center; justify-content: center; }
 .outlined { border: 1px solid var(--brand-500); color: var(--brand-500); background: white; }
 .primary { color: var(--gray-800); background: var(--brand-500); }
-.load { padding: 0; color: var(--brand-500); background: transparent; font-weight: 600; }
 .error { color: var(--red-500); font-size: 12px; line-height: 16px; }
-.dialogText, .summary, .draftList { display: flex; flex-direction: column; gap: 8px; }
-.draftItem { display: flex; flex-direction: column; gap: 4px; padding: 0; text-align: left; background: transparent; }
-.draftItem time { color: var(--gray-700); font-size: 12px; line-height: 16px; }
+.dialogText, .summary { display: flex; flex-direction: column; gap: 8px; }

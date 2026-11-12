@@ -43,7 +43,7 @@ test('course drafts require an administrator and use an optimistic revision',asy
   const changed={...document(),basic:{...document().basic,title:'저장된 초안'}};
   const saved=await request('admin/courses/drafts/'+draft.id,{method:'PATCH',jar:admin.jar,data:{document:changed,revision:1}}); assert.equal(saved.status,200,JSON.stringify(saved.body)); assert.equal(saved.body.draft.revision,2);
   const stale=await request('admin/courses/drafts/'+draft.id,{method:'PATCH',jar:admin.jar,data:{document:changed,revision:1}}); assert.equal(stale.status,409); assert.equal(stale.body.error.code,'draft_conflict');
-  const list=await request('admin/courses/drafts',{jar:admin.jar}); assert.equal(list.status,200); assert.ok(list.body.items.some(item=>item.id===draft.id));
+  assert.equal((await fetch(base+'/api/admin/courses/drafts')).status,405);
 });
 
 test('uploads reject MIME spoofing before private storage is written',async()=>{

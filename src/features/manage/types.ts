@@ -8,5 +8,4 @@ export type ReviewErrors = Partial<Record<'rating' | 'body' | 'author', string>>
 export type CourseBasic = { title: string; basePrice: string; price: string; licenseDays: string; displayOrder: string; reviews: CourseReview[]; thumbnail: CourseAsset | null; detailImages: CourseAsset[]; materials: CourseAsset[] };
 export type CourseDocument = { basic: CourseBasic; chapters: CourseChapter[]; step: 1 | 2; selectedLessonId: string | null };
 export type CourseDraft = { id: string; revision: number; courseId: string | null; slug: string | null; published: boolean; savedAt: string; document: CourseDocument };
-export type DraftSummary = Pick<CourseDraft, 'id' | 'savedAt' | 'published' | 'slug'> & { title: string; step: 1 | 2 };
 export type BasicErrors = Partial<Record<Exclude<keyof CourseBasic, 'reviews'>, string>> & { reviews?: Record<string, ReviewErrors> };

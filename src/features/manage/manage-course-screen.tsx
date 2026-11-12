@@ -6,12 +6,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog, FormField, SiteFooter } from '@/components/site';
 import { RequestError } from '@/lib/http';
-import { checkAccess, getDraft, getDrafts, getEditableCourse, publishDraft, saveDraft, verifyVideo } from './api';
+import { checkAccess, getDraft, getEditableCourse, publishDraft, saveDraft, verifyVideo } from './api';
 import { BasicInformation } from './basic-information';
 import { CurriculumEditor } from './curriculum-editor';
 import { useCourseUploads } from './use-course-uploads';
 import { emptyDocument, emptyReview, isEmptyReview, validateReview, formattedPrice, parseVimeoUrl, validateBasic, validateCurriculum } from './validation';
-import type { BasicErrors, CourseChapter, CourseDocument, CourseDraft, CourseLesson, CourseReview, DraftSummary } from './types';
+import type { BasicErrors, CourseChapter, CourseDocument, CourseDraft, CourseLesson, CourseReview } from './types';
 import { ManageCourseSkeleton } from './manage-course-skeleton';
 import styles from './manage.module.css';
 
@@ -34,7 +34,6 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
   const [document, setDocument] = useState<CourseDocument>(emptyDocument);
   const [draft, setDraft] = useState<CourseDraft | null>(null);
   const [saved, setSaved] = useState(() => serialize(document));
-  const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [phase, setPhase] = useState<'checking' | 'loading' | 'ready' | 'error' | 'forbidden' | 'missing'>('checking');
   const [busy, setBusy] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -43,7 +42,6 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
   const [notice, setNotice] = useState('');
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [nameDialog, setNameDialog] = useState<NameDialog | null>(null);
-  const [showDrafts, setShowDrafts] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const operation = useRef(false);
   const mounted = useRef(false);
@@ -75,11 +73,8 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
         await checkAccess();
         if (cancelled) return;
         setPhase(current => current === 'checking' ? 'loading' : current);
-        const [listing, loaded] = await Promise.all([
-          getDrafts(), draftId ? getDraft(draftId) : courseId ? getEditableCourse(courseId) : Promise.resolve(null),
-        ]);
+        const loaded = draftId ? await getDraft(draftId) : courseId ? await getEditableCourse(courseId) : null;
         if (cancelled) return;
-        setDrafts(listing.items);
         if (loaded?.draft.published && loaded.draft.slug) { router.replace('/courses/' + encodeURIComponent(loaded.draft.slug)); return; }
         const next = loaded?.draft.document ?? emptyDocument();
         const basicErrors = validateBasic(next.basic);
@@ -176,7 +171,6 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
         setConfirm({ label: '클래스 등록 완료', text: '클래스가 등록되었습니다.', cancel: '확인', accept: '', onAccept: go });
       } else {
         setNotice('임시저장되었습니다.');
-        void getDrafts().then(listing => { if (mounted.current) setDrafts(listing.items); }).catch(error => { if (mounted.current) handleAuthError(error); });
       }
     } catch (error) {
       if (!handleAuthError(error)) setMessage(publishing ? '클래스를 등록하지 못했습니다. 다시 시도해주세요.' : '임시저장하지 못했습니다. 다시 시도해주세요.');
@@ -266,25 +260,6 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
     } finally { operation.current = false; if (mounted.current) setVerifying(false); }
   }
 
-  async function loadSelectedDraft(id: string) {
-    if (operation.current) return;
-    operation.current = true; setBusy(true); setShowDrafts(false); setMessage('');
-    try {
-      const result = await getDraft(id);
-      if (result.draft.published && result.draft.slug) { router.push('/courses/' + encodeURIComponent(result.draft.slug)); return; }
-      const next = result.draft.document;
-      const nextErrors = validateBasic(next.basic);
-      if (next.step === 2 && Object.keys(nextErrors).length) { next.step = 1; setErrors(nextErrors); } else setErrors({});
-      uploads.reset(); setDocument(next); setDraft(result.draft); setSaved(serialize(next)); setNotice(''); replaceUrl(result.draft, next.step);
-    } catch (error) {
-      if (!handleAuthError(error)) {
-        if (error instanceof RequestError && error.code === 'not_found') {
-          uploads.reset(); const blank = emptyDocument(); setDocument(blank); setSaved(serialize(blank)); setDraft(null); replaceUrl(null, 1); setMessage('초안을 찾을 수 없습니다.');
-        } else setMessage('초안을 불러오지 못했습니다. 다시 시도해주세요.');
-      }
-    } finally { operation.current = false; setBusy(false); }
-  }
-
   if (phase === 'checking') return null;
   if (phase === 'loading') return <ManageCourseSkeleton />;
   if (phase !== 'ready') return <><main className={styles.main}><p role="alert">{phase === 'forbidden' ? '관리자만 이용할 수 있습니다.' : phase === 'missing' ? '강의를 찾을 수 없습니다.' : message}</p><button type="button" className={styles.outlined} onClick={phase === 'error' ? () => { setPhase('checking'); setLoadAttempt(value => value + 1); } : () => router.push('/courses')}>{phase === 'error' ? '재시도' : '목록으로'}</button></main><SiteFooter /></>;
@@ -293,7 +268,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
   return <>
     <main className={`${styles.main} ${document.step === 2 ? styles.details : ''}`}>
       <div className={styles.heading}>
-        <div className={styles.headingRow}><h1>클래스 등록</h1>{drafts.length > 0 && <button type="button" className={styles.load} onClick={() => setShowDrafts(true)} disabled={busy || verifying}>불러오기</button>}</div>
+        <h1>클래스 등록</h1>
         <div className={styles.steps} aria-label="클래스 등록 단계">
           {document.step === 2 ? <button type="button" className={styles.step} onClick={() => guardPending(() => { setDocument(current => ({ ...current, step: 1 })); replaceUrl(draft, 1); })} disabled={busy || verifying}><span className={styles.chip}>1</span><span>기본정보</span></button> : <span className={`${styles.step} ${styles.current}`} aria-current="step"><span className={styles.chip}>1</span><span>기본정보</span></span>}
           <Image unoptimized src="/assets/manage-chevron-right.svg" alt="" width={16} height={16} />
@@ -320,6 +295,5 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
     <SiteFooter />
     {confirm && <ConfirmationDialog label={confirm.label} onCancel={() => { if (!confirm.accept) confirm.onAccept(); setConfirm(null); }} actions={confirm.accept ? [{ label: confirm.cancel, cancel: true }, { label: confirm.accept, onClick: () => { setConfirm(null); confirm.onAccept(); } }] : [{ label: confirm.cancel, onClick: () => { setConfirm(null); confirm.onAccept(); } }]}><div className={styles.dialogText}><p>{confirm.text}</p>{confirm.summary && <div className={styles.summary}><p>클래스명: {document.basic.title.trim()}</p><p>판매금액: {formattedPrice(document.basic.price)}원</p><p>수강기간: {document.basic.licenseDays || '60'}일</p><p>정렬 순서: {Number(document.basic.displayOrder)}</p><p>공개 후기: {document.basic.reviews.filter(review => !isEmptyReview(review)).length}개</p><p>차시 수: {document.chapters.reduce((sum, chapter) => sum + chapter.lessons.length, 0)}개</p></div>}</div></ConfirmationDialog>}
     {nameDialog && <ConfirmationDialog label={nameLabel} onCancel={() => setNameDialog(null)} actions={[{ label: '취소', cancel: true }, { label: nameDialog.lessonId || (nameDialog.kind === 'chapter' && nameDialog.chapterId) ? '변경' : '추가', onClick: saveName }]}><form className={styles.dialogText} onSubmit={event => { event.preventDefault(); saveName(); }}>{nameDialog.kind === 'lesson' && <p>소속 챕터: {document.chapters.find(chapter => chapter.id === nameDialog.chapterId)?.title}</p>}<FormField id="curriculum-name" autoFocus label={nameDialog.kind === 'chapter' ? '챕터명' : '차시명'} value={nameDialog.value} error={nameDialog.error} onChange={event => setNameDialog({ ...nameDialog, value: event.target.value, error: '' })} /></form></ConfirmationDialog>}
-    {showDrafts && <ConfirmationDialog label="초안 불러오기" onCancel={() => setShowDrafts(false)} actions={[{ label: '취소', cancel: true }]}><div className={styles.draftList}>{drafts.map(item => <button key={item.id} type="button" className={styles.draftItem} onClick={() => { setShowDrafts(false); guardDirty(() => { void loadSelectedDraft(item.id); }); }}><span>{item.title || '클래스명 미입력'}</span><time dateTime={item.savedAt}>{new Date(item.savedAt).toLocaleString('ko-KR')}</time></button>)}</div></ConfirmationDialog>}
   </>;
 }

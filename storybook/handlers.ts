@@ -48,10 +48,6 @@ export const handlers = {
   `, { headers: { 'Content-Type': 'application/javascript' } })),
   reviews: http.get('/api/landing/reviews', () => HttpResponse.json({ items: [review], admin: false })),
   access: http.get('/api/admin/courses/access', () => HttpResponse.json({ admin: true })),
-  drafts: http.get('/api/admin/courses/drafts', () => HttpResponse.json({ items: [{
-    id: draft.id, title: draft.document.basic.title, step: draft.document.step,
-    savedAt: draft.savedAt, published: draft.published, slug: draft.slug,
-  }] })),
   draft: http.get(`/api/admin/courses/drafts/${draft.id}`, () => HttpResponse.json({ draft })),
   editCourse: http.get(`/api/admin/courses/${course.id}`, () => HttpResponse.json({ draft: { ...draft, id: '' } })),
 };
