@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useId, useRef, type ChangeEvent } from 'react';
-import type { AssetSlot, BasicErrors, CourseAsset, CourseBasic } from './types';
+import type { AssetSlot, BasicErrors, CourseAsset, CourseBasic, CourseReview } from './types';
 import { formattedPrice } from './validation';
 import styles from './basic-information.module.css';
 
@@ -11,23 +11,30 @@ type BasicInformationProps = {
   errors: BasicErrors;
   uploading: Partial<Record<AssetSlot, boolean>>;
   uploadErrors: Partial<Record<AssetSlot, string>>;
-  onChange: (field: 'title' | 'basePrice' | 'price' | 'licenseDays', value: string) => void;
-  onBlur: (field: 'title' | 'basePrice' | 'price' | 'licenseDays') => void;
+  onChange: (field: 'title' | 'basePrice' | 'price' | 'licenseDays' | 'displayOrder', value: string) => void;
+  onBlur: (field: 'title' | 'basePrice' | 'price' | 'licenseDays' | 'displayOrder') => void;
   onUpload: (slot: AssetSlot, files: File[]) => void;
   onRemoveMaterial: (id: string) => void;
   onRetryMaterial: (id: string) => void;
+  onRemoveDetailImage: (id: string) => void;
+  onRetryDetailImage: (id: string) => void;
+  onReviewChange: (id: string, field: 'rating' | 'body' | 'author', value: string | number) => void;
+  onReviewBlur: (review: CourseReview) => void;
+  onAddReview: () => void;
+  onRemoveReview: (review: CourseReview) => void;
 };
 
-type TextField = 'title' | 'basePrice' | 'price';
+type TextField = 'title' | 'basePrice' | 'price' | 'displayOrder';
 
 const fieldDetails: Record<TextField, { label: string; placeholder: string; inputMode?: 'numeric' }> = {
+  displayOrder: { label: '정렬 순서', placeholder: '정렬 순서를 입력해주세요. (숫자가 동일한 강의가 존재할 경우, 최신순으로 정렬됩니다.)', inputMode: 'numeric' },
   title: { label: '클래스명', placeholder: '클래스명을 입력해주세요.' },
   basePrice: { label: '원가(단위: 원)', placeholder: '강의 원가를 입력해주세요.', inputMode: 'numeric' },
   price: { label: '할인가(단위: 원)', placeholder: '강의 할인가를 입력해주세요.', inputMode: 'numeric' },
 };
 
 function messageFor(slot: AssetSlot, errors: BasicErrors, uploadErrors: BasicInformationProps['uploadErrors']) {
-  return uploadErrors[slot] ?? errors[slot === 'material' ? 'materials' : slot];
+  return uploadErrors[slot] ?? errors[slot === 'material' ? 'materials' : slot === 'detailImage' ? 'detailImages' : slot];
 }
 
 function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload }: {
@@ -49,8 +56,8 @@ function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload 
 
   return <div className={styles.field}>
     <div className={styles.assetHeading}><label htmlFor={inputId} className={styles.label}>{label}<span aria-hidden="true" className={styles.required}>*</span></label>{helper && <p className={styles.helper}>{helper}</p>}</div>
-    <input ref={input} id={inputId} className={styles.fileInput} type="file" accept=".jpg,.jpeg,.png,.webp" onChange={select} />
-    <button id={`course-${slot}`} type="button" className={styles.assetUpload} onClick={() => input.current?.click()} aria-label={`${label} ${asset ? '교체' : '업로드'}`} disabled={uploading}>
+    <input ref={input} id={inputId} className={styles.fileInput} type="file" accept=".jpg,.jpeg,.png,.webp" multiple={slot === 'detailImage'} onChange={select} />
+    <button id={`course-${slot}`} type="button" className={styles.assetUpload} onClick={() => input.current?.click()} aria-label={`${label} ${asset ? '교체' : '업로드'}`} disabled={slot === 'thumbnail' && uploading}>
       {asset ? <Image unoptimized className={styles.assetPreview} src={asset.url} width={144} height={144} alt={`${label} 미리보기`} /> : <span className={styles.uploadPrompt}><span className={styles.imageIcon}><Image unoptimized src="/assets/manage-image-upload.svg" width={20} height={20} alt="" /></span><span>이미지 업로드</span></span>}
     </button>
     {uploading && <p className={styles.status} role="status">업로드 중...</p>}
@@ -58,7 +65,7 @@ function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload 
   </div>;
 }
 
-export function BasicInformation({ basic, errors, uploading, uploadErrors, onChange, onBlur, onUpload, onRemoveMaterial, onRetryMaterial }: BasicInformationProps) {
+export function BasicInformation({ basic, errors, uploading, uploadErrors, onChange, onBlur, onUpload, onRemoveMaterial, onRetryMaterial, onRemoveDetailImage, onRetryDetailImage, onReviewChange, onReviewBlur, onAddReview, onRemoveReview }: BasicInformationProps) {
   const materialInput = useRef<HTMLInputElement>(null);
   const materialId = useId();
 
@@ -80,7 +87,14 @@ export function BasicInformation({ basic, errors, uploading, uploadErrors, onCha
 
   return <div className={styles.content}>
     <AssetUpload asset={basic.thumbnail} label="클래스 대표이미지" message={messageFor('thumbnail', errors, uploadErrors)} slot="thumbnail" uploading={Boolean(uploading.thumbnail)} onUpload={onUpload} />
-    <AssetUpload asset={basic.detailImage} helper="* 높이 3000px 이하의 사이즈를 권장합니다." label="클래스 상세이미지" message={messageFor('detailImage', errors, uploadErrors)} slot="detailImage" uploading={Boolean(uploading.detailImage)} onUpload={onUpload} />
+    <AssetUpload asset={null} helper="* 높이 3000px 이하의 사이즈를 권장합니다." label="클래스 상세이미지" message={messageFor('detailImage', errors, uploadErrors)} slot="detailImage" uploading={Boolean(uploading.detailImage)} onUpload={onUpload} />
+    {basic.detailImages.length > 0 && <ul className={styles.detailImages} aria-label="첨부된 상세이미지">{basic.detailImages.map(asset => <li key={asset.id} className={styles.detailImage}>
+      {asset.url && <Image unoptimized className={styles.assetPreview} src={asset.url} width={144} height={144} alt={asset.name} />}
+      <span className={styles.assetName}>{asset.name}</span>
+      <div className={styles.materialActions}>{asset.status === 'error' && <button type="button" onClick={() => onRetryDetailImage(asset.id)}>재시도</button>}<button type="button" onClick={() => onRemoveDetailImage(asset.id)}>삭제</button></div>
+      {asset.status === 'uploading' && <p className={styles.status} role="status">업로드 중</p>}
+      {asset.status === 'error' && <p className={styles.message} role="alert">{asset.error}</p>}
+    </li>)}</ul>}
     {textField('title')}
     <div className={styles.field}>
       <label htmlFor={materialId} className={styles.label}>교재파일</label>
@@ -100,6 +114,32 @@ export function BasicInformation({ basic, errors, uploading, uploadErrors, onCha
         <span>수강 신청일로부터</span><input id="course-license-days" value={basic.licenseDays} placeholder="수강 가능 기간을 입력해주세요." inputMode="numeric" aria-invalid={Boolean(errors.licenseDays)} aria-describedby={errors.licenseDays ? 'course-license-days-message' : undefined} onChange={event => onChange('licenseDays', event.target.value)} onBlur={() => onBlur('licenseDays')} /><span>일</span>
       </div>
       {errors.licenseDays && <p id="course-license-days-message" className={styles.message} role="alert">{errors.licenseDays}</p>}
+    </div>
+    {textField('displayOrder')}
+    <div className={styles.field}>
+      <h2 className={styles.label}>후기 등록</h2>
+      <div className={styles.reviewList}>{basic.reviews.map(review => {
+        const reviewErrors = errors.reviews?.[review.id] ?? {};
+        const prefix = `review-${review.id}`;
+        return <div className={styles.review} key={review.id}>
+          <p className={styles.helper}>학생한테 받은 후기를 작성해주세요</p>
+          <div className={styles.rating} role="radiogroup" aria-label="학생이 남긴 별점" aria-invalid={Boolean(reviewErrors.rating)} aria-describedby={reviewErrors.rating ? `${prefix}-rating-error` : undefined}>
+            {[1, 2, 3, 4, 5].map(rating => <button type="button" key={rating} id={rating === 1 ? `${prefix}-rating` : `${prefix}-rating-${rating}`} role="radio" aria-label={`${rating}점`} aria-checked={review.rating === rating} tabIndex={review.rating === rating || (review.rating === null && rating === 1) ? 0 : -1} onClick={() => onReviewChange(review.id, 'rating', rating)} onKeyDown={event => {
+              if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+              event.preventDefault(); const next = ((rating - 1 + (event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : 4)) % 5) + 1;
+              onReviewChange(review.id, 'rating', next);
+              window.document.getElementById(next === 1 ? `${prefix}-rating` : `${prefix}-rating-${next}`)?.focus();
+            }}><Image unoptimized src={rating <= (review.rating ?? 0) ? '/assets/manage-star-selected.svg' : '/assets/manage-star-empty.svg'} width={32} height={32} alt="" /></button>)}
+          </div>
+          {reviewErrors.rating && <p id={`${prefix}-rating-error`} className={styles.message} role="alert">{reviewErrors.rating}</p>}
+          <textarea id={`${prefix}-body`} className={`${styles.input} ${styles.reviewBody}`} aria-label="후기 내용" aria-invalid={Boolean(reviewErrors.body)} aria-describedby={`${prefix}-body-help`} placeholder="후기를 입력해주세요." value={review.body} onChange={event => onReviewChange(review.id, 'body', event.target.value)} onBlur={() => onReviewBlur(review)} />
+          <p id={`${prefix}-body-help`} className={reviewErrors.body ? styles.message : styles.helper}>{reviewErrors.body || `${Array.from(review.body).length.toLocaleString()} / 5,000자`}</p>
+          <input id={`${prefix}-author`} className={styles.input} aria-label="후기를 남겨준 학생 이름" aria-invalid={Boolean(reviewErrors.author)} aria-describedby={reviewErrors.author ? `${prefix}-author-error` : undefined} placeholder="후기를 남겨준 학생 이름을 입력해주세요." value={review.author} onChange={event => onReviewChange(review.id, 'author', event.target.value)} onBlur={() => onReviewBlur(review)} />
+          {reviewErrors.author && <p id={`${prefix}-author-error`} className={styles.message} role="alert">{reviewErrors.author}</p>}
+          <button type="button" className={styles.removeReview} onClick={() => onRemoveReview(review)}>후기 삭제</button>
+        </div>;
+      })}</div>
+      <button type="button" className={styles.addReview} onClick={onAddReview}>후기 추가 +</button>
     </div>
   </div>;
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog, FormField, SiteFooter } from '@/components/site';
@@ -9,8 +10,8 @@ import { checkAccess, getDraft, getDrafts, getEditableCourse, publishDraft, save
 import { BasicInformation } from './basic-information';
 import { CurriculumEditor } from './curriculum-editor';
 import { useCourseUploads } from './use-course-uploads';
-import { emptyDocument, formattedPrice, parseVimeoUrl, validateBasic, validateCurriculum } from './validation';
-import type { BasicErrors, CourseChapter, CourseDocument, CourseDraft, CourseLesson, DraftSummary } from './types';
+import { emptyDocument, emptyReview, isEmptyReview, validateReview, formattedPrice, parseVimeoUrl, validateBasic, validateCurriculum } from './validation';
+import type { BasicErrors, CourseChapter, CourseDocument, CourseDraft, CourseLesson, CourseReview, DraftSummary } from './types';
 import { ManageCourseSkeleton } from './manage-course-skeleton';
 import styles from './manage.module.css';
 
@@ -29,9 +30,10 @@ const videoMessages: Record<string, string> = {
 
 export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [document, setDocument] = useState<CourseDocument>(emptyDocument);
   const [draft, setDraft] = useState<CourseDraft | null>(null);
-  const [saved, setSaved] = useState(() => serialize(emptyDocument()));
+  const [saved, setSaved] = useState(() => serialize(document));
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [phase, setPhase] = useState<'checking' | 'loading' | 'ready' | 'error' | 'forbidden' | 'missing'>('checking');
   const [busy, setBusy] = useState(false);
@@ -133,15 +135,19 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
 
   function uploadsReady() {
     if (uploads.pending) { setMessage('파일 업로드가 완료될 때까지 기다려주세요.'); return false; }
+    if (uploads.failedDetailImages) { setMessage('업로드에 실패한 상세이미지를 재시도하거나 삭제해주세요.'); return false; }
     if (uploads.failedMaterials) { setMessage('업로드에 실패한 교재파일을 재시도하거나 삭제해주세요.'); return false; }
     return true;
   }
 
   function focusFirstError(nextErrors: BasicErrors) {
-    const field = (['thumbnail', 'detailImage', 'title', 'materials', 'basePrice', 'price', 'licenseDays'] as const).find(key => nextErrors[key]);
-    if (!field) return;
+    const field = (['thumbnail', 'detailImages', 'title', 'materials', 'basePrice', 'price', 'licenseDays', 'displayOrder'] as const).find(key => nextErrors[key]);
+    const reviewId = Object.keys(nextErrors.reviews ?? {}).find(id => Object.keys(nextErrors.reviews?.[id] ?? {}).length);
+    if (!field && !reviewId) return;
     requestAnimationFrame(() => {
-      const element = window.document.getElementById(field === 'licenseDays' ? 'course-license-days' : `course-${field}`);
+      const reviewField = reviewId && (['rating', 'body', 'author'] as const).find(key => nextErrors.reviews?.[reviewId]?.[key]);
+      const id = field ? field === 'licenseDays' ? 'course-license-days' : `course-${field === 'detailImages' ? 'detailImage' : field}` : `review-${reviewId}-${reviewField}`;
+      const element = window.document.getElementById(id);
       element?.scrollIntoView({ block: 'center' }); element?.focus();
     });
   }
@@ -158,12 +164,14 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
     if (operation.current || !uploadsReady()) return;
     operation.current = true; setBusy(true); setMessage(''); setNotice('');
     try {
-      const result = publishing && draft?.id && serialize(document) === saved ? { draft } : await saveDraft(document, draft, courseId);
+      const snapshot = publishing ? { ...document, basic: { ...document.basic, displayOrder: document.basic.displayOrder.trim(), reviews: document.basic.reviews.filter(review => !isEmptyReview(review)).map(review => ({ ...review, author: review.author.trim() })) } } : document;
+      const result = publishing && draft?.id && serialize(snapshot) === saved ? { draft } : await saveDraft(snapshot, draft, courseId);
       if (!mounted.current) return;
       setDraft(result.draft); setDocument(result.draft.document); setSaved(serialize(result.draft.document)); replaceUrl(result.draft, result.draft.document.step);
       if (publishing) {
         const published = await publishDraft(result.draft);
         if (!mounted.current) return;
+        await Promise.all([queryClient.invalidateQueries({ queryKey: ['products'] }), queryClient.invalidateQueries({ queryKey: ['product', published.slug] })]);
         const go = () => { setSaved(serialize(result.draft.document)); router.push('/courses/' + encodeURIComponent(published.slug)); };
         setConfirm({ label: '클래스 등록 완료', text: '클래스가 등록되었습니다.', cancel: '확인', accept: '', onAccept: go });
       } else {
@@ -192,7 +200,24 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
       }
       return;
     }
-    setMessage(''); setConfirm({ label: '클래스 등록', text: '클래스를 등록하면 목록에 공개되고 구매할 수 있습니다.', cancel: '취소', accept: '등록하기', summary: true, onAccept: () => { void persist(true); } });
+    setMessage(''); setConfirm({ label: '클래스 등록', text: document.basic.reviews.some(review => !isEmptyReview(review)) ? '클래스와 입력한 후기가 공개되며 구매할 수 있습니다.' : '클래스가 공개되며 구매할 수 있습니다.', cancel: '취소', accept: '등록하기', summary: true, onAccept: () => { void persist(true); } });
+  }
+
+  function addReview() {
+    const review = emptyReview();
+    setDocument(current => ({ ...current, basic: { ...current.basic, reviews: [...current.basic.reviews, review] } }));
+    setNotice('');
+    requestAnimationFrame(() => { const element = window.document.getElementById(`review-${review.id}-rating`); element?.scrollIntoView({ block: 'center' }); element?.focus(); });
+  }
+
+  function removeReview(review: CourseReview) {
+    const remove = () => {
+      setDocument(current => { const reviews = current.basic.reviews.filter(item => item.id !== review.id); return { ...current, basic: { ...current.basic, reviews: reviews.length ? reviews : [emptyReview()] } }; });
+      setNotice('');
+      setErrors(current => { const reviews = { ...current.reviews }; delete reviews[review.id]; return { ...current, reviews }; });
+    };
+    if (isEmptyReview(review)) remove();
+    else setConfirm({ label: '후기 삭제', text: '입력한 후기를 삭제하시겠습니까?', cancel: '취소', accept: '삭제', onAccept: remove });
   }
 
   function openName(kind: NameDialog['kind'], chapterId?: string, lessonId?: string) {
@@ -279,7 +304,13 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
         {document.step === 1 ? <BasicInformation basic={document.basic} errors={errors} uploading={uploads.uploading} uploadErrors={uploads.uploadErrors} onChange={(field, value) => {
           setNotice(''); setDocument(current => ({ ...current, basic: { ...current.basic, [field]: field === 'basePrice' || field === 'price' ? value.replaceAll(',', '') : value } }));
           setErrors(current => ({ ...current, [field]: undefined }));
-        }} onBlur={field => setErrors(current => ({ ...current, [field]: validateBasic(document.basic)[field] }))} onUpload={uploads.onUpload} onRemoveMaterial={uploads.onRemoveMaterial} onRetryMaterial={uploads.onRetryMaterial} /> : <CurriculumEditor chapters={document.chapters} selectedLessonId={document.selectedLessonId} verifying={verifying} onAddChapter={() => openName('chapter')} onAddLesson={id => openName('lesson', id)} onSelectLesson={id => { if (id !== document.selectedLessonId) guardPending(() => setDocument(current => ({ ...current, selectedLessonId: id }))); }} onRenameChapter={id => openName('chapter', id)} onDeleteChapter={id => deleteItem(id)} onRenameLesson={(chapterId, lessonId) => openName('lesson', chapterId, lessonId)} onDeleteLesson={deleteItem} onChangeUrl={value => { if (document.selectedLessonId) updateLesson(document.selectedLessonId, current => ({ ...current, inputUrl: value, videoError: undefined })); }} onVerify={() => { void verifySelected(); }} onVideoError={() => { if (document.selectedLessonId) updateLesson(document.selectedLessonId, current => ({ ...current, videoError: '영상 공개 범위와 임베드 설정을 확인해주세요.' })); }} />}
+        }} onBlur={field => setErrors(current => ({ ...current, [field]: validateBasic(document.basic)[field] }))} onUpload={uploads.onUpload} onRemoveMaterial={uploads.onRemoveMaterial} onRetryMaterial={uploads.onRetryMaterial} onRemoveDetailImage={uploads.onRemoveDetailImage} onRetryDetailImage={uploads.onRetryDetailImage}
+          onAddReview={addReview} onRemoveReview={removeReview} onReviewBlur={review => setErrors(current => ({ ...current, reviews: { ...current.reviews, [review.id]: validateReview(review) } }))}
+          onReviewChange={(id, field, value) => {
+            setNotice('');
+            setDocument(current => ({ ...current, basic: { ...current.basic, reviews: current.basic.reviews.map(review => review.id === id ? { ...review, [field]: value } : review) } }));
+            setErrors(current => ({ ...current, reviews: { ...current.reviews, [id]: { ...current.reviews?.[id], [field]: undefined } } }));
+          }} /> : <CurriculumEditor chapters={document.chapters} selectedLessonId={document.selectedLessonId} verifying={verifying} onAddChapter={() => openName('chapter')} onAddLesson={id => openName('lesson', id)} onSelectLesson={id => { if (id !== document.selectedLessonId) guardPending(() => setDocument(current => ({ ...current, selectedLessonId: id }))); }} onRenameChapter={id => openName('chapter', id)} onDeleteChapter={id => deleteItem(id)} onRenameLesson={(chapterId, lessonId) => openName('lesson', chapterId, lessonId)} onDeleteLesson={deleteItem} onChangeUrl={value => { if (document.selectedLessonId) updateLesson(document.selectedLessonId, current => ({ ...current, inputUrl: value, videoError: undefined })); }} onVerify={() => { void verifySelected(); }} onVideoError={() => { if (document.selectedLessonId) updateLesson(document.selectedLessonId, current => ({ ...current, videoError: '영상 공개 범위와 임베드 설정을 확인해주세요.' })); }} />}
       </fieldset>
       <div className={styles.actionGroup}>
         {message && <p className={styles.error} role="alert">{message}</p>}{notice && <p role="status">{notice}</p>}
@@ -287,7 +318,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
       </div>
     </main>
     <SiteFooter />
-    {confirm && <ConfirmationDialog label={confirm.label} onCancel={() => { if (!confirm.accept) confirm.onAccept(); setConfirm(null); }} actions={confirm.accept ? [{ label: confirm.cancel, cancel: true }, { label: confirm.accept, onClick: () => { setConfirm(null); confirm.onAccept(); } }] : [{ label: confirm.cancel, onClick: () => { setConfirm(null); confirm.onAccept(); } }]}><div className={styles.dialogText}><p>{confirm.text}</p>{confirm.summary && <div className={styles.summary}><p>클래스명: {document.basic.title.trim()}</p><p>판매금액: {formattedPrice(document.basic.price)}원</p><p>수강기간: {document.basic.licenseDays || '60'}일</p><p>차시 수: {document.chapters.reduce((sum, chapter) => sum + chapter.lessons.length, 0)}개</p></div>}</div></ConfirmationDialog>}
+    {confirm && <ConfirmationDialog label={confirm.label} onCancel={() => { if (!confirm.accept) confirm.onAccept(); setConfirm(null); }} actions={confirm.accept ? [{ label: confirm.cancel, cancel: true }, { label: confirm.accept, onClick: () => { setConfirm(null); confirm.onAccept(); } }] : [{ label: confirm.cancel, onClick: () => { setConfirm(null); confirm.onAccept(); } }]}><div className={styles.dialogText}><p>{confirm.text}</p>{confirm.summary && <div className={styles.summary}><p>클래스명: {document.basic.title.trim()}</p><p>판매금액: {formattedPrice(document.basic.price)}원</p><p>수강기간: {document.basic.licenseDays || '60'}일</p><p>정렬 순서: {Number(document.basic.displayOrder)}</p><p>공개 후기: {document.basic.reviews.filter(review => !isEmptyReview(review)).length}개</p><p>차시 수: {document.chapters.reduce((sum, chapter) => sum + chapter.lessons.length, 0)}개</p></div>}</div></ConfirmationDialog>}
     {nameDialog && <ConfirmationDialog label={nameLabel} onCancel={() => setNameDialog(null)} actions={[{ label: '취소', cancel: true }, { label: nameDialog.lessonId || (nameDialog.kind === 'chapter' && nameDialog.chapterId) ? '변경' : '추가', onClick: saveName }]}><form className={styles.dialogText} onSubmit={event => { event.preventDefault(); saveName(); }}>{nameDialog.kind === 'lesson' && <p>소속 챕터: {document.chapters.find(chapter => chapter.id === nameDialog.chapterId)?.title}</p>}<FormField id="curriculum-name" autoFocus label={nameDialog.kind === 'chapter' ? '챕터명' : '차시명'} value={nameDialog.value} error={nameDialog.error} onChange={event => setNameDialog({ ...nameDialog, value: event.target.value, error: '' })} /></form></ConfirmationDialog>}
     {showDrafts && <ConfirmationDialog label="초안 불러오기" onCancel={() => setShowDrafts(false)} actions={[{ label: '취소', cancel: true }]}><div className={styles.draftList}>{drafts.map(item => <button key={item.id} type="button" className={styles.draftItem} onClick={() => { setShowDrafts(false); guardDirty(() => { void loadSelectedDraft(item.id); }); }}><span>{item.title || '클래스명 미입력'}</span><time dateTime={item.savedAt}>{new Date(item.savedAt).toLocaleString('ko-KR')}</time></button>)}</div></ConfirmationDialog>}
   </>;

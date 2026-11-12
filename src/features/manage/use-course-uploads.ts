@@ -129,7 +129,7 @@ export function useCourseUploads(
 
   const isCurrent = useCallback((generation: number) => activeRef.current && generation === generationRef.current, []);
 
-  const uploadImage = useCallback(async (slot: Extract<AssetSlot, 'thumbnail' | 'detailImage'>, file: File) => {
+  const uploadImage = useCallback(async (slot: 'thumbnail', file: File) => {
     const generation = generationRef.current;
     const error = imageError(slot, file);
     if (error) {
@@ -158,26 +158,29 @@ export function useCourseUploads(
     }
   }, [changeCount, clearError, isCurrent, report, setDocument]);
 
-  const uploadMaterial = useCallback(async (id: string, file: File) => {
+  const uploadAttachment = useCallback(async (slot: 'material' | 'detailImage', id: string, file: File) => {
+    const field = slot === 'material' ? 'materials' : 'detailImages';
     const generation = generationRef.current;
     const controller = new AbortController();
     controllersRef.current.set(id, controller);
-    changeCount('material', 1);
+    changeCount(slot, 1);
     try {
-      const { asset } = await uploadAsset('material', file, controller.signal);
+      if (slot === 'detailImage') await ensureReadableImage(file);
+      if (!isCurrent(generation) || controller.signal.aborted) return;
+      const { asset } = await uploadAsset(slot, file, controller.signal);
       if (!isCurrent(generation) || controller.signal.aborted) return;
       setDocument(current => ({
         ...current,
         basic: {
           ...current.basic,
-          materials: current.basic.materials.map(material => material.id === id ? {
+          [field]: current.basic[field].map(material => material.id === id ? {
             ...asset,
             checksum: asset.checksum ?? material.checksum,
           } : material),
         },
       }));
       filesRef.current.delete(id);
-      clearError('material');
+      if (slot === 'material') clearError(slot);
     } catch (error) {
       if (!isCurrent(generation) || isAbortError(error)) return;
       if (onErrorRef.current?.(error)) return;
@@ -185,7 +188,7 @@ export function useCourseUploads(
         ...current,
         basic: {
           ...current.basic,
-          materials: current.basic.materials.map(material => material.id === id ? {
+          [field]: current.basic[field].map(material => material.id === id ? {
             ...material,
             status: 'error',
             error: '업로드하지 못했습니다. 다시 시도해주세요.',
@@ -194,17 +197,26 @@ export function useCourseUploads(
       }));
     } finally {
       controllersRef.current.delete(id);
-      if (isCurrent(generation)) changeCount('material', -1);
+      if (isCurrent(generation)) changeCount(slot, -1);
     }
   }, [changeCount, clearError, isCurrent, setDocument]);
 
   const onUpload = useCallback((slot: AssetSlot, files: File[]) => {
-    if (slot === 'thumbnail' || slot === 'detailImage') {
+    if (slot === 'thumbnail') {
       const file = files[0];
       if (file) void uploadImage(slot, file);
       return;
     }
 
+    if (slot === 'detailImage') {
+      clearError(slot);
+      const accepted = files.filter(file => { const error = imageError(slot, file); if (error) report(slot, error); return !error; });
+      const temporary = accepted.map(file => ({ ...temporaryMaterial(file, ''), type: file.type }));
+      temporary.forEach((asset, index) => filesRef.current.set(asset.id, accepted[index]));
+      setDocument(current => ({ ...current, basic: { ...current.basic, detailImages: [...current.basic.detailImages, ...temporary] } }));
+      temporary.forEach((asset, index) => { void uploadAttachment(slot, asset.id, accepted[index]); });
+      return;
+    }
     const generation = generationRef.current;
     changeCount('material', 1);
     const processSelection = async () => {
@@ -243,7 +255,7 @@ export function useCourseUploads(
           basic: { ...current.basic, materials: [...current.basic.materials, ...temporary] },
         }));
         if (!firstError) clearError('material');
-        for (let index = 0; index < temporary.length; index += 1) void uploadMaterial(temporary[index].id, accepted[index].file);
+        for (let index = 0; index < temporary.length; index += 1) void uploadAttachment('material', temporary[index].id, accepted[index].file);
       } catch (error) {
         if (isCurrent(generation) && !onErrorRef.current?.(error)) report('material', '파일을 읽을 수 없습니다.');
       } finally {
@@ -251,39 +263,41 @@ export function useCourseUploads(
       }
     };
     materialQueueRef.current = materialQueueRef.current.then(processSelection, processSelection);
-  }, [changeCount, clearError, isCurrent, report, setDocument, uploadImage, uploadMaterial]);
+  }, [changeCount, clearError, isCurrent, report, setDocument, uploadImage, uploadAttachment]);
 
-  const onRemoveMaterial = useCallback((id: string) => {
+  const onRemoveAttachment = useCallback((slot: 'material' | 'detailImage', id: string) => {
+    const field = slot === 'material' ? 'materials' : 'detailImages';
     controllersRef.current.get(id)?.abort();
     controllersRef.current.delete(id);
     filesRef.current.delete(id);
     setDocument(current => {
-      const material = current.basic.materials.find(item => item.id === id);
+      const material = current.basic[field].find(item => item.id === id);
       if (material?.checksum) reservedChecksumsRef.current.delete(material.checksum);
       return {
         ...current,
-        basic: { ...current.basic, materials: current.basic.materials.filter(item => item.id !== id) },
+        basic: { ...current.basic, [field]: current.basic[field].filter(item => item.id !== id) },
       };
     });
   }, [setDocument]);
 
-  const onRetryMaterial = useCallback((id: string) => {
+  const onRetryAttachment = useCallback((slot: 'material' | 'detailImage', id: string) => {
+    const field = slot === 'material' ? 'materials' : 'detailImages';
     if (controllersRef.current.has(id)) return;
     const file = filesRef.current.get(id);
     if (!file) {
-      report('material', '파일을 다시 선택해주세요.');
+      report(slot, '파일을 다시 선택해주세요.');
       return;
     }
     setDocument(current => ({
       ...current,
       basic: {
         ...current.basic,
-        materials: current.basic.materials.map(material => material.id === id ? { ...material, status: 'uploading', error: undefined } : material),
+        [field]: current.basic[field].map(material => material.id === id ? { ...material, status: 'uploading', error: undefined } : material),
       },
     }));
-    clearError('material');
-    void uploadMaterial(id, file);
-  }, [clearError, report, setDocument, uploadMaterial]);
+    clearError(slot);
+    void uploadAttachment(slot, id, file);
+  }, [clearError, report, setDocument, uploadAttachment]);
 
   const reset = useCallback(() => {
     generationRef.current += 1;
@@ -316,9 +330,12 @@ export function useCourseUploads(
     uploading: Object.fromEntries(Object.entries(counts).filter(([, count]) => count > 0).map(([slot]) => [slot, true])) as Partial<Record<AssetSlot, boolean>>,
     uploadErrors,
     onUpload,
-    onRemoveMaterial,
-    onRetryMaterial,
+    onRemoveMaterial: (id: string) => onRemoveAttachment('material', id),
+    onRetryMaterial: (id: string) => onRetryAttachment('material', id),
+    onRemoveDetailImage: (id: string) => onRemoveAttachment('detailImage', id),
+    onRetryDetailImage: (id: string) => onRetryAttachment('detailImage', id),
     pending: Object.values(counts).some(count => count > 0),
+    failedDetailImages: document.basic.detailImages.some(asset => asset.status === 'error'),
     failedMaterials: document.basic.materials.some(material => material.status === 'error'),
     reset,
   };

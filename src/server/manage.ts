@@ -2,8 +2,7 @@ import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { NextResponse } from 'next/server';
-import { parseVimeoUrl } from '../features/manage/validation';
-import type { CourseDocument } from '../features/manage/types';
+import { parseVimeoUrl, emptyReview, emptyDocument } from '../features/manage/validation';
 import type { Json } from './database.types';
 import { adminDb, ApiError, bytes, dbError, requireAdmin, type Context } from './http';
 
@@ -44,7 +43,8 @@ function readAssetId(value: unknown, field: string, required=false) {
 function assetReferences(document: Record<string,unknown>) {
   const basic=plainObject(document.basic,'basic'); const refs:{id:string;slot:Slot;field:string}[]=[];
   const thumbnail=readAssetId(basic.thumbnail,'thumbnail'); if(thumbnail) refs.push({id:thumbnail,slot:'thumbnail',field:'thumbnail'});
-  const detail=readAssetId(basic.detailImage,'detailImage'); if(detail) refs.push({id:detail,slot:'detailImage',field:'detailImage'});
+  if (!Array.isArray(basic.detailImages)) throw new ApiError(400,'invalid_field','detailImages');
+  basic.detailImages.forEach((item,index) => { const id=readAssetId(item,'detailImages',true); refs.push({id:id!,slot:'detailImage',field:'detailImages.'+index}); });
   if(basic.materials !== undefined) {
     if(!Array.isArray(basic.materials)) throw new ApiError(400,'invalid_field','materials');
     basic.materials.forEach((item,index)=>{ const id=readAssetId(item,'materials'); if(id) refs.push({id,slot:'material',field:'materials.'+index}); });
@@ -53,7 +53,20 @@ function assetReferences(document: Record<string,unknown>) {
 }
 function assertDocumentShape(document: unknown) {
   const value=plainObject(document); const basic=plainObject(value.basic,'basic');
-  for(const key of ['title','basePrice','price','licenseDays']) if(typeof basic[key] !== 'string') throw new ApiError(400,'invalid_field','basic.'+key);
+  // Older saved drafts contain one detailImage and no authoring fields.
+  if (basic.detailImages === undefined) basic.detailImages = basic.detailImage ? [basic.detailImage] : [];
+  delete basic.detailImage;
+  if (basic.displayOrder === undefined) basic.displayOrder = '';
+  if (basic.reviews === undefined) basic.reviews = [emptyReview()];
+  if (!Array.isArray(basic.reviews)) throw new ApiError(400,'invalid_field','reviews');
+  if (!basic.reviews.length) basic.reviews.push(emptyReview());
+  const reviewIds = new Set<string>();
+  for (const item of basic.reviews) {
+    const review=plainObject(item,'reviews');
+    if(typeof review.id!=='string'||!uuid.test(review.id)||reviewIds.has(review.id)||typeof review.body!=='string'||typeof review.author!=='string'||(review.rating!==null&&(typeof review.rating!=='number'||!Number.isFinite(review.rating)))) throw new ApiError(400,'invalid_field','reviews');
+    reviewIds.add(review.id);
+  }
+  for(const key of ['displayOrder','title','basePrice','price','licenseDays']) if(typeof basic[key] !== 'string') throw new ApiError(400,'invalid_field','basic.'+key);
   if(!Array.isArray(value.chapters) || (value.step!==1&&value.step!==2) || (value.selectedLessonId!==null&&typeof value.selectedLessonId!=='string')) throw new ApiError(400,'invalid_field','document');
   for(const chapter of value.chapters) {
     const c=plainObject(chapter,'chapter'); if(typeof c.id!=='string'||typeof c.title!=='string'||!Array.isArray(c.lessons)) throw new ApiError(400,'invalid_field','chapter');
@@ -77,9 +90,11 @@ async function authoredAssets(ownerId: string, document: Record<string,unknown>,
   const linkedIds=new Set((linked.data as Array<{asset_id:string}>).map(row=>row.asset_id));
   const found=new Map(rows.map(row=>[row.id,row]));
   const materialIds=new Set<string>(),materialChecksums=new Set<string>();
+  const detailIds=new Set<string>();
   for(const ref of refs) {
     const asset=found.get(ref.id);
     if(asset?.slot!==ref.slot||(asset.owner_id!==ownerId&&!linkedIds.has(ref.id))) throw new ApiError(400,'invalid_asset',ref.field);
+    if(ref.slot==='detailImage') { if(detailIds.has(asset.id)) throw new ApiError(400,'invalid_asset',ref.field); detailIds.add(asset.id); }
     if(ref.slot==='material') {
       if(materialIds.has(asset.id)||materialChecksums.has(asset.checksum)) throw new ApiError(400,'invalid_asset',ref.field);
       materialIds.add(asset.id); materialChecksums.add(asset.checksum);
@@ -91,15 +106,30 @@ function hydrateDocument(value: unknown, assets: Map<string,AssetRow>) {
   const document=structuredClone(assertDocumentShape(value)); const basic=document.basic as Record<string,unknown>;
   const hydrate=(item:unknown) => { const id=readAssetId(item,'asset'); return id ? courseAsset(assets.get(id)!) : null; };
   if(basic.thumbnail) basic.thumbnail=hydrate(basic.thumbnail);
-  if(basic.detailImage) basic.detailImage=hydrate(basic.detailImage);
+  if(Array.isArray(basic.detailImages)) basic.detailImages=basic.detailImages.map(hydrate);
   if(Array.isArray(basic.materials)) basic.materials=basic.materials.map(hydrate);
   return document;
 }
 function draft(row: DraftRow, document: unknown) {
   return {id:row.id,revision:row.revision,courseId:row.course_id,slug:row.slug,published:row.published,savedAt:row.saved_at,document};
 }
+async function courseReviews(courseId: string) {
+  const [reviews, authors] = await Promise.all([
+    db().from('reviews').select('id,rating,body,author').eq('product_id',courseId).order('position',{nullsFirst:false}).order('created_at',{ascending:false}).order('id'),
+    db().from('course_review_authors').select('review_id,author').eq('product_id',courseId),
+  ]);
+  manageError(reviews.error); manageError(authors.error);
+  const originalNames = new Map(authors.data!.map(row=>[row.review_id,row.author]));
+  return reviews.data!.map(review=>({...review,author:originalNames.get(review.id)??review.author}));
+}
+async function authoringDocument(value: unknown, courseId: string|null) {
+  const input=structuredClone(plainObject(value)),basic=plainObject(input.basic,'basic');
+  if(courseId && basic.reviews===undefined) basic.reviews=await courseReviews(courseId);
+  if(courseId && basic.displayOrder===undefined) { const product=await db().from('products').select('display_order').eq('id',courseId).single(); manageError(product.error); basic.displayOrder=product.data?.display_order===null?'':String(product.data!.display_order); }
+  return assertDocumentShape(input);
+}
 async function hydrateDraft(row: DraftRow, ownerId: string) {
-  const document=assertDocumentShape(row.document); const assets=await authoredAssets(ownerId,document,row.course_id);
+  const document=await authoringDocument(row.document,row.course_id); const assets=await authoredAssets(ownerId,document,row.course_id);
   return draft(row,hydrateDocument(document,assets));
 }
 function summary(row: DraftRow) {
@@ -113,10 +143,11 @@ export async function courseDrafts(ctx: Context) {
   manageError(result.error); return {items:(result.data as DraftRow[]).map(summary)};
 }
 export async function createCourseDraft(ctx: Context) {
-  const user=await requireAdmin(ctx),input=await json(ctx.request),document=assertDocumentShape(input.document);
+  const user=await requireAdmin(ctx),input=await json(ctx.request);
   const courseId=input.courseId===undefined?null:typeof input.courseId==='string'&&input.courseId.length<=120?input.courseId:null;
   if(input.courseId!==undefined&&!courseId) throw new ApiError(400,'invalid_field','courseId');
   if(courseId) { const course=await db().from('products').select('id').eq('id',courseId).maybeSingle(); manageError(course.error); if(!course.data) throw new ApiError(404,'not_found'); }
+  const document=await authoringDocument(input.document,courseId);
   const assets=await authoredAssets(user.id,document,courseId),saved=hydrateDocument(document,assets);
   const result=await db().from('course_drafts').insert({owner_id:user.id,course_id:courseId,document:saved as unknown as Json}).select('id,owner_id,course_id,slug,document,revision,published,saved_at').single();
   manageError(result.error); return {draft:await hydrateDraft(result.data as DraftRow,user.id)};
@@ -127,18 +158,18 @@ export async function courseDraft(ctx: Context) {
   manageError(result.error); if(!result.data) throw new ApiError(404,'not_found'); return {draft:await hydrateDraft(result.data as DraftRow,user.id)};
 }
 export async function saveCourseDraft(ctx: Context) {
-  const user=await requireAdmin(ctx),id=ctx.params.id,input=await json(ctx.request),document=assertDocumentShape(input.document);
+  const user=await requireAdmin(ctx),id=ctx.params.id,input=await json(ctx.request);
   const revision=input.revision; if(!uuid.test(id)||typeof revision!=='number'||!Number.isSafeInteger(revision)||revision<1) throw new ApiError(400,'invalid_field','revision');
   const current=await db().from('course_drafts').select('course_id,published').eq('id',id).eq('owner_id',user.id).maybeSingle(); manageError(current.error); if(!current.data) throw new ApiError(404,'not_found'); if(current.data.published) throw new ApiError(400,'draft_published');
+  const document=await authoringDocument(input.document,current.data.course_id);
   const assets=await authoredAssets(user.id,document,current.data.course_id),saved=hydrateDocument(document,assets);
   const result=await db().rpc('save_course_draft',{p_owner:user.id,p_draft:id,p_revision:revision,p_document:saved as unknown as Json}); manageError(result.error);
   return {draft:await hydrateDraft(result.data as DraftRow,user.id)};
 }
 
-function emptyDocument(): CourseDocument { return {basic:{title:'',basePrice:'',price:'',licenseDays:'',thumbnail:null,detailImage:null,materials:[]},chapters:[],step:1,selectedLessonId:null}; }
 export async function persistedCourse(ctx: Context) {
   const user=await requireAdmin(ctx),courseId=ctx.params.courseId;
-  const product=await db().from('products').select('id,slug,title,base_price,price,license_days').eq('id',courseId).maybeSingle(); manageError(product.error); if(!product.data) throw new ApiError(404,'not_found');
+  const product=await db().from('products').select('id,slug,title,base_price,price,license_days,display_order').eq('id',courseId).maybeSingle(); manageError(product.error); if(!product.data) throw new ApiError(404,'not_found');
   const saved=await db().from('course_drafts').select('id,owner_id,course_id,slug,document,revision,published,saved_at').eq('owner_id',user.id).eq('course_id',courseId).eq('published',false).order('saved_at',{ascending:false}).limit(1).maybeSingle(); manageError(saved.error);
   if(saved.data) return {draft:await hydrateDraft(saved.data as DraftRow,user.id)};
   const [chapters,lessons,links]=await Promise.all([
@@ -152,8 +183,9 @@ export async function persistedCourse(ctx: Context) {
   const verifiedByUrl=new Map((verified.data as Array<{url:string;embed_url:string;duration_seconds:number}>).map(video=>[video.url,video]));
   const linked=links.data as Array<{role:Slot;asset_id:string}>; const assetResult=linked.length ? await db().from('admin_course_assets').select('id,owner_id,slot,path,name,size_bytes,checksum,content_type,width,height').in('id',linked.map(link=>link.asset_id)) : {data:[],error:null}; manageError(assetResult.error);
   const assetById=new Map((assetResult.data as AssetRow[]).map(asset=>[asset.id,asset]));
-  const document=emptyDocument(); document.basic.title=product.data.title; document.basic.basePrice=String(product.data.base_price??product.data.price); document.basic.price=String(product.data.price); document.basic.licenseDays=String(product.data.license_days);
-  for(const row of linked) { const source=assetById.get(row.asset_id); if(!source) continue; const asset=courseAsset(source); if(row.role==='thumbnail') document.basic.thumbnail=asset; else if(row.role==='detailImage') document.basic.detailImage=asset; else document.basic.materials.push(asset); }
+  const document=emptyDocument(); document.basic.title=product.data.title; document.basic.basePrice=String(product.data.base_price??product.data.price); document.basic.price=String(product.data.price); document.basic.licenseDays=String(product.data.license_days); document.basic.displayOrder=product.data.display_order===null?'':String(product.data.display_order);
+  const reviews=await courseReviews(courseId); document.basic.reviews=reviews.length?reviews:[emptyReview()];
+  for(const row of linked) { const source=assetById.get(row.asset_id); if(!source) continue; const asset=courseAsset(source); if(row.role==='thumbnail') document.basic.thumbnail=asset; else if(row.role==='detailImage') document.basic.detailImages.push(asset); else document.basic.materials.push(asset); }
   document.chapters=(chapters.data as Array<{id:string;title:string}>).map(chapter=>({id:chapter.id,title:chapter.title,lessons:lessonRows.filter(lesson=>lesson.chapter_id===chapter.id).map(lesson=>{
     const verifiedVideo=lesson.vimeo_url ? verifiedByUrl.get(lesson.vimeo_url) : undefined;
     return {id:lesson.id,title:lesson.title,inputUrl:lesson.vimeo_url??'',video:verifiedVideo?{url:lesson.vimeo_url!,embedUrl:verifiedVideo.embed_url,durationSeconds:verifiedVideo.duration_seconds}:null,videoError:lesson.vimeo_url&&!verifiedVideo?'영상 재확인이 필요합니다.':undefined};

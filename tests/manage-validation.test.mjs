@@ -23,8 +23,10 @@ function validBasic(overrides = {}) {
     basePrice: '100,000',
     price: '90,000',
     licenseDays: '',
+    displayOrder: '0',
+    reviews: [],
     thumbnail: asset,
-    detailImage: asset,
+    detailImages: [asset],
     materials: [],
     ...overrides,
   };
@@ -47,13 +49,15 @@ function validChapters(overrides = {}) {
   }];
 }
 
-test('empty document is a draft-safe, blank first step', () => {
-  assert.deepEqual(validation.emptyDocument(), {
-    basic: { title: '', basePrice: '', price: '', licenseDays: '', thumbnail: null, detailImage: null, materials: [] },
-    chapters: [],
-    step: 1,
-    selectedLessonId: null,
-  });
+test('empty document starts with one unrated review and preserves a blank required order', () => {
+  const document = validation.emptyDocument();
+  assert.equal(document.basic.displayOrder, '');
+  assert.deepEqual(document.basic.detailImages, []);
+  assert.equal(document.basic.reviews.length, 1);
+  assert.equal(document.basic.reviews[0].rating, null);
+  assert.equal(validation.isEmptyReview(document.basic.reviews[0]), true);
+  assert.notEqual(validation.emptyReview().id, document.basic.reviews[0].id);
+  assert.equal(document.step, 1);
 });
 
 test('basic validation accepts blank period as the 60-day default and rejects incomplete values', () => {
@@ -65,13 +69,13 @@ test('basic validation accepts blank period as the 60-day default and rejects in
     price: '100,001',
     licenseDays: '1.5',
     thumbnail: null,
-    detailImage: null,
+    detailImages: [],
   }));
   assert.equal(errors.title, '클래스명을 입력해주세요.');
   assert.equal(errors.price, '할인가는 원가 이하로 입력해주세요.');
   assert.equal(errors.licenseDays, '수강 가능 기간을 1일 이상의 정수로 입력해주세요.');
   assert.equal(errors.thumbnail, '클래스 대표이미지를 등록해주세요.');
-  assert.equal(errors.detailImage, '클래스 상세이미지를 등록해주세요.');
+  assert.equal(errors.detailImages, '클래스 상세이미지를 등록해주세요.');
 });
 
 test('prices require a positive database integer and retain comma-formatted display values', () => {
@@ -132,3 +136,22 @@ test('Vimeo URLs use the same 2,048-character limit as the video verification AP
 });
 
 test.after(() => rmSync(compiled, { recursive: true, force: true }));
+
+test('order accepts zero and leading zeros, rejects missing, negative, fractional and exponential input', () => {
+  for (const displayOrder of ['0', ' 001 ', '2147483647']) assert.equal(validation.validateBasic(validBasic({ displayOrder })).displayOrder, undefined);
+  for (const displayOrder of ['', ' ', '-1', '1.2', '1e3', '2147483648']) assert.ok(validation.validateBasic(validBasic({ displayOrder })).displayOrder);
+});
+
+test('blank reviews are optional while partially entered reviews require every field', () => {
+  const review = validation.emptyReview();
+  assert.deepEqual(validation.validateReview(review), {});
+  const partial = { ...review, body: '내용' };
+  assert.deepEqual(Object.keys(validation.validateReview(partial)).sort(), ['author', 'rating']);
+  assert.ok(validation.validateBasic(validBasic({ reviews: [partial] })).reviews[review.id]);
+  for (const rating of [0, 1.5, 6]) assert.ok(validation.validateReview({ ...partial, rating, author: '김학생' }).rating);
+  const complete = { ...partial, rating: 3, author: ' 김학생 ', body: '첫째 줄\n둘째 줄 😊' };
+  assert.deepEqual(validation.validateReview(complete), {});
+  assert.ok(validation.validateReview({ ...complete, author: '김'.repeat(51) }).author);
+  assert.equal(validation.validateReview({ ...complete, body: '😊'.repeat(5000) }).body, undefined);
+  assert.ok(validation.validateReview({ ...complete, body: '😊'.repeat(5001) }).body);
+});

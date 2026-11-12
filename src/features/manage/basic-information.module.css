@@ -27,3 +27,17 @@
 .periodField input { flex: 1; width: 0; padding: 0; border: 0; background: transparent; font: inherit; color: inherit; }
 .periodField input::placeholder { font-family: SUIT, sans-serif; font-weight: 600; line-height: 20px; letter-spacing: -.7px; }
 .input[aria-invalid='true'], .periodField:has(input[aria-invalid='true']) { border-color: var(--red-500); }
+
+.detailImages { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 16px; }
+.detailImage { width: 164px; padding: 10px; border: 1px solid var(--gray-200); background: var(--gray-100); border-radius: 16px; display: flex; flex-direction: column; gap: 8px; }
+.detailImage .assetPreview { height: 144px; }
+.assetName { overflow-wrap: anywhere; font-size: 12px; }
+.detailImage button { padding: 0; background: transparent; font: inherit; }
+.reviewList { display: flex; flex-direction: column; gap: 20px; padding-block: 16px; }
+.review { display: flex; flex-direction: column; gap: 8px; }
+.rating { display: flex; gap: 4px; }
+.rating button { padding: 0; background: transparent; }
+.reviewBody { height: 104px; padding-block: 16px; font: inherit; resize: vertical; }
+.removeReview, .addReview { padding: 0; background: transparent; font: inherit; }
+.removeReview { align-self: flex-end; font-size: 12px; color: var(--gray-700); }
+.addReview { align-self: center; font-weight: 600; }

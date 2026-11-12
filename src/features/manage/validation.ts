@@ -1,4 +1,4 @@
-import type { BasicErrors, CourseBasic, CourseChapter, CourseDocument } from './types';
+import type { BasicErrors, CourseBasic, CourseChapter, CourseDocument, CourseReview, ReviewErrors } from './types';
 
 const MAX_DATABASE_INTEGER = 2_147_483_647;
 const MAX_VIMEO_URL_LENGTH = 2_048;
@@ -20,6 +20,21 @@ function formattedPositiveInteger(value: string) {
   return positiveInteger(value.replaceAll(',', ''), MAX_DATABASE_INTEGER);
 }
 
+export function emptyReview(): CourseReview { return { id: crypto.randomUUID(), rating: null, body: '', author: '' }; }
+
+export function isEmptyReview(review: CourseReview) { return review.rating === null && !review.body.trim() && !review.author.trim(); }
+
+export function validateReview(review: CourseReview): ReviewErrors {
+  const errors: ReviewErrors = {};
+  if (isEmptyReview(review)) return errors;
+  if (!Number.isInteger(review.rating) || review.rating! < 1 || review.rating! > 5) errors.rating = '학생이 남긴 별점을 1–5점 중 선택해주세요.';
+  if (!review.body.trim()) errors.body = '후기 내용을 입력해주세요.';
+  else if (Array.from(review.body).length > 5000) errors.body = '후기는 5,000자 이내로 입력해주세요.';
+  if (!review.author.trim()) errors.author = '학생 이름을 입력해주세요.';
+  else if (Array.from(review.author.trim()).length > 50) errors.author = '학생 이름은 50자 이내로 입력해주세요.';
+  return errors;
+}
+
 export function emptyDocument(): CourseDocument {
   return {
     basic: {
@@ -27,8 +42,10 @@ export function emptyDocument(): CourseDocument {
       basePrice: '',
       price: '',
       licenseDays: '',
+      displayOrder: '',
+      reviews: [emptyReview()],
       thumbnail: null,
-      detailImage: null,
+      detailImages: [],
       materials: [],
     },
     chapters: [],
@@ -43,7 +60,7 @@ export function validateBasic(basic: CourseBasic): BasicErrors {
   const price = formattedPositiveInteger(basic.price);
 
   if (!basic.thumbnail) errors.thumbnail = '클래스 대표이미지를 등록해주세요.';
-  if (!basic.detailImage) errors.detailImage = '클래스 상세이미지를 등록해주세요.';
+  if (!basic.detailImages.length) errors.detailImages = '클래스 상세이미지를 등록해주세요.';
   if (!validName(basic.title, 100)) {
     errors.title = basic.title.trim() ? '클래스명은 100자 이내로 입력해주세요.' : '클래스명을 입력해주세요.';
   }
@@ -54,6 +71,11 @@ export function validateBasic(basic: CourseBasic): BasicErrors {
     errors.licenseDays = '수강 가능 기간을 1일 이상의 정수로 입력해주세요.';
   }
 
+  const order = basic.displayOrder.trim();
+  if (!order) errors.displayOrder = '정렬 순서를 입력해주세요.';
+  else if (!/^\d+$/.test(order) || !Number.isSafeInteger(Number(order)) || Number(order) > MAX_DATABASE_INTEGER) errors.displayOrder = '정렬 순서는 0 이상의 정수로 입력해주세요.';
+  const reviews = Object.fromEntries(basic.reviews.map(review => [review.id, validateReview(review)]).filter(([, error]) => Object.keys(error).length));
+  if (Object.keys(reviews).length) errors.reviews = reviews;
   return errors;
 }
 

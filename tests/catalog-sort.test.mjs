@@ -18,7 +18,7 @@ const { parseSort } = load('../src/features/catalog/api.ts');
 function loadCatalog(adminDb) {
   return load('../src/server/catalog.ts', {
     '../features/catalog': { parseSort },
-    './http': { adminDb, dbError: error => assert.equal(error, null) },
+    './http': { adminDb, dbError: error => assert.equal(error, null), date: value => value },
     './profile': {},
   });
 }
@@ -105,4 +105,32 @@ test('catalog tags follow the product type and attached materials on list and de
       assert.equal('pdf_path' in product, false);
     }
   }
+});
+
+
+test('detail returns every ordered image, stable review IDs and the review input order', async () => {
+  const db = createClient('http://127.0.0.1:54331', 'test-key', {
+    auth: { persistSession: false },
+    global: { fetch: async url => {
+      const { pathname, searchParams } = new URL(url);
+      switch (pathname.split('/').at(-1)) {
+        case 'products': return Response.json([{ id: 'course', slug: 'course', kind: 'vod', title: 'course', price: 1000, tags: [], selling: true, license_days: 60 }]);
+        case 'reviews':
+          assert.equal(searchParams.get('order'), 'position.asc.nullslast,created_at.desc,id.asc');
+          return Response.json([{ id: 'review-1', body: '첫 줄\n다음 줄', author: '김*수', rating: 2, created_at: '2026.11.12' }]);
+        case 'product_assets':
+          assert.equal(searchParams.get('order'), 'position.asc');
+          return Response.json(['second-selected', 'first-selected'].map((id, position) => ({ role: 'detailImage', position, asset_id: id, admin_course_assets: { id, name: id + '.png', size_bytes: 10, content_type: 'image/png', width: 640, height: 800 } })));
+        case 'chapters': case 'lessons': return Response.json([]);
+        default: throw new Error('Unexpected request: ' + pathname);
+      }
+    } },
+  });
+  const detail = await loadCatalog(() => db).productDetail({ params: { slug: 'course' }, optionalUser: async () => null });
+  assert.deepEqual(Array.from(detail.detailImages, image => image.id), ['second-selected', 'first-selected']);
+  assert.equal(detail.detailImage.id, 'second-selected');
+  assert.equal(detail.reviews[0].id, 'review-1');
+  assert.equal(detail.reviews[0].body, '첫 줄\n다음 줄');
+  assert.equal(detail.reviews[0].author, '김*수');
+  assert.equal(detail.reviews[0].rating, 2);
 });

@@ -5,6 +5,12 @@ export type Database = {
   
   "public": {
           Tables: {
+            course_review_authors: {
+              Row: { review_id: string; product_id: string; author: string; created_by: string | null; updated_by: string | null; updated_at: string }
+              Insert: { review_id: string; product_id: string; author: string; created_by?: string | null; updated_by?: string | null; updated_at?: string }
+              Update: { author?: string; updated_by?: string | null; updated_at?: string }
+              Relationships: []
+            },
             "landing_reviews": {
               Row: { id: string; position: number; author: string; body: string; image: Json; image_path: string | null }
               Insert: { id?: string; position?: never; author: string; body: string; image: Json; image_path?: string | null }
@@ -327,14 +333,14 @@ isOneToOne: true
                   ]
                 },"reviews": {
                   Row: {
-                    "author": string,"body": string,"created_at": string,"id": string,"product_id": string,"rating": number
+                    "position": number | null,"author": string,"body": string,"created_at": string,"id": string,"product_id": string,"rating": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "author": string,"body": string,"created_at"?: string,"id"?: string,"product_id": string,"rating": number
+                    "position"?: number | null,"author": string,"body": string,"created_at"?: string,"id"?: string,"product_id": string,"rating": number
                   }
                   Update: {
-                    "author"?: string,"body"?: string,"created_at"?: string,"id"?: string,"product_id"?: string,"rating"?: number
+                    "position"?: number | null,"author"?: string,"body"?: string,"created_at"?: string,"id"?: string,"product_id"?: string,"rating"?: number
                   }
                   Relationships: [
                     {

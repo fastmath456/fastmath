@@ -73,7 +73,7 @@ export async function productDetail(ctx: Context) {
   const [chapters,lessons,reviews,ownership,role,account,assets]=await Promise.all([
     db.from('chapters').select('id,title,position').eq('product_id',data.id).eq('active',true).order('position'),
     db.from('lessons').select('id,title,chapter_id,duration_seconds,preview,position').eq('product_id',data.id).eq('active',true).order('position'),
-    db.from('reviews').select('body,author,created_at,rating').eq('product_id',data.id).order('created_at',{ascending:false}),
+    db.from('reviews').select('id,body,author,created_at,rating').eq('product_id',data.id).order('position',{nullsFirst:false}).order('created_at',{ascending:false}).order('id'),
     user?db.from('entitlements').select('id').eq('user_id',user.id).eq('product_id',data.id).eq('revoked',false).limit(1):Promise.resolve({data:[],error:null}),
     user?db.from('user_roles').select('role').eq('user_id',user.id).maybeSingle():Promise.resolve({data:null,error:null}),
     user?profile(ctx):Promise.resolve(null),
@@ -86,12 +86,12 @@ export async function productDetail(ctx: Context) {
     const asset=Array.isArray(row.admin_course_assets)?row.admin_course_assets[0]:row.admin_course_assets;
     return asset?[{role:row.role,id:asset.id,name:asset.name,size:asset.size_bytes,type:asset.content_type,width:asset.width,height:asset.height}]:[];
   });
-  const detailAsset=productAssets.find(asset=>asset.role==='detailImage');
-  const detailImage=detailAsset?{id:detailAsset.id,name:detailAsset.name,size:detailAsset.size,type:detailAsset.type,width:detailAsset.width,height:detailAsset.height,url:'/api/course-assets/'+detailAsset.id}:null;
+  const detailImages=productAssets.filter(asset=>asset.role==='detailImage').map(asset=>({id:asset.id,name:asset.name,size:asset.size,type:asset.type,width:asset.width,height:asset.height,url:'/api/course-assets/'+asset.id}));
+  const detailImage=detailImages[0]??null;
   const materials=productAssets.filter(asset=>asset.role==='material').map(asset=>({id:asset.id,name:asset.name,size:asset.size,type:asset.type,width:asset.width,height:asset.height}));
   const licenseDays=Number.isSafeInteger(data.license_days)&&data.license_days>0?data.license_days:60;
   const hasMaterial = materials.length > 0 || Boolean(data.pdf_path);
-  return {...product(data as DetailRow, hasMaterial),chapters:curriculum,reviews:reviews.data!.map(r=>({body:r.body,author:r.author,date:date(r.created_at),rating:Number(r.rating)})),selling:data.selling,ownership:ownership.data?.length?'owned':'none',admin:role.data?.role==='admin',licenseDays,detailImage,materials,...(account?{profile:{name:account.name,image:account.avatar}}:{})};
+  return {...product(data as DetailRow, hasMaterial),chapters:curriculum,reviews:reviews.data!.map(r=>({id:r.id,body:r.body,author:r.author,date:date(r.created_at),rating:Number(r.rating)})),selling:data.selling,ownership:ownership.data?.length?'owned':'none',admin:role.data?.role==='admin',licenseDays,detailImage,detailImages,materials,...(account?{profile:{name:account.name,image:account.avatar}}:{})};
 }
 export async function manageProduct(ctx: Context) {
   await requireAdmin(ctx); const input=await body(ctx.request);

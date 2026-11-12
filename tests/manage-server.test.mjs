@@ -37,7 +37,7 @@ test('course drafts require an administrator and use an optimistic revision',asy
   assert.equal((await request('admin/courses/access',{jar:member.jar})).status,403);
   assert.deepEqual((await request('admin/courses/access',{jar:admin.jar})).body,{admin:true});
   const created=await request('admin/courses/drafts',{method:'POST',jar:admin.jar,data:{document:document()}}); assert.equal(created.status,200,JSON.stringify(created.body)); draft=created.body.draft;
-  assert.equal(draft.revision,1); assert.equal(draft.document.basic.title,'초안');
+  assert.equal(draft.document.basic.displayOrder,''); assert.deepEqual(draft.document.basic.detailImages,[]); assert.equal(draft.document.basic.reviews[0].rating,null); assert.equal(draft.revision,1); assert.equal(draft.document.basic.title,'초안');
   const own=await request('admin/courses/drafts/'+draft.id,{jar:admin.jar}); assert.equal(own.status,200);
   assert.equal((await request('admin/courses/drafts/'+draft.id,{jar:other.jar})).status,404);
   const changed={...document(),basic:{...document().basic,title:'저장된 초안'}};
@@ -73,7 +73,7 @@ test('publishing atomically creates a sellable VOD and retains every material re
   const [thumbnail,detail,materialA,materialB]=await Promise.all([createAsset('thumbnail','thumb.png'),createAsset('detailImage','detail.png'),createAsset('material','a.pdf'),createAsset('material','b.pdf')]);
   const video={url:'https://vimeo.com/123456',embedUrl:'https://player.vimeo.com/video/123456?autoplay=0',durationSeconds:120};
   assert.equal((await db.from('verified_videos').insert({owner_id:admin.id,url:video.url,embed_url:video.embedUrl,duration_seconds:video.durationSeconds})).error,null);
-  const complete={basic:{title:'공개할 강의',basePrice:'10000',price:'9000',licenseDays:'45',thumbnail:{id:thumbnail},detailImage:{id:detail},materials:[{id:materialA},{id:materialB}]},chapters:[{id:'chapter-'+draft.id,title:'챕터',lessons:[{id:'lesson-'+draft.id,title:'차시',inputUrl:video.url,video}]}],step:2,selectedLessonId:'lesson-'+draft.id};
+  const complete={basic:{title:'공개할 강의',basePrice:'10000',price:'9000',licenseDays:'45',displayOrder:'0',reviews:[],thumbnail:{id:thumbnail},detailImages:[{id:detail}],materials:[{id:materialA},{id:materialB}]},chapters:[{id:'chapter-'+draft.id,title:'챕터',lessons:[{id:'lesson-'+draft.id,title:'차시',inputUrl:video.url,video}]}],step:2,selectedLessonId:'lesson-'+draft.id};
   publishedDocument=complete; oldLessonId=complete.chapters[0].lessons[0].id;
   const oversized=structuredClone(complete); oversized.basic.price='2147483648';
   const oversizedSave=await request('admin/courses/drafts/'+draft.id,{method:'PATCH',jar:admin.jar,data:{document:oversized,revision:2}}); assert.equal(oversizedSave.status,200,JSON.stringify(oversizedSave.body));

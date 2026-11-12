@@ -21,7 +21,7 @@ export const course: ProductDetail = {
     { id: 'lesson-1', title: '지수의 확장', duration: '00:18:00', preview: true },
     { id: 'lesson-2', title: '로그의 정의와 성질', duration: '00:23:00' },
   ] }],
-  reviews: [{ body: '개념을 차근차근 설명해 주셔서 이해하기 쉬웠어요.', author: '홍**', date: '2026.10.01', rating: 5 }],
+  reviews: [{ body: '개념을 차근차근 설명해 주셔서 이해하기 쉬웠어요.', author: '홍*동', date: '2026.10.01', rating: 4.5 }],
   ownership: 'none', selling: true, admin: false, licenseDays: 60, detailImage,
 };
 
@@ -62,7 +62,7 @@ export const viewer: Viewer = {
 export const draft: CourseDraft = {
   id: 'course-draft', courseId: course.id, slug: course.slug, revision: 1, published: false, savedAt: '2026-10-01T01:00:00Z',
   document: {
-    basic: { title: course.title, basePrice: '99000', price: '89000', licenseDays: '60', thumbnail, detailImage, materials: [] },
+    basic: { title: course.title, basePrice: '99000', price: '89000', licenseDays: '60', displayOrder: '0', reviews: [{ id: 'sample-review', rating: 3, body: '개념 설명이 이해하기 쉬웠어요.\n다음 강의도 기대합니다.', author: '홍길동' }], thumbnail, detailImages: [detailImage, { ...detailImage, id: 'sample-detail-2', name: '상세이미지-2.png' }], materials: [] },
     chapters: course.chapters.map(chapter => ({ ...chapter, lessons: chapter.lessons.map(lesson => ({
       id: lesson.id, title: lesson.title, inputUrl: '', video: null,
     })) })),
