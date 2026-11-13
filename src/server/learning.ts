@@ -95,5 +95,6 @@ export async function playback(ctx:Context) {
 export async function progress(ctx:Context) {
   const user=await ctx.user(),input=await body(ctx.request);
   if(typeof input.playing!=='boolean') throw new ApiError(400,'invalid_field','playing');
-  const result=await adminDb().rpc('record_progress',{p_user:user.id,p_session:uuid(input.sessionId,'sessionId'),p_sequence:integer(input.sequence,'sequence'),p_position:integer(input.position,'position'),p_playing:input.playing});dbError(result.error);return {ok:true};
+  if(input.ended!==undefined&&typeof input.ended!=='boolean') throw new ApiError(400,'invalid_field','ended');
+  const result=await adminDb().rpc('record_progress',{p_user:user.id,p_session:uuid(input.sessionId,'sessionId'),p_sequence:integer(input.sequence,'sequence'),p_position:integer(input.position,'position'),p_playing:input.playing,p_ended:input.ended===true});dbError(result.error);return {ok:true};
 }

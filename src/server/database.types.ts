@@ -480,7 +480,7 @@ isOneToOne: false
 { Args: { "p_order": string,"p_user": string }; Returns: string
                            },
 "record_progress":
-{ Args: { "p_playing": boolean,"p_position": number,"p_sequence": number,"p_session": string,"p_user": string }; Returns: undefined
+{ Args: { "p_ended"?: boolean,"p_playing": boolean,"p_position": number,"p_sequence": number,"p_session": string,"p_user": string }; Returns: undefined
                            },
 "refund_quote":
 { Args: { "p_order": string,"p_user": string }; Returns: Json

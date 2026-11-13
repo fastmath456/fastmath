@@ -32,9 +32,9 @@ export function VideoPlayer({orderId,lessonId,previewUrl}:VideoPlayerProps) {
       player.on('error',()=>{if(active) setFailed(true);});
       if (!('sessionId' in session)) return;
       const sessionId = session.sessionId;
-      function send(seconds:number,count:boolean) {
+      function send(seconds:number,count:boolean,ended=false) {
         if(!active) return;
-        const input={sessionId,sequence:++sequence,position:Math.floor(seconds),playing:count};lastSent=performance.now();
+        const input={sessionId,sequence:++sequence,position:Math.floor(seconds),playing:count,ended};lastSent=performance.now();
         queue=queue.then(async()=> { if(active) await mutate('playback/progress',input); }).catch(error=>{if(active){active=false;if(!redirectIfUnauthorized(error)) setFailed(true);}});
       }
       player.on('playing',()=>{playing=true;});
@@ -42,7 +42,7 @@ export function VideoPlayer({orderId,lessonId,previewUrl}:VideoPlayerProps) {
       player.on('seeked',e=>{seeking=false;send(e.seconds,false);});
       player.on('timeupdate',e=>{if(!seeking && performance.now()-lastSent>=5000) send(e.seconds,playing);});
       player.on('pause',e=>{send(e.seconds,playing&&!seeking);playing=false;});
-      player.on('ended',e=>{send(e.seconds,playing&&!seeking);playing=false;});
+      player.on('ended',e=>{send(e.seconds,playing&&!seeking,true);playing=false;});
     }
     void start().catch(error=>{if(active && !redirectIfUnauthorized(error)) setFailed(true);});
     return ()=>{active=false;void player?.destroy();};
