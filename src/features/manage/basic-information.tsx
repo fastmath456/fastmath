@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useId, useRef, type ChangeEvent } from 'react';
+import { useId, useRef, type ChangeEvent, type ReactNode } from 'react';
 import type { AssetSlot, BasicErrors, CourseAsset, CourseBasic, CourseReview } from './types';
 import { formattedPrice } from './validation';
 import styles from './basic-information.module.css';
@@ -14,6 +14,7 @@ type BasicInformationProps = {
   onChange: (field: 'title' | 'basePrice' | 'price' | 'licenseDays' | 'displayOrder', value: string) => void;
   onBlur: (field: 'title' | 'basePrice' | 'price' | 'licenseDays' | 'displayOrder') => void;
   onUpload: (slot: AssetSlot, files: File[]) => void;
+  onRemoveThumbnail: () => void;
   onChooseOrder: () => void;
   onRemoveMaterial: (id: string) => void;
   onRetryMaterial: (id: string) => void;
@@ -37,7 +38,7 @@ function messageFor(slot: AssetSlot, errors: BasicErrors, uploadErrors: BasicInf
   return uploadErrors[slot] ?? errors[slot === 'material' ? 'materials' : slot === 'detailImage' ? 'detailImages' : slot];
 }
 
-function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload }: {
+function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload, onRemove, children }: {
   asset: CourseAsset | null;
   helper?: string;
   label: string;
@@ -45,6 +46,8 @@ function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload 
   slot: Extract<AssetSlot, 'thumbnail' | 'detailImage'>;
   uploading: boolean;
   onUpload: BasicInformationProps['onUpload'];
+  onRemove?: () => void;
+  children?: ReactNode;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const inputId = useId();
@@ -54,18 +57,23 @@ function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload 
     if (files.length > 0) onUpload(slot, files);
   }
 
+  const uploadBox = <div className={styles.imageFrame}>
+      <button id={`course-${slot}`} type="button" className={`${styles.assetUpload} ${asset ? styles.filledUpload : ''}`} onClick={() => input.current?.click()} aria-label={`${label} ${asset ? '교체' : '업로드'}`} disabled={slot === 'thumbnail' && uploading}>
+        {asset ? <Image unoptimized className={styles.filledPreview} src={asset.url} width={164} height={164} alt={`${label} 미리보기`} /> : <span className={styles.uploadPrompt}><span className={styles.imageIcon}><Image unoptimized src="/assets/manage-image-upload.svg" width={20} height={20} alt="" /></span><span>이미지 업로드</span></span>}
+      </button>
+      {asset && onRemove && <button type="button" className={styles.removeImage} aria-label={`${label} 삭제`} disabled={uploading} onClick={onRemove}><Image unoptimized src="/assets/profile-imgX03.svg" width={16} height={16} alt="" /></button>}
+    </div>;
+
   return <div className={styles.field}>
     <div className={styles.assetHeading}><label htmlFor={inputId} className={styles.label}>{label}<span aria-hidden="true" className={styles.required}>*</span></label>{helper && <p className={styles.helper}>{helper}</p>}</div>
     <input ref={input} id={inputId} className={styles.fileInput} type="file" accept=".jpg,.jpeg,.png,.webp" multiple={slot === 'detailImage'} onChange={select} />
-    <button id={`course-${slot}`} type="button" className={styles.assetUpload} onClick={() => input.current?.click()} aria-label={`${label} ${asset ? '교체' : '업로드'}`} disabled={slot === 'thumbnail' && uploading}>
-      {asset ? <Image unoptimized className={styles.assetPreview} src={asset.url} width={144} height={144} alt={`${label} 미리보기`} /> : <span className={styles.uploadPrompt}><span className={styles.imageIcon}><Image unoptimized src="/assets/manage-image-upload.svg" width={20} height={20} alt="" /></span><span>이미지 업로드</span></span>}
-    </button>
+    {slot === 'detailImage' ? <ul className={styles.detailImages} aria-label="첨부된 상세이미지"><li className={styles.imageFrame}>{uploadBox}</li>{children}</ul> : uploadBox}
     {uploading && <p className={styles.status} role="status">업로드 중...</p>}
     {message && <p className={styles.message} role="alert">{message}</p>}
   </div>;
 }
 
-export function BasicInformation({ basic, errors, uploading, uploadErrors, onChange, onBlur, onUpload, onChooseOrder, onRemoveMaterial, onRetryMaterial, onRemoveDetailImage, onRetryDetailImage, onReviewChange, onReviewBlur, onAddReview, onRemoveReview }: BasicInformationProps) {
+export function BasicInformation({ basic, errors, uploading, uploadErrors, onChange, onBlur, onUpload, onChooseOrder, onRemoveThumbnail, onRemoveMaterial, onRetryMaterial, onRemoveDetailImage, onRetryDetailImage, onReviewChange, onReviewBlur, onAddReview, onRemoveReview }: BasicInformationProps) {
   const materialInput = useRef<HTMLInputElement>(null);
   const materialId = useId();
 
@@ -86,15 +94,19 @@ export function BasicInformation({ basic, errors, uploading, uploadErrors, onCha
   }
 
   return <div className={styles.content}>
-    <AssetUpload asset={basic.thumbnail} label="클래스 대표이미지" message={messageFor('thumbnail', errors, uploadErrors)} slot="thumbnail" uploading={Boolean(uploading.thumbnail)} onUpload={onUpload} />
-    <AssetUpload asset={null} helper="* 높이 3000px 이하의 사이즈를 권장합니다." label="클래스 상세이미지" message={messageFor('detailImage', errors, uploadErrors)} slot="detailImage" uploading={Boolean(uploading.detailImage)} onUpload={onUpload} />
-    {basic.detailImages.length > 0 && <ul className={styles.detailImages} aria-label="첨부된 상세이미지">{basic.detailImages.map(asset => <li key={asset.id} className={styles.detailImage}>
-      {asset.url && <Image unoptimized className={styles.assetPreview} src={asset.url} width={144} height={144} alt={asset.name} />}
+    <AssetUpload asset={basic.thumbnail} label="클래스 대표이미지" message={messageFor('thumbnail', errors, uploadErrors)} slot="thumbnail" uploading={Boolean(uploading.thumbnail)} onUpload={onUpload} onRemove={onRemoveThumbnail} />
+    <AssetUpload asset={null} helper="* 높이 3000px 이하의 사이즈를 권장합니다." label="클래스 상세이미지" message={messageFor('detailImage', errors, uploadErrors)} slot="detailImage" uploading={Boolean(uploading.detailImage)} onUpload={onUpload}>
+    {basic.detailImages.map(asset => <li key={asset.id} className={styles.detailImage}>
+      <div className={styles.imageFrame}>
+        {asset.url && <Image unoptimized className={styles.filledPreview} src={asset.url} width={164} height={164} alt={asset.name} />}
+        <button type="button" className={styles.removeImage} aria-label={`${asset.name} 삭제`} onClick={() => onRemoveDetailImage(asset.id)}><Image unoptimized src="/assets/profile-imgX03.svg" width={16} height={16} alt="" /></button>
+      </div>
       <span className={styles.assetName}>{asset.name}</span>
-      <div className={styles.materialActions}>{asset.status === 'error' && <button type="button" onClick={() => onRetryDetailImage(asset.id)}>재시도</button>}<button type="button" onClick={() => onRemoveDetailImage(asset.id)}>삭제</button></div>
+      {asset.status === 'error' && <button type="button" onClick={() => onRetryDetailImage(asset.id)}>재시도</button>}
       {asset.status === 'uploading' && <p className={styles.status} role="status">업로드 중</p>}
       {asset.status === 'error' && <p className={styles.message} role="alert">{asset.error}</p>}
-    </li>)}</ul>}
+    </li>)}
+    </AssetUpload>
     {textField('title')}
     <div className={styles.field}>
       <label htmlFor={materialId} className={styles.label}>교재파일</label>

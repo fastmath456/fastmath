@@ -28,10 +28,16 @@
 .periodField input::placeholder { font-family: SUIT, sans-serif; font-weight: 600; line-height: 20px; letter-spacing: -.7px; }
 .input[aria-invalid='true'], .periodField:has(input[aria-invalid='true']) { border-color: var(--red-500); }
 
-.detailImages { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 16px; }
-.detailImage { width: 164px; padding: 10px; border: 1px solid var(--gray-200); background: var(--gray-100); border-radius: 16px; display: flex; flex-direction: column; gap: 8px; }
-.detailImage .assetPreview { height: 144px; }
-.assetName { overflow-wrap: anywhere; font-size: 12px; }
+.detailImages { width: 100%; list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: nowrap; align-items: flex-start; gap: 16px; overflow-x: auto; scrollbar-width: none; }
+.detailImages::-webkit-scrollbar { display: none; }
+.detailImage { flex: 0 0 164px; padding: 0 0 10px; overflow: hidden; border: 1px solid var(--gray-200); background: var(--gray-100); border-radius: 16px; display: flex; flex-direction: column; gap: 8px; }
+.imageFrame { position: relative; width: 164px; height: 164px; flex-shrink: 0; }
+.detailImage .imageFrame { width: 100%; }
+.filledUpload { padding: 0; }
+.filledPreview { display: block; width: 100%; height: 100%; object-fit: cover; }
+.imageFrame .removeImage { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: color-mix(in srgb, var(--gray-200) 80%, transparent); }
+.assetName { padding-inline: 10px; overflow-wrap: anywhere; font-size: 12px; }
+.detailImage > .status, .detailImage > .message { padding-inline: 10px; }
 .detailImage button { padding: 0; background: transparent; font: inherit; }
 .reviewList { display: flex; flex-direction: column; gap: 20px; padding-block: 16px; }
 .review { display: flex; flex-direction: column; gap: 8px; }

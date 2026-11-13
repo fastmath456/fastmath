@@ -16,14 +16,36 @@ function runtime() {
     useCallback(fn) { return fn; },
     useEffect(fn, deps) { const i = cursor++; if (!slots[i] || deps.some((value, j) => value !== slots[i][j])) { slots[i] = deps; const stop = fn(); if (stop) cleanup.push(stop); } },
   };
-  const module = { exports: {} }, nativeRequire = createRequire(import.meta.url);
+  const loadedModule = { exports: {} }, nativeRequire = createRequire(import.meta.url);
   const require = id => id === 'react' ? react : id === './api' ? { uploadAsset: (slot, file, signal) => new Promise((resolve, reject) => requests.push({ slot, file, signal, resolve, reject })) } : nativeRequire(id);
-  runInNewContext(source, { require, exports: module.exports, module, crypto, AbortController, createImageBitmap: async () => ({ close() {} }) });
-  const render = () => { cursor = 0; return module.exports.useCourseUploads(document, update => { document = update(document); }); };
+  runInNewContext(source, { require, exports: loadedModule.exports, module: loadedModule, crypto, AbortController, createImageBitmap: async () => ({ close() {} }) });
+  const render = () => { cursor = 0; return loadedModule.exports.useCourseUploads(document, update => { document = update(document); }); };
   const complete = index => requests[index].resolve({ asset: { id: `saved-${index}`, name: requests[index].file.name, url: `/image/${index}`, type: 'image/png', size: 1 } });
   return { render, requests, complete, get document() { return document; }, unmount: () => cleanup.forEach(fn => fn()) };
 }
 const file = name => new File(['image'], name, { type: 'image/png' });
+
+test('thumbnail removal clears its error and allows reupload without changing detail images', async () => {
+  const r = runtime();
+  r.render().onUpload('detailImage', [file('detail.png')]);
+  await flush(); r.complete(0); await flush();
+  r.render().onUpload('thumbnail', [file('first.png')]);
+  await flush(); r.complete(1); await flush();
+  r.render().onUpload('thumbnail', [file('failed.png')]);
+  await flush();
+  r.render().onRemoveThumbnail();
+  assert.equal(r.document.basic.thumbnail.name, 'first.png');
+  r.requests[2].reject(new Error('upload failed')); await flush();
+  assert.ok(r.render().uploadErrors.thumbnail);
+  r.render().onRemoveThumbnail();
+  assert.equal(r.document.basic.thumbnail, null);
+  assert.equal(r.render().uploadErrors.thumbnail, undefined);
+  assert.equal(r.document.basic.detailImages[0].name, 'detail.png');
+  r.render().onUpload('thumbnail', [file('replacement.png')]);
+  await flush(); r.complete(3); await flush();
+  assert.equal(r.document.basic.thumbnail.name, 'replacement.png');
+  r.unmount();
+});
 
 test('detail uploads keep selection order even when responses finish out of order', async () => {
   const r = runtime();

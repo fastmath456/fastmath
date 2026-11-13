@@ -330,6 +330,11 @@ export function useCourseUploads(
     uploading: Object.fromEntries(Object.entries(counts).filter(([, count]) => count > 0).map(([slot]) => [slot, true])) as Partial<Record<AssetSlot, boolean>>,
     uploadErrors,
     onUpload,
+    onRemoveThumbnail: () => {
+      if (counts.thumbnail) return;
+      clearError('thumbnail');
+      setDocument(current => ({ ...current, basic: { ...current.basic, thumbnail: null } }));
+    },
     onRemoveMaterial: (id: string) => onRemoveAttachment('material', id),
     onRetryMaterial: (id: string) => onRetryAttachment('material', id),
     onRemoveDetailImage: (id: string) => onRemoveAttachment('detailImage', id),
