@@ -280,7 +280,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
       </div>
       <fieldset className={styles.fields} disabled={busy}>
         {document.step === 1 ? <BasicInformation onChooseOrder={() => setOrdering(true)} basic={document.basic} errors={errors} uploading={uploads.uploading} uploadErrors={uploads.uploadErrors} onChange={(field, value) => {
-          setNotice(''); setDocument(current => ({ ...current, basic: { ...current.basic, [field]: field === 'basePrice' || field === 'price' ? value.replaceAll(',', '') : value } }));
+          setNotice(''); setDocument(current => ({ ...current, basic: { ...current.basic, [field]: field === 'title' ? value : value.replace(/\D/g, '') } }));
           setErrors(current => ({ ...current, [field]: undefined }));
         }} onBlur={field => setErrors(current => ({ ...current, [field]: validateBasic(document.basic)[field] }))} onUpload={uploads.onUpload} onRemoveThumbnail={uploads.onRemoveThumbnail} onRemoveMaterial={uploads.onRemoveMaterial} onRetryMaterial={uploads.onRetryMaterial} onRemoveDetailImage={uploads.onRemoveDetailImage} onRetryDetailImage={uploads.onRetryDetailImage}
           onAddReview={addReview} onRemoveReview={removeReview} onReviewBlur={review => setErrors(current => ({ ...current, reviews: { ...current.reviews, [review.id]: validateReview(review) } }))}
