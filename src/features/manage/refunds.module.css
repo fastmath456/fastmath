@@ -9,6 +9,7 @@
 .sidebar nav a { height: 52px; padding-inline: 16px; display: flex; align-items: center; border-radius: 16px; font-weight: 600; }
 .sidebar nav a[aria-current='page'] { background: rgba(255,203,17,.1); color: #fe964c; }
 .content { width: 1100px; display: flex; flex-direction: column; gap: 40px; }
+.titleRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .title { font-size: 20px; line-height: 30px; letter-spacing: -1px; font-weight: 600; }
 .subtitle { color: var(--gray-700); }
 .stack { display: flex; flex-direction: column; gap: 16px; }

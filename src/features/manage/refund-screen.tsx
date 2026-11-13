@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConfirmationDialog, SiteFooter, SiteHeader } from '@/components/site';
 import { useProfile } from '@/features/account';
+import { AdminGuide } from '@/features/admin-guide';
 import { useLoginRedirect } from '@/features/auth';
 import { getRefund, recoverRefund, reviewRefund } from './refunds-api';
 import { date, dateTime, refundErrorMessage, statusLabels, won } from './refunds-format';
@@ -76,10 +77,11 @@ export function ManageRefundScreen({ orderId }: { orderId: string }) {
     ? <span className={`${styles.badge} ${styles[data.status]}`}>{statusLabels[data.status]}</span>
     : <span className={`${styles.badge} ${styles.plain}`}>{statusLabels[data.status]}</span>;
   const usedMinutes = Math.floor(data.usedSeconds / 60), totalMinutes = Math.floor(data.totalSeconds / 60);
+  const guide = data.status === 'review' ? 'refund-review' : data.status === 'processing' ? 'refund-recover' : null;
 
   return <>{header}<main className={manage.main}>
     <div className={manage.heading}>
-      <div className={manage.headingRow}><h1>{data.status === 'processing' ? '환불 처리 확인' : '환불 요청 확인'}</h1><div className={styles.filters}>{badge}{data.external && <span className={`${styles.badge} ${styles.plain}`}>PG 직접 취소</span>}</div></div>
+      <div className={manage.headingRow}><h1>{data.status === 'processing' ? '환불 처리 확인' : '환불 요청 확인'}</h1><div className={styles.filters}>{badge}{data.external && <span className={`${styles.badge} ${styles.plain}`}>PG 직접 취소</span>}{guide && <AdminGuide guide={guide} admin paused={busy || Boolean(confirm || result)} />}</div></div>
       <p className={styles.muted}>{data.external ? '감지' : '신청'} {dateTime(data.requestedAt)} · {data.name || '탈퇴 회원'}{data.email && ` (${data.email})`}</p>
     </div>
 
@@ -98,7 +100,7 @@ export function ManageRefundScreen({ orderId }: { orderId: string }) {
         </div>
       </section>
 
-      <section className={styles.card}>
+      <section className={styles.card} data-guide="refund-usage">
         <h2>이용 내역</h2>
         <div className={styles.facts}>
           {data.kind === 'vod' ? <>
@@ -109,14 +111,14 @@ export function ManageRefundScreen({ orderId }: { orderId: string }) {
         </div>
       </section>
 
-      {data.status === 'processing' ? <section className={styles.card}>
+      {data.status === 'processing' ? <section className={styles.card} data-guide="refund-recover-steps">
         <h2>다시 확인하면</h2>
         <ol className={styles.steps}>
           <li>나이스페이에서 이 결제의 상태를 조회해요.</li>
           <li>이미 취소됐으면 환불 완료로 처리해요.</li>
           <li>취소되지 않았으면 취소를 다시 요청해요. 첫 요청 후 35초가 지나야 해요.</li>
         </ol>
-      </section> : <section className={styles.card}>
+      </section> : <section className={styles.card} data-guide="refund-summary">
         <h2>{data.external ? '결제사 상태' : '환불 금액'}</h2>
         <div className={styles.line}><span>결제금액</span><span>{won(data.paidAmount)}</span></div>
         {data.external
@@ -151,11 +153,11 @@ export function ManageRefundScreen({ orderId }: { orderId: string }) {
 
     <div className={manage.actions}>
       <Link href="/manage/refunds" className={manage.outlined}>목록으로</Link>
-      {data.status === 'review' && <div className={manage.rightActions}>
+      {data.status === 'review' && <div className={manage.rightActions} data-guide="refund-decision">
         <button type="button" className={manage.outlined} disabled={busy} onClick={() => ask('reject')}>{data.external ? '거절 · 수강 유지' : '거절'}</button>
         <button type="button" className={manage.primary} disabled={busy || blockedPdf} onClick={() => ask('approve')}>{data.external ? `${won(data.refundAmount)}으로 완료 처리` : `${won(approved)} 승인`}</button>
       </div>}
-      {data.status === 'processing' && <button type="button" className={manage.primary} disabled={busy} onClick={() => void recover()}>{busy ? '확인 중' : '다시 확인'}</button>}
+      {data.status === 'processing' && <button type="button" data-guide="refund-recover" className={manage.primary} disabled={busy} onClick={() => void recover()}>{busy ? '확인 중' : '다시 확인'}</button>}
     </div>
   </main>
   <SiteFooter />

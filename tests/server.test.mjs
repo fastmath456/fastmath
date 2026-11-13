@@ -95,6 +95,7 @@ test('progress ignores seeking, excludes preview and deduplicates replay',async(
 });
 test('signed quote detects tampering, manual review freezes access, reject restores it',async()=>{
  const quote=await http('orders/'+order.id+'/refund-quote',{jar:a.jar});assert.equal(quote.status,200);assert.equal(quote.body.usedSeconds,10);assert.equal(quote.body.amount,98972);
+ assert.match(quote.body.text,/시청 이력이 있어 관리자 확인 후 환불돼요/,'manual review is announced before the request');
  const bad=await http('orders/'+order.id+'/refund',{method:'POST',jar:a.jar,data:{quote:{...quote.body.quote,amount:99000},token:quote.body.token,requestKey:randomUUID()}});assert.equal(bad.status,400);
  const malformed=await http('orders/'+order.id+'/refund',{method:'POST',jar:a.jar,data:{quote:quote.body.quote,token:'é'.repeat(64),requestKey:randomUUID()}});assert.equal(malformed.status,400);
  const key=randomUUID(),request={quote:quote.body.quote,token:quote.body.token,requestKey:key};

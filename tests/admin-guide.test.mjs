@@ -94,3 +94,15 @@ test('blocked browser storage still allows dismissal and manual replay', () => {
   assert.equal(ui.history.hasViewedGuide('course-basic'), true);
   button.props.onClick(); assert.equal(ui.runs.length, 2); ui.unmount();
 });
+
+test('refund guides point at elements that exist on the refund screens', () => {
+  const { adminGuides } = load('steps.ts');
+  const source = ['refunds-screen.tsx', 'refund-screen.tsx'].map(file => readFileSync('src/features/manage/' + file, 'utf8')).join('\n');
+  for (const guide of ['refunds-list', 'refund-review', 'refund-recover']) {
+    assert.ok(adminGuides[guide].length > 0, guide);
+    for (const { element } of adminGuides[guide]) {
+      const target = element.startsWith('#') ? `id="${element.slice(1)}"` : element.slice(1, -1);
+      assert.ok(source.includes(target), `${guide}: ${element}`);
+    }
+  }
+});
