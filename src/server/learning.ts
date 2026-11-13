@@ -36,7 +36,7 @@ export async function viewer(ctx:Context) {
   const orderedLessons=curriculum.flatMap(chapter=>chapter.lessons),recent=progress.data?.[0];
   const recentIndex=orderedLessons.findIndex(lesson=>lesson.id===recent?.lesson_id);
   const nextLesson=recent?.completed&&recentIndex>=0?orderedLessons[recentIndex+1]:undefined;
-  return {courseId:ctx.params.courseId,title:product.title,poster:product.poster,orderId:ent.data.order_id,recentLessonId:nextLesson?.id??recent?.lesson_id??lessons.data?.[0]?.id??'',chapters:curriculum};
+  return {courseId:ctx.params.courseId,title:product.title,poster:product.poster,orderId:ent.data.order_id,recentLessonId:nextLesson?.id??recent?.lesson_id??orderedLessons[0]?.id??'',chapters:curriculum};
 }
 export async function previewViewer(ctx:Context) {
   const db=adminDb(),courseId=string(ctx.params.courseId,'courseId',100);
