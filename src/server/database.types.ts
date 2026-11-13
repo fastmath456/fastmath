@@ -299,14 +299,14 @@ isOneToOne: false
                   ]
                 },"refunds": {
                   Row: {
-                    "amount": number,"completed_at": string | null,"nicepay_cancel_started": boolean,"nicepay_cancel_tid": string | null,"order_id": string,"reason": string | null,"request_key": string,"requested_at": string,"status": string,"used_seconds": number,"user_id": string
+                    "amount": number,"completed_at": string | null,"nicepay_cancel_started": boolean,"nicepay_cancel_started_at": string | null,"nicepay_cancel_tid": string | null,"order_id": string,"reason": string | null,"request_key": string,"requested_at": string,"status": string,"used_seconds": number,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount": number,"completed_at"?: string | null,"nicepay_cancel_started"?: boolean,"nicepay_cancel_tid"?: string | null,"order_id": string,"reason"?: string | null,"request_key": string,"requested_at"?: string,"status": string,"used_seconds": number,"user_id": string
+                    "amount": number,"completed_at"?: string | null,"nicepay_cancel_started"?: boolean,"nicepay_cancel_started_at"?: string | null,"nicepay_cancel_tid"?: string | null,"order_id": string,"reason"?: string | null,"request_key": string,"requested_at"?: string,"status": string,"used_seconds": number,"user_id": string
                   }
                   Update: {
-                    "amount"?: number,"completed_at"?: string | null,"nicepay_cancel_started"?: boolean,"nicepay_cancel_tid"?: string | null,"order_id"?: string,"reason"?: string | null,"request_key"?: string,"requested_at"?: string,"status"?: string,"used_seconds"?: number,"user_id"?: string
+                    "amount"?: number,"completed_at"?: string | null,"nicepay_cancel_started"?: boolean,"nicepay_cancel_started_at"?: string | null,"nicepay_cancel_tid"?: string | null,"order_id"?: string,"reason"?: string | null,"request_key"?: string,"requested_at"?: string,"status"?: string,"used_seconds"?: number,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -456,7 +456,7 @@ isOneToOne: false
 { Args: { "p_amount": number,"p_expires": string,"p_key": string,"p_order": string,"p_used": number,"p_user": string }; Returns: {
               "amount": number,
 "completed_at": string | null,
-"nicepay_cancel_started": boolean,
+"nicepay_cancel_started": boolean,"nicepay_cancel_started_at": string | null,
 "nicepay_cancel_tid": string | null,
 "order_id": string,
 "reason": string | null,
@@ -489,7 +489,7 @@ isOneToOne: false
 { Args: { "p_amount": number,"p_approve": boolean,"p_order": string,"p_reason": string }; Returns: {
               "amount": number,
 "completed_at": string | null,
-"nicepay_cancel_started": boolean,
+"nicepay_cancel_started": boolean,"nicepay_cancel_started_at": string | null,
 "nicepay_cancel_tid": string | null,
 "order_id": string,
 "reason": string | null,

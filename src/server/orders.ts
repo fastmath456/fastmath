@@ -188,12 +188,24 @@ async function reconcileCancellation(order:OrderRow, payment:NicepayPayment) {
   if (!verifiedCancellation(payment,amount)) throw new ApiError(409,'refund_mismatch');
   const refund=await loadRefund(order.id);
   if (refund?.status==='processing') {
-    if (refund.amount!==amount || !payment.cancels.some(cancel=>cancel.tid===refund.nicepay_cancel_tid && cancel.amount===amount)) {
+    // No recorded cancel tid means the cancel response was lost or the cancel was made in the PG console.
+    // Then a single cancel of exactly the approved amount is this refund's cancel.
+    const recorded=refund.nicepay_cancel_tid;
+    if (!recorded && refund.amount!==amount) throw new ApiError(409,'refund_mismatch');
+    const tid=recorded ?? (payment.cancels.length===1 ? payment.cancels[0].tid : null);
+    if (refund.amount!==amount || !payment.cancels.some(cancel=>cancel.tid===tid && cancel.amount===amount)) {
       throw new ApiError(503,'payment_outcome_unknown');
+    }
+    if (!recorded) {
+      const record=await adminDb().from('refunds').update({nicepay_cancel_tid:tid}).eq('order_id',order.id)
+        .eq('request_key',refund.request_key).eq('status','processing').is('nicepay_cancel_tid',null).select('order_id').maybeSingle();
+      dbError(record.error);
+      if (!record.data) throw new ApiError(503,'payment_outcome_unknown');
     }
     const result=await adminDb().rpc('complete_refund',{p_order:order.id,p_amount:amount});
     dbError(result.error);
-  } else if (order.status!=='refunded') {
+  } else if (order.status!=='refunded' && !(refund?.status==='rejected' && refund.amount===amount)) {
+    // A rejected review of this same cancellation already decided to keep access; don't reopen it.
     const result=await adminDb().rpc('external_cancellation',{p_order:order.id,p_amount:amount});
     dbError(result.error);
   }
@@ -273,13 +285,26 @@ async function executeRefund(refund:Refund) {
     await reconcileCancellation(order,existing);
     return {status:'completed'};
   }
-  if (refund.nicepay_cancel_started) throw new ApiError(503,'payment_outcome_unknown');
   const partial=refund.amount<order.amount;
+  if (refund.nicepay_cancel_started) {
+    // The last cancel's outcome was lost. Once it has had time to settle, a payment that is still untouched
+    // proves the cancel never happened, so it is safe to try again.
+    const startedAt=refund.nicepay_cancel_started_at?Date.parse(refund.nicepay_cancel_started_at):0;
+    if (Date.now()-startedAt<approvalTimeout+5000 || existing.status!=='paid' || existing.balance!==order.amount || existing.cancels.length) {
+      throw new ApiError(503,'payment_outcome_unknown');
+    }
+  }
   if (existing.status!=='paid' || existing.balance!==order.amount || existing.cancels.length || refund.amount>existing.balance
       || (partial && existing.canPartCancel!==true && existing.canPartCancel!=='true')) throw new ApiError(409,'refund_requires_review');
 
   requireNicepayWrites(config);
-  const claim=await db.from('refunds').update({nicepay_cancel_started:true}).eq('order_id',order.id)
+  if (refund.nicepay_cancel_started) {
+    const reset=await db.from('refunds').update({nicepay_cancel_started:false,nicepay_cancel_started_at:null}).eq('order_id',order.id)
+      .eq('request_key',refund.request_key).eq('status','processing').eq('nicepay_cancel_started',true).select('order_id').maybeSingle();
+    dbError(reset.error);
+    if (!reset.data) throw new ApiError(503,'payment_outcome_unknown');
+  }
+  const claim=await db.from('refunds').update({nicepay_cancel_started:true,nicepay_cancel_started_at:new Date().toISOString()}).eq('order_id',order.id)
     .eq('request_key',refund.request_key).eq('status','processing').eq('nicepay_cancel_started',false).select('order_id').maybeSingle();
   dbError(claim.error);
   if (!claim.data) throw new ApiError(503,'payment_outcome_unknown');
@@ -322,9 +347,11 @@ export async function reviewRefund(ctx:Context) {
   if(typeof input.approve!=='boolean') throw new ApiError(400,'invalid_field','approve');
   const orderId=uuid(ctx.params.orderId), amount=integer(input.amount,'amount');
   if (input.approve && amount>0) {
-    const config=nicepayConfig();
+    const config=nicepayConfig(), order=await loadOrder(orderId);
     requireNicepayWrites(config);
-    await refundableAttempt(await loadOrder(orderId),config);
+    // If the PG already cancelled part of this payment (e.g. in its console), only that amount can be approved.
+    const cancelled=cancellationAmount(await lookupPayment(config,await refundableAttempt(order,config),order));
+    if (cancelled>0 && cancelled!==amount) throw new ApiError(409,'refund_mismatch');
   }
   const {data,error}=await adminDb().rpc('review_refund',{p_order:orderId,p_approve:input.approve,p_amount:amount,p_reason:string(input.reason,'reason',1000)}); dbError(error);
   return executeRefund(data as Refund);

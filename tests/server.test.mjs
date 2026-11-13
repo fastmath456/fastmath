@@ -216,7 +216,7 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
  const digest=(...fields)=>createHash('sha256').update(fields.join('')+secret).digest('hex');
  const ediDate=new Date().toISOString();
  let state, orderId=o.id, timedOut=true, failedPayment=false, failedRefund=false, cancelCalls=0, approvals=0;
- let partialAmount, loseRefundResponse=false;
+ let partialAmount, refundMode='ok';
  const reply=()=>({...state,signature:digest(state.tid,state.amount,state.ediDate)});
  const transaction=(checkout,tid)=>({tid,orderId:checkout.orderId,amount:checkout.amount,status:'paid',paidAt:ediDate,ediDate,resultCode:'0000',currency:'KRW',payMethod:'card',balanceAmt:checkout.amount,cancels:[]});
  globalThis.fetch=async(input,options)=>{
@@ -233,9 +233,10 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
     const request=JSON.parse(options.body);
     assert.match(request.orderId,/^refund-/);
     assert.equal(request.cancelAmt,partialAmount);
+    if(refundMode==='dropped') {refundMode='ok';throw new Error('dropped refund request');}
     const amount=partialAmount??state.amount;
     state={...state,status:partialAmount?'partialCancelled':'cancelled',balanceAmt:state.amount-amount,cancelledTid:'contract-cancel',cancels:[{tid:'contract-cancel',amount}]};
-    if(loseRefundResponse) throw new Error('lost refund response');
+    if(refundMode==='lost') {refundMode='ok';throw new Error('lost refund response');}
    } else if(options.method==='POST') {
     approvals++;
     assert.deepEqual(JSON.parse(options.body),{amount:state.amount});
@@ -307,27 +308,43 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
 
   assert.equal((await db.from('user_roles').upsert({user_id:a.id,role:'admin'})).error,null);
   partialAmount=15000;
-  for(const lost of [false,true]) {
-   loseRefundResponse=lost;
+  for(const mode of ['ok','lost','dropped','external']) {
+   refundMode=mode;
    const checkout=await start();
    const attempt=await db.from('nicepay_attempts').select('order_id').eq('id',checkout.orderId).single();
    assert.equal(attempt.error,null);
    orderId=attempt.data.order_id;
-   state={...transaction(checkout,'partial-'+Number(lost)+'-'+run),card:{canPartCancel:'true'}};
+   state={...transaction(checkout,'partial-'+mode+'-'+run),card:{canPartCancel:'true'}};
    assert.equal((await callback(checkout)).status,303);
-   assert.equal((await db.from('refunds').insert({order_id:orderId,user_id:b.id,request_key:randomUUID(),amount:partialAmount,used_seconds:1,status:'review'})).error,null);
-   assert.equal((await db.from('orders').update({status:'review'}).eq('id',orderId)).error,null);
    const review=ctx({approve:true,amount:partialAmount,reason:'테스트 부분취소'},a);
-   if(lost) {
-    await assert.rejects(code.reviewRefund(review),e=>e.code==='payment_outcome_unknown');
-    await assert.rejects(code.recoverOrder(ctx({},a)),e=>e.code==='payment_outcome_unknown');
-    await assert.rejects(webhook(),e=>e.code==='payment_outcome_unknown');
-    assert.equal((await db.from('refunds').select('status').eq('order_id',orderId).single()).data.status,'processing');
-   } else {
+   if(mode==='external') {
+    // A partial cancel made in the PG console goes to review, and only its exact amount can be approved.
+    state={...state,status:'partialCancelled',balanceAmt:state.amount-partialAmount,cancels:[{tid:'console-cancel',amount:partialAmount}]};
+    assert.equal(await (await webhook()).text(),'OK');
+    assert.equal((await db.from('orders').select('status').eq('id',orderId).single()).data.status,'review');
+    await assert.rejects(code.reviewRefund(ctx({approve:true,amount:partialAmount-1,reason:'금액 불일치'},a)),e=>e.code==='refund_mismatch');
     assert.equal((await code.reviewRefund(review)).status,'completed');
-    assert.equal((await db.from('entitlements').select('revoked').eq('order_id',orderId).single()).data.revoked,true);
+   } else {
+    assert.equal((await db.from('refunds').insert({order_id:orderId,user_id:b.id,request_key:randomUUID(),amount:partialAmount,used_seconds:1,status:'review'})).error,null);
+    assert.equal((await db.from('orders').update({status:'review'}).eq('id',orderId)).error,null);
+    if(mode==='ok') {
+     assert.equal((await code.reviewRefund(review)).status,'completed');
+    } else {
+     await assert.rejects(code.reviewRefund(review),e=>e.code==='payment_outcome_unknown');
+     if(mode==='lost') {
+      // The cancel went through but its response was lost: the PG record finishes the refund.
+      assert.equal(await (await webhook()).text(),'OK');
+     } else {
+      // The cancel never reached the PG: too soon to tell at first, then safe to retry once it has settled.
+      await assert.rejects(code.recoverOrder(ctx({},a)),e=>e.code==='payment_outcome_unknown');
+      assert.equal((await db.from('refunds').update({nicepay_cancel_started_at:new Date(Date.now()-60_000).toISOString()}).eq('order_id',orderId)).error,null);
+      assert.equal((await code.recoverOrder(ctx({},a))).status,'completed');
+     }
+    }
    }
-   assert.equal(cancelCalls,lost?3:2);
+   assert.equal((await db.from('refunds').select('status').eq('order_id',orderId).single()).data.status,'completed');
+   assert.equal((await db.from('entitlements').select('revoked').eq('order_id',orderId).single()).data.revoked,true);
+   assert.equal(cancelCalls,{ok:2,lost:3,dropped:5,external:5}[mode]);
   }
  } finally {
   globalThis.fetch=original;
