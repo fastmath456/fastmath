@@ -105,7 +105,7 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     location: { hash: '', replace: path => routes.push(['location', path]) },
     window: { addEventListener() {}, removeEventListener() {}, matchMedia: () => ({ matches: reducedMotion }), Vimeo: { Player: class { constructor(_container, options) { players.push(options); } on(name, callback) { events[name] = callback; } ready() { return new Promise(resolve => { events.ready = resolve; }); } async destroy() {} } } },
     document: { addEventListener() {}, removeEventListener() {}, getElementById: () => null, createElement: () => ({}), head: { append: script => queueMicrotask(() => script.onload()) } },
-    performance: { now: () => 6000 }, crypto: { randomUUID: () => 'test-request-key' },
+    performance: { now: () => 21000 }, crypto: { randomUUID: () => 'test-request-key' },
     sessionStorage: { setItem: (key, value) => retryStorage.set(key, value) },
     fetch: async () => new Response('image'),
   };

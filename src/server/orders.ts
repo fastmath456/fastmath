@@ -243,16 +243,16 @@ export async function paymentWebhook(ctx:Context) {
 }
 
 export async function orders(ctx:Context) {
-  const user=await ctx.user(),db=adminDb(); const [orders,entitlements,refunds,progress,downloads]=await Promise.all([
+  const user=await ctx.user(),db=adminDb(); const [orders,entitlements,refunds,downloads]=await Promise.all([
     db.from('orders').select('*').eq('user_id',user.id).neq('status','pending').order('created_at',{ascending:false}),
     db.from('entitlements').select('order_id,expires_at').eq('user_id',user.id),
     db.from('refunds').select('order_id,status').eq('user_id',user.id),
-    db.from('lesson_progress').select('order_id,completed').eq('user_id',user.id),
     db.from('download_events').select('order_id').eq('user_id',user.id),
-  ]); [orders,entitlements,refunds,progress,downloads].forEach(r=>dbError(r.error));
+  ]); [orders,entitlements,refunds,downloads].forEach(r=>dbError(r.error));
   const items=await Promise.all(orders.data!.map(async o=>{
-    const total=await db.from('lessons').select('id',{count:'exact',head:true}).eq('product_id',o.product_id); dbError(total.error);
-    const completed=progress.data!.filter(p=>p.order_id===o.id&&p.completed).length,rate=total.count?Math.floor(completed/total.count*100):0;
+    // Progress is the watched share of the paid video, the same basis the refund amount uses.
+    const used=o.kind==='vod'&&o.total_paid_seconds>0?await db.rpc('used_seconds',{p_order:o.id}):{data:0,error:null}; dbError(used.error);
+    const rate=o.total_paid_seconds>0?Math.min(100,Math.floor(Number(used.data??0)/o.total_paid_seconds*100)):0;
     const status=o.status==='refunded'?'환불완료':o.status==='refunding'?'환불 처리 중':o.status==='review'?'환불 확인 중':'결제완료';
     // VOD: no refund after the access period ends. PDF: no refund once downloaded.
     const expiresAt=entitlements.data!.find(e=>e.order_id===o.id)?.expires_at??null;

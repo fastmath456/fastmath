@@ -7,16 +7,17 @@ import { zipStream } from './zip';
 export async function classroom(ctx:Context) {
   const user=await ctx.user(),db=adminDb(); const [entitlements,progress,downloads]=await Promise.all([
     db.from('entitlements').select('*,products(title,kind,image,pdf_path)').eq('user_id',user.id).eq('revoked',false).eq('hidden',false).order('starts_at',{ascending:false}),
-    db.from('lesson_progress').select('order_id,completed,updated_at').eq('user_id',user.id).order('updated_at',{ascending:false}),
+    db.from('lesson_progress').select('order_id,updated_at').eq('user_id',user.id).order('updated_at',{ascending:false}),
     db.from('download_events').select('order_id,created_at').eq('user_id',user.id).order('created_at',{ascending:false}),
   ]); [entitlements,progress,downloads].forEach(r=>dbError(r.error));
   const assets=entitlements.data!.length ? await db.from('product_assets').select('product_id').eq('role','material').in('product_id',entitlements.data!.map(e=>e.product_id)) : {data:[],error:null}; dbError(assets.error);
   const materialProducts=new Set(assets.data!.map(asset=>asset.product_id));
   const items=await Promise.all(entitlements.data!.map(async e=>{
     const p=e.products as unknown as {title:string;kind:string;image:string;pdf_path:string|null};
-    const lessons=await db.from('order_lessons').select('lesson_id',{count:'exact',head:true}).eq('order_id',e.order_id); dbError(lessons.error);
-    const completed=progress.data!.filter(pr=>pr.order_id===e.order_id&&pr.completed).length,expired=Date.parse(e.expires_at)<=Date.now();
-    return {id:e.id,orderId:e.order_id,courseId:e.product_id,kind:p.kind,title:p.title,image:p.image,status:expired?'만료':p.kind==='vod'?'수강 중':'다운로드 가능',period:date(e.starts_at)+' ~ '+date(e.expires_at),progress:lessons.count?Math.floor(completed/lessons.count*100):0,recent:date(progress.data!.find(pr=>pr.order_id===e.order_id)?.updated_at??null)||'-',downloaded:date(downloads.data!.find(d=>d.order_id===e.order_id)?.created_at??null)||'-',includedPdf:Boolean(p.pdf_path)||materialProducts.has(e.product_id),expired};
+    // Progress is the watched share of the paid video, the same basis the refund amount uses.
+    const [order,used]=await Promise.all([db.from('orders').select('total_paid_seconds').eq('id',e.order_id).single(),db.rpc('used_seconds',{p_order:e.order_id})]); dbError(order.error); dbError(used.error);
+    const total=order.data!.total_paid_seconds,expired=Date.parse(e.expires_at)<=Date.now();
+    return {id:e.id,orderId:e.order_id,courseId:e.product_id,kind:p.kind,title:p.title,image:p.image,status:expired?'만료':p.kind==='vod'?'수강 중':'다운로드 가능',period:date(e.starts_at)+' ~ '+date(e.expires_at),progress:total>0?Math.min(100,Math.floor(Number(used.data??0)/total*100)):0,recent:date(progress.data!.find(pr=>pr.order_id===e.order_id)?.updated_at??null)||'-',downloaded:date(downloads.data!.find(d=>d.order_id===e.order_id)?.created_at??null)||'-',includedPdf:Boolean(p.pdf_path)||materialProducts.has(e.product_id),expired};
   })); return {items,count:items.length};
 }
 export async function viewer(ctx:Context) {

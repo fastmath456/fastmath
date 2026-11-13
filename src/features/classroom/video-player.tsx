@@ -40,7 +40,7 @@ export function VideoPlayer({orderId,lessonId,previewUrl}:VideoPlayerProps) {
       player.on('playing',()=>{playing=true;});
       player.on('seeking',()=>{seeking=true;});
       player.on('seeked',e=>{seeking=false;send(e.seconds,false);});
-      player.on('timeupdate',e=>{if(!seeking && performance.now()-lastSent>=5000) send(e.seconds,playing);});
+      player.on('timeupdate',e=>{if(!seeking && performance.now()-lastSent>=20000) send(e.seconds,playing);});
       player.on('pause',e=>{send(e.seconds,playing&&!seeking);playing=false;});
       player.on('ended',e=>{send(e.seconds,playing&&!seeking,true);playing=false;});
     }
