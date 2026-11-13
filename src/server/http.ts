@@ -19,7 +19,7 @@ export function adminDb() {
 export function dbError(error: { message: string; code?: string } | null) {
   if (!error) return;
   if (error.message === 'payment_outcome_unknown') throw new ApiError(503, 'payment_outcome_unknown');
-  const code = ['not_found','no_access','not_selling','already_owned','key_conflict','payment_conflict','payment_mismatch','sequence_conflict','invalid_position','quote_expired','quote_changed','refund_conflict','refund_mismatch','refund_expired','refund_downloaded','file_missing','profile_missing','profile_conflict'].find(code => error.message.includes(code));
+  const code = ['not_found','no_access','not_selling','already_owned','key_conflict','payment_conflict','payment_mismatch','sequence_conflict','invalid_position','quote_expired','quote_changed','refund_conflict','refund_mismatch','refund_expired','refund_downloaded','refund_used_up','file_missing','profile_missing','profile_conflict'].find(code => error.message.includes(code));
   if(!code && error.code==='23505') throw new ApiError(409,'conflict');
   if(!code && ['23503','23514','23502'].includes(error.code??'')) throw new ApiError(400,'invalid_field');
   throw new ApiError(code === 'not_found' ? 404 : code === 'no_access' ? 403 : code ? 409 : 500, code ?? 'database_error');

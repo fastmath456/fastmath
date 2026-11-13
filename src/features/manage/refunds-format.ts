@@ -14,6 +14,10 @@ export function usage(item: Pick<AdminRefund, 'kind' | 'usedSeconds' | 'totalSec
   return used === 0 ? '시청 안 함' : `${Math.floor(item.totalSeconds / 60)}분 중 ${used}분`;
 }
 
+export function refundTier(usedSeconds: number, totalSeconds: number) {
+  return usedSeconds === 0 ? '수강 전' : usedSeconds * 3 < totalSeconds ? '1/3 수강 전' : usedSeconds * 2 < totalSeconds ? '1/2 수강 전' : '1/2 이상 수강';
+}
+
 export const statusLabels: Record<RefundStatus, string> = { review: '확인 필요', processing: '응답 확인 필요', completed: '환불완료', rejected: '환불 거절' };
 export const filters: { value: RefundFilter; label: string }[] = [
   { value: 'all', label: '전체' }, { value: 'review', label: '확인 필요' }, { value: 'processing', label: '처리 중' },

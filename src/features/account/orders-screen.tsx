@@ -16,7 +16,7 @@ import accountStyles from './account.module.css';
 
 function refundBlockedText(error: unknown) {
   const code = (error as { code?: unknown } | null)?.code;
-  return code === 'refund_expired' ? '수강기간이 끝난 강의는 환불할 수 없습니다.' : code === 'refund_downloaded' ? '다운로드한 전자책은 환불할 수 없습니다.' : '';
+  return code === 'refund_expired' ? '수강기간이 끝난 강의는 환불할 수 없습니다.' : code === 'refund_downloaded' ? '다운로드한 전자책은 환불할 수 없습니다.' : code === 'refund_used_up' ? '강의를 절반 이상 수강해 환불할 수 없습니다.' : '';
 }
 
 export function OrdersScreen({ state = '' }: { state?: string }) {

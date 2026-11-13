@@ -43,3 +43,11 @@ test('refund errors map to actionable messages with a generic fallback', () => {
   assert.match(format.refundErrorMessage('constructor'), /일시적인 오류/);
   assert.match(format.refundErrorMessage(undefined), /일시적인 오류/);
 });
+
+test('refund tier follows the three-step table at its boundaries', () => {
+  assert.equal(format.refundTier(0, 36000), '수강 전');
+  assert.equal(format.refundTier(11999, 36000), '1/3 수강 전');
+  assert.equal(format.refundTier(12000, 36000), '1/2 수강 전');
+  assert.equal(format.refundTier(17999, 36000), '1/2 수강 전');
+  assert.equal(format.refundTier(18000, 36000), '1/2 이상 수강');
+});

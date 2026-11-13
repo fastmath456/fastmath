@@ -9,7 +9,7 @@ import { useProfile } from '@/features/account';
 import { AdminGuide } from '@/features/admin-guide';
 import { useLoginRedirect } from '@/features/auth';
 import { getRefund, recoverRefund, reviewRefund } from './refunds-api';
-import { date, dateTime, refundErrorMessage, statusLabels, won } from './refunds-format';
+import { date, dateTime, refundErrorMessage, refundTier, statusLabels, won } from './refunds-format';
 import manage from './manage.module.css';
 import styles from './refunds.module.css';
 
@@ -32,7 +32,7 @@ export function ManageRefundScreen({ orderId }: { orderId: string }) {
   if (requiresLogin) return null;
 
   const data = query.data;
-  const header = <SiteHeader mobileAt1360 profileLoading={profile.isPending} profile={profile.data ? { name: profile.data.name, image: profile.data.avatar } : undefined} />;
+  const header = <SiteHeader mobileAt1360 profileLoading={profile.isPending} profile={profile.data ? { name: profile.data.name, image: profile.data.avatar, admin: profile.data.admin } : undefined} />;
   if (!data) return <>{header}<main className={manage.main}>{query.isError
     ? <><p role="alert">{refundErrorMessage(codeOf(query.error))}</p><Link href="/manage/refunds" className={manage.outlined}>목록으로</Link></>
     : <p className={styles.muted} aria-busy="true">환불 요청을 불러오는 중이에요.</p>}</main><SiteFooter /></>;
@@ -123,7 +123,7 @@ export function ManageRefundScreen({ orderId }: { orderId: string }) {
         <div className={styles.line}><span>결제금액</span><span>{won(data.paidAmount)}</span></div>
         {data.external
           ? <div className={styles.line}><span>나이스페이에서 취소된 금액</span><span>-{won(data.refundAmount)}</span></div>
-          : <div className={styles.line}><span>이용분 공제{data.kind === 'vod' && totalMinutes ? ` (${usedMinutes}분 ÷ ${totalMinutes}분)` : ''}</span><span>-{won(data.paidAmount - data.refundAmount)}</span></div>}
+          : <div className={styles.line}><span>수강 구간 공제{data.kind === 'vod' && totalMinutes ? ` (${usedMinutes}분 ÷ ${totalMinutes}분 · ${refundTier(data.usedSeconds, data.totalSeconds)})` : ''}</span><span>-{won(data.paidAmount - data.refundAmount)}</span></div>}
         <div className={styles.divider} />
         <div className={styles.total}><span>{data.external ? '남은 결제금액' : data.status === 'review' ? '계산된 환불금액' : '환불금액'}</span><span>{won(data.external ? data.paidAmount - data.refundAmount : data.refundAmount)}</span></div>
         {!data.external && <p className={styles.help}>결제사 상태: {data.payment ? `${data.payment.partialCancel ? '부분취소 가능' : '부분취소 불가'} · ${data.payment.cancelledAmount ? `${won(data.payment.cancelledAmount)} 취소됨` : '취소 내역 없음'}` : '확인할 수 없음'}</p>}
@@ -144,7 +144,7 @@ export function ManageRefundScreen({ orderId }: { orderId: string }) {
         </div>
         <div className={styles.field}>
           <label htmlFor="refund-reason" className={styles.label}>처리 사유<span className={styles.required}>*</span></label>
-          <textarea id="refund-reason" className={styles.textarea} maxLength={1000} aria-describedby="refund-reason-help" placeholder={data.external ? '예: 고객 요청으로 나이스페이에서 직접 부분 취소' : '예: 시청한 분량을 공제하고 환불'} value={reason} onChange={event => setReason(event.target.value)} />
+          <textarea id="refund-reason" className={styles.textarea} maxLength={1000} aria-describedby="refund-reason-help" placeholder={data.external ? '예: 고객 요청으로 나이스페이에서 직접 부분 취소' : '예: 1/3 수강 전이라 결제금액의 2/3 환불'} value={reason} onChange={event => setReason(event.target.value)} />
           <p id="refund-reason-help" className={styles.help}>승인·거절 모두 필요해요. 내부 기록용이라 회원에게는 보이지 않아요.</p>
         </div>
       </>}

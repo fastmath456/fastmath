@@ -264,11 +264,13 @@ function signQuote(q:Quote) { return createHmac('sha256',setting('SUPABASE_SECRE
 export async function refundQuote(ctx:Context) {
   const user=await ctx.user(); const {data,error}=await adminDb().rpc('refund_quote',{p_user:user.id,p_order:uuid(ctx.params.orderId)}); dbError(error); const q=data as Quote;
   const won=(n:number)=>n.toLocaleString('ko-KR')+'원',vod=q.kind!=='pdf';
-  const usage=vod?`\n전체 유료 영상: ${Math.floor(q.totalSeconds/60)}분\n중복 제외 시청·저장: ${Math.floor(q.usedSeconds/60)}분\n이용분 공제액: ${won(q.paidAmount-q.amount)}`:'';
+  // Three-step table: nothing watched -> full, under 1/3 -> 2/3, under 1/2 -> 1/2 (1/2 or more is refused by refund_quote).
+  const tier=q.usedSeconds===0?'수강 전 · 전액 환불':q.usedSeconds*3<q.totalSeconds?'전체의 1/3 수강 전 · 결제금액의 2/3 환불':'전체의 1/2 수강 전 · 결제금액의 1/2 환불';
+  const usage=vod?`\n전체 유료 영상: ${Math.floor(q.totalSeconds/60)}분\n중복 제외 시청·저장: ${Math.floor(q.usedSeconds/60)}분\n적용 구간: ${tier}`:'';
   // Requests that need an admin's review say so before the user submits.
   const why=q.kind==='pdf'?'구매 후 7일이 지나':q.usedSeconds>0?'시청 이력이 있어':'자료 다운로드 이력이 있어';
   const review=q.manual?`\n\n${why} 관리자 확인 후 환불돼요. 최종 금액은 확인 후 정해지며, 신청하면 결제내역에서 '환불 확인 중'으로 표시돼요.`:'';
-  return {...q,quote:q,token:signQuote(q),text:`예상 환불 금액 ${won(q.amount)}\n\n실제 결제금액: ${won(q.paidAmount)}${usage}\n\n${vod?'무료 미리보기는 이용분에서 제외하며, ':''}정가 차액·위약금·결제 수수료는 추가 공제하지 않습니다.${review}\n\n환불을 신청하시겠어요?`};
+  return {...q,quote:q,token:signQuote(q),text:`예상 환불 금액 ${won(q.amount)}\n\n실제 결제금액: ${won(q.paidAmount)}${usage}\n\n${vod?'무료 미리보기는 수강 분량에서 제외하며, ':''}정가 차액·위약금·결제 수수료는 추가 공제하지 않습니다.${review}\n\n환불을 신청하시겠어요?`};
 }
 async function refundableAttempt(order:OrderRow, config:NicepayConfig) {
   const attempt=await currentAttempt(order.id);
