@@ -16,7 +16,7 @@ import accountStyles from './account.module.css';
 
 function refundBlockedText(error: unknown) {
   const code = (error as { code?: unknown } | null)?.code;
-  return code === 'refund_expired' ? '수강기간이 끝난 강의는 환불할 수 없습니다.' : code === 'refund_downloaded' ? '다운로드한 전자책은 환불할 수 없습니다.' : code === 'refund_used_up' ? '강의를 절반 이상 수강해 환불할 수 없습니다.' : '';
+  return code === 'refund_expired' ? '수강기간이 끝난 강의는 환불할 수 없습니다.' : code === 'refund_downloaded' ? '다운로드한 전자책은 환불할 수 없습니다.' : code === 'refund_used_up' ? '강의를 절반 이상 수강해 환불할 수 없습니다.' : code === 'refund_conflict' ? '이미 환불이 접수됐거나 처리 중이에요. 결제내역에서 상태를 확인해주세요.' : '';
 }
 
 export function OrdersScreen({ state = '' }: { state?: string }) {
@@ -55,8 +55,8 @@ export function OrdersScreen({ state = '' }: { state?: string }) {
         </div>
       </div></Fragment>)}</div>}
     </div>
-    {refundId && (quote.isPending || quote.data) && <ConfirmationDialog label={quote.data ? quote.data.title+' 환불 확인' : '환불 확인'} onCancel={cancel} actions={quote.data ? [{label:quote.data.quote?.manual === true ? '환불 신청' : '환불',onClick:() => { if(quote.data?.quote && quote.data.token) void mutate(`orders/${refundId}/refund`,{quote:quote.data.quote,token:quote.data.token,requestKey:refundKey.current ||= crypto.randomUUID()}).then(() => { cancel(); return query.refetch(); }).catch(error => { if (!redirectIfUnauthorized(error)) void quote.refetch(); }); }},{label:'취소',cancel:true}] : []}>{quote.data ? <p className={styles.quote}>{quote.data.text}</p> : <RefundQuoteSkeleton />}</ConfirmationDialog>}
-    {refundId && quote.isError && refundBlocked && <ConfirmationDialog label="환불 불가" onCancel={cancel} actions={[{label:'확인',cancel:true}]}><p>{refundBlocked}</p></ConfirmationDialog>}
+    {refundId && (quote.isPending || (quote.data && !quote.isError)) && <ConfirmationDialog label={quote.data ? quote.data.title+' 환불 확인' : '환불 확인'} onCancel={cancel} actions={quote.data ? [{label:quote.data.quote?.manual === true ? '환불 신청' : '환불',onClick:() => { if(quote.data?.quote && quote.data.token) void mutate(`orders/${refundId}/refund`,{quote:quote.data.quote,token:quote.data.token,requestKey:refundKey.current ||= crypto.randomUUID()}).then(() => { cancel(); return query.refetch(); }).catch(error => { if (!redirectIfUnauthorized(error)) { void quote.refetch(); void query.refetch(); } }); }},{label:'취소',cancel:true}] : []}>{quote.data ? <p className={styles.quote}>{quote.data.text}</p> : <RefundQuoteSkeleton />}</ConfirmationDialog>}
+    {refundId && quote.isError && refundBlocked && <ConfirmationDialog label={(quote.error as { code?: unknown } | null)?.code === 'refund_conflict' ? '환불 안내' : '환불 불가'} onCancel={cancel} actions={[{label:'확인',cancel:true}]}><p>{refundBlocked}</p></ConfirmationDialog>}
     {refundId && quote.isError && !refundBlocked && <ConfirmationDialog label="환불 정보 조회 오류" onCancel={cancel} actions={[{label:'다시 시도',onClick:() => { void quote.refetch(); }},{label:'취소',cancel:true}]}><p>환불 정보를 불러오지 못했습니다. 다시 시도해주세요.</p></ConfirmationDialog>}
   </AccountShell>;
 }
