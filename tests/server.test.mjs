@@ -179,8 +179,20 @@ test('private Storage: validated image upload, signed PDF, expiration and hide p
  const pdf=await fetch(base+'/api/admin/products/'+productId+'/file',{method:'PUT',headers:{Origin:base,'Content-Type':'application/pdf',Cookie:[...a.jar].map(([k,v])=>k+'='+v).join(';')},body:'%PDF-1.4\n1 0 obj <</Type /Catalog>> endobj\n%%EOF'});
  const object=await pdf.json();assert.equal(pdf.status,200);
  const link=await http('orders/'+order.id+'/download',{method:'POST',jar:a.jar});assert.equal(link.status,200,JSON.stringify(link.body));assert.equal((await fetch(link.body.url)).status,200);
+ // A downloaded PDF is never refundable, and admin approval cannot bypass it.
+ assert.equal((await db.from('orders').update({kind:'pdf'}).eq('id',order.id)).error,null);
+ const downloaded=await http('orders/'+order.id+'/refund-quote',{jar:a.jar});assert.equal(downloaded.status,409);assert.equal(downloaded.body.error.code,'refund_downloaded');
+ const pdfItem=(await http('orders',{jar:a.jar})).body.items.find(item=>item.id===order.id);assert.equal(pdfItem.refundable,false);assert.equal(pdfItem.refundLabel,'환불 불가');
+ assert.equal((await db.from('refunds').upsert({order_id:order.id,user_id:a.id,request_key:randomUUID(),amount:1,used_seconds:0,status:'review'})).error,null);
+ assert.equal((await db.from('orders').update({status:'review'}).eq('id',order.id)).error,null);
+ assert.match((await db.rpc('review_refund',{p_order:order.id,p_approve:true,p_amount:1,p_reason:'테스트 승인'})).error?.message??'',/refund_downloaded/);
+ await rpc('review_refund',{p_order:order.id,p_approve:false,p_amount:1,p_reason:'테스트 반려'});
+ assert.equal((await db.from('orders').update({kind:'vod'}).eq('id',order.id)).error,null);
  const publicUrl=process.env.SUPABASE_URL+'/storage/v1/object/public/paid-files/'+object.path;assert.notEqual((await fetch(publicUrl)).status,200);
  await db.from('entitlements').update({starts_at:new Date(Date.now()-120000).toISOString(),expires_at:new Date(Date.now()-60000).toISOString()}).eq('order_id',order.id);
+ // A VOD past its access period is never refundable, watched or not.
+ const expired=await http('orders/'+order.id+'/refund-quote',{jar:a.jar});assert.equal(expired.status,409);assert.equal(expired.body.error.code,'refund_expired');
+ assert.equal((await http('orders',{jar:a.jar})).body.items.find(item=>item.id===order.id).refundable,false);
  assert.equal((await http('orders/'+order.id+'/download',{method:'POST',jar:a.jar})).status,403);
  assert.equal((await http('classroom/courses/'+productId,{jar:a.jar})).status,403);
  const ent=(await db.from('entitlements').select('id').eq('order_id',order.id).single()).data;

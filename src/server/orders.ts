@@ -5,7 +5,7 @@ import type { Database } from './database.types';
 import { approvalTimeout, nicepayCallbackAttempt, nicepayConfig, nicepayGoodsName, nicepayRequest, nicepayReturnUrl, readNicepayPayment, requireNicepayWrites, validNicepaySignature, type NicepayPayment } from './nicepay';
 
 type OrderRow={id:string;user_id:string;product_id:string;request_key:string;title:string;kind:'vod'|'pdf';amount:number;status:string;payment_key:string|null;paid_at:string|null;total_paid_seconds:number};
-type Quote={orderId:string;title:string;amount:number;paidAmount:number;usedSeconds:number;totalSeconds:number;manual:boolean;version:string;expiresAt:string};
+type Quote={orderId:string;title:string;kind?:'vod'|'pdf';amount:number;paidAmount:number;usedSeconds:number;totalSeconds:number;manual:boolean;version:string;expiresAt:string};
 type Refund=Database['public']['Tables']['refunds']['Row'];
 type Attempt=Database['public']['Tables']['nicepay_attempts']['Row'];
 type NicepayConfig=ReturnType<typeof nicepayConfig>;
@@ -231,23 +231,29 @@ export async function paymentWebhook(ctx:Context) {
 }
 
 export async function orders(ctx:Context) {
-  const user=await ctx.user(),db=adminDb(); const [orders,entitlements,refunds,progress]=await Promise.all([
+  const user=await ctx.user(),db=adminDb(); const [orders,entitlements,refunds,progress,downloads]=await Promise.all([
     db.from('orders').select('*').eq('user_id',user.id).neq('status','pending').order('created_at',{ascending:false}),
     db.from('entitlements').select('order_id,expires_at').eq('user_id',user.id),
     db.from('refunds').select('order_id,status').eq('user_id',user.id),
     db.from('lesson_progress').select('order_id,completed').eq('user_id',user.id),
-  ]); [orders,entitlements,refunds,progress].forEach(r=>dbError(r.error));
+    db.from('download_events').select('order_id').eq('user_id',user.id),
+  ]); [orders,entitlements,refunds,progress,downloads].forEach(r=>dbError(r.error));
   const items=await Promise.all(orders.data!.map(async o=>{
     const total=await db.from('lessons').select('id',{count:'exact',head:true}).eq('product_id',o.product_id); dbError(total.error);
     const completed=progress.data!.filter(p=>p.order_id===o.id&&p.completed).length,rate=total.count?Math.floor(completed/total.count*100):0;
     const status=o.status==='refunded'?'환불완료':o.status==='refunding'?'환불 처리 중':o.status==='review'?'환불 확인 중':'결제완료';
-    return {id:o.id,title:o.title,kind:o.kind,status,amount:o.amount,endDate:date(entitlements.data!.find(e=>e.order_id===o.id)?.expires_at??null),progress:o.kind==='pdf'?'-':rate+'%',paidDate:date(o.paid_at),refundLabel:o.status==='refunded'?'환불 완료':o.status==='refunding'?'처리 중':o.status==='review'?'확인 중':'환불',refundable:o.status==='paid'};
+    // VOD: no refund after the access period ends. PDF: no refund once downloaded.
+    const expiresAt=entitlements.data!.find(e=>e.order_id===o.id)?.expires_at??null;
+    const blocked=o.kind==='pdf'?downloads.data!.some(d=>d.order_id===o.id):!expiresAt||Date.parse(expiresAt)<=Date.now();
+    return {id:o.id,title:o.title,kind:o.kind,status,amount:o.amount,endDate:date(expiresAt),progress:o.kind==='pdf'?'-':rate+'%',paidDate:date(o.paid_at),refundLabel:o.status==='refunded'?'환불 완료':o.status==='refunding'?'처리 중':o.status==='review'?'확인 중':blocked?'환불 불가':'환불',refundable:o.status==='paid'&&!blocked};
   })); return {items,count:items.length};
 }
 function signQuote(q:Quote) { return createHmac('sha256',setting('SUPABASE_SECRET_KEY')).update(JSON.stringify(q)).digest('hex'); }
 export async function refundQuote(ctx:Context) {
   const user=await ctx.user(); const {data,error}=await adminDb().rpc('refund_quote',{p_user:user.id,p_order:uuid(ctx.params.orderId)}); dbError(error); const q=data as Quote;
-  return {...q,quote:q,token:signQuote(q),text:`예상 환불 금액 ${q.amount.toLocaleString('ko-KR')}원\n\n실제 결제금액: ${q.paidAmount.toLocaleString('ko-KR')}원\n전체 유료 영상: ${Math.floor(q.totalSeconds/60)}분\n중복 제외 시청·저장: ${Math.floor(q.usedSeconds/60)}분\n이용분 공제액: ${(q.paidAmount-q.amount).toLocaleString('ko-KR')}원\n\n무료 미리보기는 이용분에서 제외하며, 정가 차액·위약금·결제 수수료는 추가 공제하지 않습니다.\n\n환불을 신청하시겠어요?`};
+  const won=(n:number)=>n.toLocaleString('ko-KR')+'원',vod=q.kind!=='pdf';
+  const usage=vod?`\n전체 유료 영상: ${Math.floor(q.totalSeconds/60)}분\n중복 제외 시청·저장: ${Math.floor(q.usedSeconds/60)}분\n이용분 공제액: ${won(q.paidAmount-q.amount)}`:'';
+  return {...q,quote:q,token:signQuote(q),text:`예상 환불 금액 ${won(q.amount)}\n\n실제 결제금액: ${won(q.paidAmount)}${usage}\n\n${vod?'무료 미리보기는 이용분에서 제외하며, ':''}정가 차액·위약금·결제 수수료는 추가 공제하지 않습니다.\n\n환불을 신청하시겠어요?`};
 }
 async function refundableAttempt(order:OrderRow, config:NicepayConfig) {
   const attempt=await currentAttempt(order.id);
