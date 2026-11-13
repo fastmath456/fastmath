@@ -2,7 +2,7 @@ import type { Order, Orders, Profile, RefundQuote } from '@/features/account';
 import type { ProductDetail, ProductList } from '@/features/catalog';
 import type { Classroom, Viewer } from '@/features/classroom';
 import type { SourceReview } from '@/features/landing';
-import type { CourseAsset, CourseDraft } from '@/features/manage';
+import type { AdminRefund, AdminRefundDetail, CourseAsset, CourseDraft } from '@/features/manage';
 
 export const profile: Profile = {
   name: '홍길동', email: 'student@example.test', birthday: '20050101', phone: '01012345678',
@@ -73,4 +73,26 @@ export const draft: CourseDraft = {
 export const review: SourceReview = {
   id: 'sample-review', author: '@수학공부', text: '개념을 이해하는 데 도움이 됐어요.',
   images: [{ src: '/assets/landing/review-480-3089.png', width: 354, height: 140 }],
+};
+
+const refundRow = (item: Omit<AdminRefund, 'email' | 'external'> & Partial<Pick<AdminRefund, 'email' | 'external'>>): AdminRefund => ({ email: 'student@example.test', external: false, ...item });
+export const adminRefunds: AdminRefund[] = [
+  refundRow({ orderId: '00000000-0000-4000-8000-000000000101', requestedAt: '2026-11-13T05:02:00Z', status: 'review', name: '홍길동', title: '수학1 개념 완성', kind: 'vod', paidAmount: 99000, refundAmount: 92070, usedSeconds: 2520, totalSeconds: 36000, downloaded: false }),
+  refundRow({ orderId: '00000000-0000-4000-8000-000000000102', requestedAt: '2026-11-13T02:40:00Z', status: 'review', external: true, name: '김민지', email: 'minji@example.test', title: '미적분 고난도 풀이', kind: 'vod', paidAmount: 120000, refundAmount: 15000, usedSeconds: 7200, totalSeconds: 36000, downloaded: false }),
+  refundRow({ orderId: '00000000-0000-4000-8000-000000000103', requestedAt: '2026-11-12T09:21:00Z', status: 'processing', name: '이서준', email: 'seojun@example.test', title: '확률과 통계 핵심정리', kind: 'vod', paidAmount: 89000, refundAmount: 89000, usedSeconds: 0, totalSeconds: 36000, downloaded: false }),
+  refundRow({ orderId: '00000000-0000-4000-8000-000000000104', requestedAt: '2026-11-10T00:15:00Z', status: 'completed', name: '박지훈', email: 'jihoon@example.test', title: '확통 유형 정리 노트', kind: 'pdf', paidAmount: 20000, refundAmount: 20000, usedSeconds: 0, totalSeconds: 0, downloaded: false }),
+  refundRow({ orderId: '00000000-0000-4000-8000-000000000105', requestedAt: '2026-11-09T11:47:00Z', status: 'rejected', name: '최유나', email: 'yuna@example.test', title: '수학1 개념 완성', kind: 'vod', paidAmount: 99000, refundAmount: 47850, usedSeconds: 18600, totalSeconds: 36000, downloaded: false }),
+];
+const refundDetail = (item: AdminRefund, extra: Partial<AdminRefundDetail> = {}): AdminRefundDetail => {
+  const { downloaded, ...rest } = item;
+  return {
+    ...rest, reason: null, paidAt: '2026-11-12T03:00:00Z', progress: 0, downloads: downloaded ? 1 : 0,
+    startsAt: '2026-11-12T03:00:00Z', expiresAt: '2027-01-11T03:00:00Z', cancelStartedAt: null,
+    payment: { status: 'paid', cancelledAmount: 0, balance: item.paidAmount, partialCancel: true }, ...extra,
+  };
+};
+export const adminRefundDetails = {
+  review: refundDetail(adminRefunds[0], { progress: 7 }),
+  external: refundDetail(adminRefunds[1], { progress: 20, reason: 'PG에서 확인한 외부 취소', payment: { status: 'partialCancelled', cancelledAmount: 15000, balance: 105000, partialCancel: true } }),
+  processing: refundDetail(adminRefunds[2], { cancelStartedAt: '2026-11-12T09:21:07Z' }),
 };

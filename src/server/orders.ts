@@ -369,3 +369,76 @@ export async function recoverOrder(ctx:Context) {
   await reconcilePayment(nicepayConfig(),attempt,order);
   return {ok:true};
 }
+
+// Admin refund dashboard: the list reads stored refund rows; the detail adds the PG's current view.
+async function adminEmails(userIds:string[]) {
+  const db=adminDb();
+  const entries=await Promise.all([...new Set(userIds)].map(async id=>{
+    const {data,error}=await db.auth.admin.getUserById(id);
+    return [id,error?'':data.user?.email??''] as const;
+  }));
+  return new Map(entries);
+}
+export async function adminRefunds(ctx:Context) {
+  await requireAdmin(ctx);
+  const db=adminDb();
+  const refunds=await db.from('refunds').select('*').order('requested_at',{ascending:false}).limit(200);
+  dbError(refunds.error);
+  const rows=refunds.data!;
+  if (!rows.length) return {items:[]};
+  const orderIds=rows.map(row=>row.order_id), userIds=[...new Set(rows.map(row=>row.user_id))];
+  const [orderRows,profiles,downloads,emails]=await Promise.all([
+    db.from('orders').select('id,title,kind,amount,total_paid_seconds').in('id',orderIds),
+    db.from('profiles').select('user_id,name').in('user_id',userIds),
+    db.from('download_events').select('order_id').in('order_id',orderIds),
+    adminEmails(userIds),
+  ]);
+  [orderRows,profiles,downloads].forEach(result=>dbError(result.error));
+  const items=rows.flatMap(row=>{
+    const order=orderRows.data!.find(item=>item.id===row.order_id);
+    if (!order) return [];
+    return [{
+      orderId:row.order_id, requestedAt:row.requested_at, status:row.status, external:row.request_key===row.order_id,
+      name:profiles.data!.find(profile=>profile.user_id===row.user_id)?.name??'', email:emails.get(row.user_id)??'',
+      title:order.title, kind:order.kind, paidAmount:order.amount, refundAmount:row.amount,
+      usedSeconds:row.used_seconds, totalSeconds:order.total_paid_seconds,
+      downloaded:downloads.data!.some(download=>download.order_id===row.order_id),
+    }];
+  });
+  return {items};
+}
+export async function adminRefund(ctx:Context) {
+  await requireAdmin(ctx);
+  const orderId=uuid(ctx.params.orderId), db=adminDb();
+  const refund=await loadRefund(orderId);
+  if (!refund) throw new ApiError(404,'not_found');
+  const order=await loadOrder(orderId);
+  const [profile,entitlement,downloads,lessons,completed,emails]=await Promise.all([
+    db.from('profiles').select('name').eq('user_id',order.user_id).maybeSingle(),
+    db.from('entitlements').select('starts_at,expires_at').eq('order_id',orderId).maybeSingle(),
+    db.from('download_events').select('order_id',{count:'exact',head:true}).eq('order_id',orderId),
+    db.from('lessons').select('id',{count:'exact',head:true}).eq('product_id',order.product_id),
+    db.from('lesson_progress').select('lesson_id',{count:'exact',head:true}).eq('order_id',orderId).eq('completed',true),
+    adminEmails([order.user_id]),
+  ]);
+  [profile,entitlement,downloads,lessons,completed].forEach(result=>dbError(result.error));
+  // The PG view is best effort: without it the page still shows the stored refund.
+  let payment:{status:string;cancelledAmount:number;balance:number;partialCancel:boolean}|null=null;
+  try {
+    const config=nicepayConfig(), attempt=await currentAttempt(orderId);
+    if (attempt?.status==='paid' && attempt.tid && attempt.environment===config.environment) {
+      const current=await lookupPayment(config,attempt,order);
+      payment={status:current.status,cancelledAmount:cancellationAmount(current),balance:current.balance,
+        partialCancel:current.canPartCancel===true||current.canPartCancel==='true'};
+    }
+  } catch { payment=null; }
+  return {
+    orderId, status:refund.status, external:refund.request_key===orderId, requestedAt:refund.requested_at, reason:refund.reason,
+    name:profile.data?.name??'', email:emails.get(order.user_id)??'', title:order.title, kind:order.kind,
+    paidAmount:order.amount, paidAt:order.paid_at, refundAmount:refund.amount,
+    usedSeconds:refund.used_seconds, totalSeconds:order.total_paid_seconds,
+    progress:order.kind==='vod'&&lessons.count?Math.floor((completed.count??0)/lessons.count*100):null,
+    downloads:downloads.count??0, startsAt:entitlement.data?.starts_at??null, expiresAt:entitlement.data?.expires_at??null,
+    cancelStartedAt:refund.nicepay_cancel_started?refund.nicepay_cancel_started_at??refund.requested_at:null, payment,
+  };
+}

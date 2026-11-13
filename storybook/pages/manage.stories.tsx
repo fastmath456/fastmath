@@ -3,7 +3,9 @@ import { expect, userEvent, waitFor } from 'storybook/test';
 import { delay, http, HttpResponse } from 'msw';
 import EditCoursePage from '@/app/manage/courses/[courseId]/edit/page';
 import NewCoursePage from '@/app/manage/courses/new/page';
-import { course, draft } from '../fixtures';
+import RefundsPage from '@/app/manage/refunds/page';
+import RefundPage from '@/app/manage/refunds/[orderId]/page';
+import { adminRefundDetails, course, draft } from '../fixtures';
 import { navigation } from '../navigation';
 
 const meta = { title: 'Pages/Manage' } satisfies Meta;
@@ -58,4 +60,27 @@ export const DetailImageUploading: Story = {
     await expect(canvas.queryByText('업로드 중...', { exact: true })).not.toBeInTheDocument();
     await expect(canvas.queryByText('업로드 중', { exact: true })).not.toBeInTheDocument();
   },
+};
+
+export const Refunds: Story = {
+  name: '환불 관리', tags: ['route:/manage/refunds'], parameters: navigation('/manage/refunds'),
+  render: () => <RefundsPage />,
+};
+
+export const RefundReview: Story = {
+  name: '환불 처리 · 확인 필요', tags: ['route:/manage/refunds/[orderId]'],
+  parameters: navigation(`/manage/refunds/${adminRefundDetails.review.orderId}`),
+  render: () => <RefundPage params={Promise.resolve({ orderId: adminRefundDetails.review.orderId })} />,
+};
+
+export const RefundExternal: Story = {
+  ...RefundReview, name: '환불 처리 · PG 직접 취소',
+  parameters: navigation(`/manage/refunds/${adminRefundDetails.external.orderId}`),
+  render: () => <RefundPage params={Promise.resolve({ orderId: adminRefundDetails.external.orderId })} />,
+};
+
+export const RefundStuck: Story = {
+  ...RefundReview, name: '환불 처리 · 응답 확인 필요',
+  parameters: navigation(`/manage/refunds/${adminRefundDetails.processing.orderId}`),
+  render: () => <RefundPage params={Promise.resolve({ orderId: adminRefundDetails.processing.orderId })} />,
 };

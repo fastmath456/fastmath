@@ -1,0 +1,85 @@
+/* Admin refund pages: account layout and order table for the list, course form for the detail. */
+.layout { width: 1360px; margin-inline: auto; display: flex; gap: 20px; align-items: flex-start; padding-block: 52px 64px; }
+.sidebar { width: 240px; flex-shrink: 0; display: flex; flex-direction: column; gap: 32px; position: sticky; top: 52px; }
+.profile { display: flex; flex-direction: column; gap: 8px; }
+.avatar { border-radius: 32px; object-fit: cover; }
+.greeting { font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; width: 240px; }
+.email { font-size: 12px; line-height: 16px; letter-spacing: -.6px; color: var(--gray-700); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; width: 240px; }
+.sidebar nav { display: flex; flex-direction: column; }
+.sidebar nav a { height: 52px; padding-inline: 16px; display: flex; align-items: center; border-radius: 16px; font-weight: 600; }
+.sidebar nav a[aria-current='page'] { background: rgba(255,203,17,.1); color: #fe964c; }
+.content { width: 1100px; display: flex; flex-direction: column; gap: 40px; }
+.title { font-size: 20px; line-height: 30px; letter-spacing: -1px; font-weight: 600; }
+.subtitle { color: var(--gray-700); }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+
+.alert { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 24px; border-radius: 32px; background: rgba(254,76,76,.08); }
+.alertTitle { font-weight: 600; color: #c62828; }
+.notice { display: flex; flex-direction: column; gap: 4px; padding: 16px 24px; border-radius: 32px; background: rgba(255,203,17,.1); }
+.noticeTitle { font-weight: 600; color: #7a5200; }
+.muted { color: var(--gray-700); }
+
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.filter { height: 32px; padding-inline: 16px; border-radius: 16px; background: var(--gray-100); color: var(--gray-700); font-weight: 600; }
+.filter[aria-pressed='true'] { background: var(--brand-500); color: #3c3b28; }
+.search { width: 280px; height: 44px; padding-inline: 16px; border: 1px solid #efefef; border-radius: 16px; background: var(--gray-00); font-weight: 600; }
+.search::placeholder { color: var(--gray-400); opacity: 1; }
+
+.tableScroll { overflow-x: auto; }
+.table { width: 1100px; display: flex; flex-direction: column; gap: 8px; }
+.header, .row { display: grid; grid-template-columns: 110px 170px 250px 110px 140px 110px 110px 100px; }
+.header { border-radius: 32px; background: var(--gray-50); color: #5e677a; }
+.header > div, .row > div { min-height: 64px; padding-inline: 16px; display: flex; align-items: center; }
+.rows { display: flex; flex-direction: column; gap: 8px; padding-block: 8px; border-radius: 32px; background: var(--gray-50); }
+.divider { height: 1px; background: #e9ecf2; }
+.empty { padding: 32px 16px; text-align: center; color: var(--gray-700); }
+.small { font-size: 12px; line-height: 16px; letter-spacing: -.6px; color: var(--gray-700); }
+.product { gap: 4px; }
+.productName { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.amount { font-weight: 700; }
+.nowrap { white-space: nowrap; }
+.row > .member, .row > .statusCell { flex-direction: column; align-items: flex-start; justify-content: center; }
+.row > .statusCell { gap: 4px; }
+.tag, .badge { padding: 4px 8px; border-radius: 16px; font-size: 12px; line-height: 16px; letter-spacing: -.6px; white-space: nowrap; }
+.tag, .badge.review { background: rgba(255,203,17,.1); color: #fe964c; }
+.badge.processing { background: rgba(254,76,76,.1); color: #c62828; }
+.badge.plain { background: var(--gray-100); color: var(--gray-700); }
+.pill { padding: 4px 8px; border-radius: 16px; white-space: nowrap; }
+.pillReview { background: var(--brand-500); color: #3c3b28; }
+.pillRecover { background: var(--red-500); color: white; }
+.pillView { background: var(--gray-200); color: var(--gray-700); }
+
+.sections { display: flex; flex-direction: column; gap: 32px; }
+.card { padding: 24px; border-radius: 32px; background: var(--gray-50); display: flex; flex-direction: column; gap: 16px; }
+.card h2 { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -.8px; }
+.facts { display: flex; flex-direction: column; gap: 8px; }
+.fact { display: flex; gap: 16px; }
+.inline { display: flex; align-items: center; gap: 4px; }
+.fact > span:first-child { width: 72px; flex-shrink: 0; color: var(--gray-700); }
+.line { display: flex; justify-content: space-between; gap: 16px; }
+.line > span:first-child { color: var(--gray-700); }
+.total { display: flex; justify-content: space-between; font-size: 16px; line-height: 24px; font-weight: 700; letter-spacing: -.8px; }
+.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; color: var(--gray-700); }
+.field { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.label { color: var(--gray-800); font-weight: 600; line-height: 20px; }
+.required { color: var(--red-500); }
+.input { width: 100%; height: 52px; border: 1px solid #efefef; border-radius: 16px; background: var(--gray-00); display: flex; align-items: center; gap: 8px; padding-inline: 16px; font-weight: 600; }
+.input input { flex: 1; min-width: 0; border: 0; padding: 0; background: transparent; font-weight: 600; letter-spacing: -.7px; }
+.input.readOnly { background: var(--gray-100); color: var(--gray-700); }
+.textarea { width: 100%; min-height: 120px; padding: 16px; border: 1px solid #efefef; border-radius: 16px; background: var(--gray-00); font: inherit; font-weight: 600; letter-spacing: -.7px; color: inherit; resize: vertical; }
+.textarea::placeholder, .input input::placeholder { color: var(--gray-400); opacity: 1; }
+.help { font-size: 12px; line-height: 16px; letter-spacing: -.6px; color: var(--gray-700); }
+
+@media (width < 1360px) {
+  .layout { width: 100%; padding: 32px 20px 52px; }
+  .sidebar { display: none; }
+  .content { width: 100%; gap: 32px; }
+}
+@media (768px < width < 1360px) {
+  .sidebar { display: flex; }
+  .content { flex: 1; width: auto; min-width: 0; }
+}
+@media (width < 768px) {
+  .search { width: 100%; }
+}

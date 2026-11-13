@@ -355,6 +355,38 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
  }
 });
 
+test('admin refund dashboard lists requests and shows one request in detail, for admins only',async()=>{
+ const compiled=mkdtempSync(join(tmpdir(),'quick-math-refunds-test-'));
+ symlinkSync(join(process.cwd(),'node_modules'),join(compiled,'node_modules'),'dir');
+ mkdirSync(join(compiled,'server'));
+ for(const file of ['http','nicepay','orders']) writeFileSync(join(compiled,'server',file+'.js'),ts.transpileModule(readFileSync('src/server/'+file+'.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText);
+ try {
+  const code=await import(pathToFileURL(join(compiled,'server','orders.js')).href);
+  const ctx=(actor,orderId)=>({params:{orderId},user:async()=>({id:actor.id,email:actor.email}),request:new NextRequest(base+'/api/admin/refunds')});
+  const o=await rpc('create_order',{p_user:b.id,p_product:productId,p_key:randomUUID()});orders.push(o.id);
+  await rpc('prepare_payment',{p_user:b.id,p_order:o.id,p_payment:'admin-list-'+run});
+  await rpc('complete_payment',{p_order:o.id,p_payment:'admin-list-'+run,p_amount:o.amount,p_paid:new Date().toISOString()});
+  assert.equal((await db.from('refunds').insert({order_id:o.id,user_id:b.id,request_key:randomUUID(),amount:50000,used_seconds:600,status:'review'})).error,null);
+  assert.equal((await db.from('orders').update({status:'review'}).eq('id',o.id)).error,null);
+  assert.equal((await db.from('user_roles').upsert({user_id:a.id,role:'admin'})).error,null);
+
+  await assert.rejects(code.adminRefunds(ctx(b)),e=>e.code==='forbidden');
+  await assert.rejects(code.adminRefund(ctx(b,o.id)),e=>e.code==='forbidden');
+  const {items}=await code.adminRefunds(ctx(a));
+  const row=items.find(item=>item.orderId===o.id);
+  assert.deepEqual({...row,requestedAt:typeof row.requestedAt},{orderId:o.id,requestedAt:'string',status:'review',external:false,name:'홍길동',email:b.email,
+   title:'검증용 강의',kind:'vod',paidAmount:o.amount,refundAmount:50000,usedSeconds:600,totalSeconds:36000,downloaded:false});
+
+  const detail=await code.adminRefund(ctx(a,o.id));
+  assert.equal(detail.orderId,o.id);assert.equal(detail.status,'review');assert.equal(detail.email,b.email);
+  assert.equal(detail.refundAmount,50000);assert.equal(detail.downloads,0);assert.equal(detail.cancelStartedAt,null);
+  assert.equal(detail.payment,null,'no PG attempt: the PG view is left out, not an error');
+  assert.ok(Date.parse(detail.expiresAt)>Date.now());
+  await assert.rejects(code.adminRefund(ctx(a,randomUUID())),e=>e.code==='not_found');
+  await rpc('review_refund',{p_order:o.id,p_approve:false,p_amount:50000,p_reason:'목록 테스트 정리'});
+ } finally { rmSync(compiled,{recursive:true}); }
+});
+
 after(async()=>{
  for(const u of users){
   // Each ID was created by this test run; clean only those rows, preserving other local projects.
