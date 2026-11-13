@@ -50,7 +50,7 @@ export async function products(ctx: Context) {
     ctx.optionalUser(),
   ]);
   const current=user?await profile(ctx):null;
-  return {items:rows.map(row => product(row, withMaterial.has(row.id))),count:rows.length,...(current?{profile:{name:current.name,image:current.avatar}}:{})};
+  return {items:rows.map(row => product(row, withMaterial.has(row.id))),count:rows.length,...(current?{profile:{name:current.name,image:current.avatar,admin:current.admin}}:{})};
 }
 
 export async function checkoutProductReturnHref(productId: unknown, kind: 'vod' | 'pdf') {
@@ -91,7 +91,7 @@ export async function productDetail(ctx: Context) {
   const materials=productAssets.filter(asset=>asset.role==='material').map(asset=>({id:asset.id,name:asset.name,size:asset.size,type:asset.type,width:asset.width,height:asset.height}));
   const licenseDays=Number.isSafeInteger(data.license_days)&&data.license_days>0?data.license_days:60;
   const hasMaterial = materials.length > 0 || Boolean(data.pdf_path);
-  return {...product(data as DetailRow, hasMaterial),chapters:curriculum,reviews:reviews.data!.map(r=>({id:r.id,body:r.body,author:r.author,date:date(r.created_at),rating:Number(r.rating)})),selling:data.selling,ownership:ownership.data?.length?'owned':'none',admin:role.data?.role==='admin',licenseDays,detailImage,detailImages,materials,...(account?{profile:{name:account.name,image:account.avatar}}:{})};
+  return {...product(data as DetailRow, hasMaterial),chapters:curriculum,reviews:reviews.data!.map(r=>({id:r.id,body:r.body,author:r.author,date:date(r.created_at),rating:Number(r.rating)})),selling:data.selling,ownership:ownership.data?.length?'owned':'none',admin:role.data?.role==='admin',licenseDays,detailImage,detailImages,materials,...(account?{profile:{name:account.name,image:account.avatar,admin:role.data?.role==='admin'}}:{})};
 }
 export async function manageProduct(ctx: Context) {
   await requireAdmin(ctx); const input=await body(ctx.request);

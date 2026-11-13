@@ -10,7 +10,7 @@ export function LegalScreen({ document }: { document: { title: string; lines: re
   const profile = useProfile();
 
   return <>
-    <SiteHeader profileLoading={profile.isPending} profile={profile.data ? { name: profile.data.name, image: profile.data.avatar } : undefined} mobile={{ title: document.title, onBack: () => router.back() }} />
+    <SiteHeader profileLoading={profile.isPending} profile={profile.data ? { name: profile.data.name, image: profile.data.avatar, admin: profile.data.admin } : undefined} mobile={{ title: document.title, onBack: () => router.back() }} />
     <main className={styles.main}>
       <h1 className={styles.title}>{document.title}</h1>
       <article className={styles.content}>

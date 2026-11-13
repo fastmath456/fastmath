@@ -13,7 +13,7 @@ async function getProfile(imagePath) {
   const exports = {};
   const row = { name: '학생', birthday: '2000-01-01', phone: '01012345678', image_path: imagePath, marketing: false, updated_at: '2026-01-01' };
   const db = {
-    from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: row, error: null }) }) }) }),
+    from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: row, error: null }), maybeSingle: async () => ({ data: null, error: null }) }) }) }),
     storage: { from: () => ({ createSignedUrl: async () => ({ data: { signedUrl: 'https://example.com/uploaded-image' }, error: null }) }) },
   };
   runInNewContext(source, {

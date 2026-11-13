@@ -8,6 +8,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Guest: Story = {};
 export const SignedIn: Story = { args: { profile: { name: profile.name, image: profile.avatar } } };
+export const Admin: Story = { args: { profile: { name: profile.name, image: profile.avatar, admin: true } } };
 export const Loading: Story = { args: { profileLoading: true } };
 export const MobileMenu: Story = {
   ...SignedIn, globals: { viewport: { value: 'mobile', isRotated: false } },

@@ -77,7 +77,7 @@ export function ViewerScreen({ courseId, lessonId, state = '', preview = false }
     <SiteHeader
       mobileAt1360
       profileLoading={profile.isPending}
-      profile={profile.data ? {name: profile.data.name, image: profile.data.avatar} : undefined}
+      profile={profile.data ? { name: profile.data.name, image: profile.data.avatar, admin: profile.data.admin } : undefined}
       mobile={{ title: data?.title ?? '', onBack: () => router.back(), menu: <button className={mobileStyles.menuButton} type="button" aria-label="커리큘럼 메뉴" aria-expanded={menuVisible} aria-controls={menuId} onClick={() => setMenuState('open')}><Image unoptimized src="/assets/mobile-menu.svg" width={24} height={24} alt="" /></button> }}
     />
     {menuVisible && <dialog ref={menuRef} id={menuId} className={mobileStyles.menuDialog} data-closing={menuState === 'closing'} aria-labelledby={`${menuId}-title`} onClose={() => setMenuState('closed')} onCancel={event => { event.preventDefault(); setMenuState('closing'); }}>

@@ -508,7 +508,7 @@ test('profile saves only 11 phone digits and stores them without separators', as
   const saved = [];
   const record = { name: '테스트', birthday: '2000-01-01', phone: '01012345678', marketing: false, image_path: '', updated_at: '2026-01-01T00:00:00.000Z' };
   const db = {
-    from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: record, error: null }) }) }) }),
+    from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: record, error: null }), maybeSingle: async () => ({ data: null, error: null }) }) }) }),
     rpc: async (_name, values) => { saved.push(values.p_phone); return { error: null }; },
   };
   const profile = load('src/server/profile.ts', {
