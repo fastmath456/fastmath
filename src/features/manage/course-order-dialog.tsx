@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts, ProductCardContent, ProductListSkeleton, type Product } from '@/features/catalog';
 import { initialProductOrder, moveProduct } from './course-order';
+import { bindTouchOrder } from './touch-order';
 import type { CourseBasic, CourseProductOrder } from './types';
 import styles from './course-order-dialog.module.css';
 import buttons from '@/components/site/dialog.module.css';
@@ -32,6 +33,12 @@ function OrderEditor({ products, basic, courseId, value, onSave, onCancel }: Pro
   const [order, setOrder] = useState(() => initialProductOrder(products.map(product => product.id), courseId, value));
   const dragged = useRef<number | null>(null);
   const cards = useRef<(HTMLDivElement | null)[]>([]);
+  const grid = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (grid.current) return bindTouchOrder(grid.current, (from, to) => {
+      setOrder(previous => ({ ...previous, ids: moveProduct(previous.ids, from, to) }));
+    });
+  }, []);
   const current: Product = {
     id: '', slug: '', kind: 'vod',
     title: basic.title || '클래스명', image: basic.thumbnail?.url || '/assets/listing-imgRectangle3.png',
@@ -42,10 +49,10 @@ function OrderEditor({ products, basic, courseId, value, onSave, onCancel }: Pro
     setOrder(previous => ({ ...previous, ids: moveProduct(previous.ids, from, to) }));
   }
   return <>
-    <div className={styles.grid}>
+    <div ref={grid} className={styles.grid}>
       {order.ids.map((id, index) => {
         const product = id === null ? current : products.find(product => product.id === id)!;
-        return <div key={id === null ? 'current' : `product:${id}`} ref={element => { cards.current[index] = element; }} className={styles.card} role="button" tabIndex={0} draggable aria-label={`${product.title}, ${index + 1}번째. 방향키로 순서 변경`} onDragStart={event => {
+        return <div key={id === null ? 'current' : `product:${id}`} ref={element => { cards.current[index] = element; }} data-order-index={index} className={styles.card} role="button" tabIndex={0} draggable aria-label={`${product.title}, ${index + 1}번째. 방향키로 순서 변경`} onDragStart={event => {
           dragged.current = index; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', String(index));
         }} onDragEnd={() => { dragged.current = null; }} onDragOver={event => { if (dragged.current !== null) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } }} onDrop={event => {
           event.preventDefault(); if (dragged.current !== null) move(dragged.current, index); dragged.current = null;
