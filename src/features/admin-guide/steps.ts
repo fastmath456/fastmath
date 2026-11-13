@@ -15,7 +15,7 @@ export const adminGuides = {
     step('#course-basePrice', '원가', '할인 전 가격을 원 단위로 입력합니다.'),
     step('#course-price', '할인가', '실제 판매할 가격을 원 단위로 입력합니다.'),
     step('#course-license-days', '수강 가능 기간', '수강 신청일부터 이용할 수 있는 일수를 입력합니다. 비워두면 60일이 적용됩니다.'),
-    step('#course-displayOrder', '정렬 순서', '숫자가 작을수록 기본 목록에서 먼저 표시됩니다. 숫자가 같으면 최신순으로 표시됩니다.'),
+    step('#course-displayOrder', '정렬 순서', '목록을 열고 카드를 드래그해 순서를 정하세요. 저장한 순서는 클래스 등록 시 반영됩니다.'),
     step('[data-guide="course-reviews"]', '후기 등록', '학생이 남긴 별점, 후기 내용과 이름을 입력합니다. 후기를 추가하거나 삭제할 수 있고, 공개 화면에서는 이름이 마스킹됩니다.'),
     step('[data-guide="save-draft"]', '임시저장', '작성 중인 내용을 저장합니다. 저장 후 현재 주소를 보관하면 이어서 작성할 수 있습니다.'),
     step('[data-guide="course-next"]', '상세정보로 이동', '필수 기본정보를 입력한 뒤 다음으로를 누르면 커리큘럼과 영상을 등록할 수 있습니다.'),

@@ -10,6 +10,7 @@ import { RequestError } from '@/lib/http';
 import { checkAccess, getDraft, getEditableCourse, publishDraft, saveDraft, verifyVideo } from './api';
 import { BasicInformation } from './basic-information';
 import { CurriculumEditor } from './curriculum-editor';
+import { CourseOrderDialog } from './course-order-dialog';
 import { useCourseUploads } from './use-course-uploads';
 import { emptyDocument, emptyReview, isEmptyReview, validateReview, formattedPrice, parseVimeoUrl, validateBasic, validateCurriculum } from './validation';
 import type { BasicErrors, CourseChapter, CourseDocument, CourseDraft, CourseLesson, CourseReview } from './types';
@@ -43,6 +44,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
   const [notice, setNotice] = useState('');
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [nameDialog, setNameDialog] = useState<NameDialog | null>(null);
+  const [ordering, setOrdering] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const operation = useRef(false);
   const mounted = useRef(false);
@@ -269,7 +271,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
   return <>
     <main className={`${styles.main} ${document.step === 2 ? styles.details : ''}`}>
       <div className={styles.heading}>
-        <div className={styles.headingRow}><h1>클래스 등록</h1><AdminGuide guide={document.step === 1 ? 'course-basic' : 'course-curriculum'} admin={phase === 'ready'} paused={busy || verifying || Boolean(confirm || nameDialog)} /></div>
+        <div className={styles.headingRow}><h1>클래스 등록</h1><AdminGuide guide={document.step === 1 ? 'course-basic' : 'course-curriculum'} admin={phase === 'ready'} paused={busy || verifying || Boolean(confirm || nameDialog || ordering)} /></div>
         <div className={styles.steps} data-guide="course-steps" aria-label="클래스 등록 단계">
           {document.step === 2 ? <button type="button" className={styles.step} onClick={() => guardPending(() => { setDocument(current => ({ ...current, step: 1 })); replaceUrl(draft, 1); })} disabled={busy || verifying}><span className={styles.chip}>1</span><span>기본정보</span></button> : <span className={`${styles.step} ${styles.current}`} aria-current="step"><span className={styles.chip}>1</span><span>기본정보</span></span>}
           <Image unoptimized src="/assets/manage-chevron-right.svg" alt="" width={16} height={16} />
@@ -277,7 +279,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
         </div>
       </div>
       <fieldset className={styles.fields} disabled={busy}>
-        {document.step === 1 ? <BasicInformation basic={document.basic} errors={errors} uploading={uploads.uploading} uploadErrors={uploads.uploadErrors} onChange={(field, value) => {
+        {document.step === 1 ? <BasicInformation onChooseOrder={() => setOrdering(true)} basic={document.basic} errors={errors} uploading={uploads.uploading} uploadErrors={uploads.uploadErrors} onChange={(field, value) => {
           setNotice(''); setDocument(current => ({ ...current, basic: { ...current.basic, [field]: field === 'basePrice' || field === 'price' ? value.replaceAll(',', '') : value } }));
           setErrors(current => ({ ...current, [field]: undefined }));
         }} onBlur={field => setErrors(current => ({ ...current, [field]: validateBasic(document.basic)[field] }))} onUpload={uploads.onUpload} onRemoveMaterial={uploads.onRemoveMaterial} onRetryMaterial={uploads.onRetryMaterial} onRemoveDetailImage={uploads.onRemoveDetailImage} onRetryDetailImage={uploads.onRetryDetailImage}
@@ -295,6 +297,10 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
     </main>
     <SiteFooter />
     {confirm && <ConfirmationDialog label={confirm.label} onCancel={() => { if (!confirm.accept) confirm.onAccept(); setConfirm(null); }} actions={confirm.accept ? [{ label: confirm.cancel, cancel: true }, { label: confirm.accept, onClick: () => { setConfirm(null); confirm.onAccept(); } }] : [{ label: confirm.cancel, onClick: () => { setConfirm(null); confirm.onAccept(); } }]}><div className={styles.dialogText}><p>{confirm.text}</p>{confirm.summary && <div className={styles.summary}><p>클래스명: {document.basic.title.trim()}</p><p>판매금액: {formattedPrice(document.basic.price)}원</p><p>수강기간: {document.basic.licenseDays || '60'}일</p><p>정렬 순서: {Number(document.basic.displayOrder)}</p><p>공개 후기: {document.basic.reviews.filter(review => !isEmptyReview(review)).length}개</p><p>차시 수: {document.chapters.reduce((sum, chapter) => sum + chapter.lessons.length, 0)}개</p></div>}</div></ConfirmationDialog>}
+    {ordering && <CourseOrderDialog basic={document.basic} courseId={draft?.courseId ?? courseId} value={document.productOrder} onCancel={() => setOrdering(false)} onSave={productOrder => {
+      setDocument(current => ({ ...current, productOrder, basic: { ...current.basic, displayOrder: String(productOrder.ids.indexOf(null)) } }));
+      setErrors(current => ({ ...current, displayOrder: undefined })); setNotice(''); setOrdering(false);
+    }} />}
     {nameDialog && <ConfirmationDialog label={nameLabel} onCancel={() => setNameDialog(null)} actions={[{ label: '취소', cancel: true }, { label: nameDialog.lessonId || (nameDialog.kind === 'chapter' && nameDialog.chapterId) ? '변경' : '추가', onClick: saveName }]}><form className={styles.dialogText} onSubmit={event => { event.preventDefault(); saveName(); }}>{nameDialog.kind === 'lesson' && <p>소속 챕터: {document.chapters.find(chapter => chapter.id === nameDialog.chapterId)?.title}</p>}<FormField id="curriculum-name" autoFocus label={nameDialog.kind === 'chapter' ? '챕터명' : '차시명'} value={nameDialog.value} error={nameDialog.error} onChange={event => setNameDialog({ ...nameDialog, value: event.target.value, error: '' })} /></form></ConfirmationDialog>}
   </>;
 }

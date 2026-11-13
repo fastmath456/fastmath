@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { NextResponse } from 'next/server';
 import { parseVimeoUrl, emptyReview, emptyDocument } from '../features/manage/validation';
+import { validProductOrder } from '../features/manage/course-order';
 import type { Json } from './database.types';
 import { adminDb, ApiError, bytes, dbError, requireAdmin, type Context } from './http';
 
@@ -18,8 +19,8 @@ const db = () => adminDb();
 
 function manageError(error: {message:string; code?:string}|null) {
   if (!error) return;
-  const found = ['draft_conflict','draft_published','invalid_draft','invalid_asset','invalid_video','pending_video','duplicate_asset'].find(code => error.message.includes(code));
-  if (found) throw new ApiError(found === 'draft_conflict' ? 409 : found === 'duplicate_asset' ? 409 : 400,found);
+  const found = ['order_conflict','draft_conflict','draft_published','invalid_draft','invalid_asset','invalid_video','pending_video','duplicate_asset'].find(code => error.message.includes(code));
+  if (found) throw new ApiError(found === 'draft_conflict' || found === 'order_conflict' ? 409 : found === 'duplicate_asset' ? 409 : 400,found);
   dbError(error);
 }
 function plainObject(value: unknown, field='document'): Record<string,unknown> {
@@ -53,6 +54,7 @@ function assetReferences(document: Record<string,unknown>) {
 }
 function assertDocumentShape(document: unknown) {
   const value=plainObject(document); const basic=plainObject(value.basic,'basic');
+  if (value.productOrder !== undefined && !validProductOrder(value.productOrder)) throw new ApiError(400,'invalid_field','productOrder');
   // Older saved drafts contain one detailImage and no authoring fields.
   if (basic.detailImages === undefined) basic.detailImages = basic.detailImage ? [basic.detailImage] : [];
   delete basic.detailImage;
@@ -245,6 +247,10 @@ export async function verifyCourseVideo(ctx: Context) {
 }
 export async function publishCourseDraft(ctx: Context) {
   const user=await requireAdmin(ctx),input=await json(ctx.request),id=ctx.params.id,revision=input.revision; if(!uuid.test(id)||typeof revision!=='number'||!Number.isSafeInteger(revision)||revision<1) throw new ApiError(400,'invalid_field','revision');
-  const result=await db().rpc('publish_course_draft',{p_owner:user.id,p_draft:id,p_revision:revision}); manageError(result.error); const row=Array.isArray(result.data)?result.data[0]:result.data;
+  const saved=await db().from('course_drafts').select('document').eq('id',id).eq('owner_id',user.id).maybeSingle();
+  manageError(saved.error); if (!saved.data) throw new ApiError(404,'not_found');
+  const document=plainObject(saved.data.document);
+  const publish=document.productOrder === undefined ? 'publish_course_draft' : 'publish_ordered_course_draft';
+  const result=await db().rpc(publish,{p_owner:user.id,p_draft:id,p_revision:revision}); manageError(result.error); const row=Array.isArray(result.data)?result.data[0]:result.data;
   if(!row?.course_id||!row?.slug) throw new ApiError(500,'database_error'); return {courseId:row.course_id,slug:row.slug};
 }

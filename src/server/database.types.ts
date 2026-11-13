@@ -371,6 +371,7 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
+            "publish_ordered_course_draft": { Args: { "p_draft": string; "p_owner": string; "p_revision": number }; Returns: { "course_id": string; "slug": string }[] },
             "publish_course_draft":
 { Args: { "p_draft": string,"p_owner": string,"p_revision": number }; Returns: { "course_id": string,"slug": string }[]
                            },

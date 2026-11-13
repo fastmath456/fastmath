@@ -14,6 +14,7 @@ type BasicInformationProps = {
   onChange: (field: 'title' | 'basePrice' | 'price' | 'licenseDays' | 'displayOrder', value: string) => void;
   onBlur: (field: 'title' | 'basePrice' | 'price' | 'licenseDays' | 'displayOrder') => void;
   onUpload: (slot: AssetSlot, files: File[]) => void;
+  onChooseOrder: () => void;
   onRemoveMaterial: (id: string) => void;
   onRetryMaterial: (id: string) => void;
   onRemoveDetailImage: (id: string) => void;
@@ -24,10 +25,9 @@ type BasicInformationProps = {
   onRemoveReview: (review: CourseReview) => void;
 };
 
-type TextField = 'title' | 'basePrice' | 'price' | 'displayOrder';
+type TextField = 'title' | 'basePrice' | 'price';
 
 const fieldDetails: Record<TextField, { label: string; placeholder: string; inputMode?: 'numeric' }> = {
-  displayOrder: { label: '정렬 순서', placeholder: '정렬 순서를 입력해주세요. (숫자가 동일한 강의가 존재할 경우, 최신순으로 정렬됩니다.)', inputMode: 'numeric' },
   title: { label: '클래스명', placeholder: '클래스명을 입력해주세요.' },
   basePrice: { label: '원가(단위: 원)', placeholder: '강의 원가를 입력해주세요.', inputMode: 'numeric' },
   price: { label: '할인가(단위: 원)', placeholder: '강의 할인가를 입력해주세요.', inputMode: 'numeric' },
@@ -65,7 +65,7 @@ function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload 
   </div>;
 }
 
-export function BasicInformation({ basic, errors, uploading, uploadErrors, onChange, onBlur, onUpload, onRemoveMaterial, onRetryMaterial, onRemoveDetailImage, onRetryDetailImage, onReviewChange, onReviewBlur, onAddReview, onRemoveReview }: BasicInformationProps) {
+export function BasicInformation({ basic, errors, uploading, uploadErrors, onChange, onBlur, onUpload, onChooseOrder, onRemoveMaterial, onRetryMaterial, onRemoveDetailImage, onRetryDetailImage, onReviewChange, onReviewBlur, onAddReview, onRemoveReview }: BasicInformationProps) {
   const materialInput = useRef<HTMLInputElement>(null);
   const materialId = useId();
 
@@ -115,7 +115,11 @@ export function BasicInformation({ basic, errors, uploading, uploadErrors, onCha
       </div>
       {errors.licenseDays && <p id="course-license-days-message" className={styles.message} role="alert">{errors.licenseDays}</p>}
     </div>
-    {textField('displayOrder')}
+    <div className={styles.field}>
+      <label htmlFor="course-displayOrder" className={styles.label}>정렬 순서<span aria-hidden="true" className={styles.required}>*</span></label>
+      <button id="course-displayOrder" type="button" className={`${styles.input} ${styles.orderInput}`} aria-haspopup="dialog" aria-describedby={errors.displayOrder ? 'course-displayOrder-error' : undefined} onClick={onChooseOrder}>{basic.displayOrder || '정렬 순서를 선택해주세요.'}</button>
+      {errors.displayOrder && <p id="course-displayOrder-error" className={styles.message} role="alert">{errors.displayOrder}</p>}
+    </div>
     <div className={styles.field}>
       <h2 className={styles.label}>후기 등록</h2>
       <div className={styles.reviewList} data-guide="course-reviews">{basic.reviews.map(review => {

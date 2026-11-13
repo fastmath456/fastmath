@@ -127,7 +127,7 @@ function runtime({ error = null, profileError = null, quoteError = null, data, q
     './api': { parseSort: value => value ?? 'latest', downloadMaterials: async orderId => { requests.push(`orders/${orderId}/download`); throw mutateError; } }, './orders-api': {}, './profile-image': {}, './video-player': { VideoPlayer: 'video' },
     '@/features/manage': { AdminCourseActions: 'admin' }, './refund-copy': { refundSections: [] },
     './skeleton': { Skeleton: 'skeleton' }, './mobile-menu': { MobileMenu: 'mobile-menu' }, './password-input': { PasswordInput: 'password-input' },
-    './product-skeletons': { ProductDetailLoading: 'product-loading', ProductListSkeleton: 'list-loading' },
+    './product-card-content': { ProductCardContent: 'product-card' }, './product-skeletons': { ProductDetailLoading: 'product-loading', ProductListSkeleton: 'list-loading' },
     './classroom-skeletons': { ViewerLoading: 'viewer-loading', ClassroomSkeleton: 'classroom-loading' },
     './account-skeletons': { OrdersSkeletonRows: 'orders-loading', ProfileLoading: 'profile-loading', RefundQuoteSkeleton: 'quote-loading' },
     './checkout': checkout,
@@ -689,7 +689,7 @@ test('pending data uses skeletons, while empty, error and cached results retain 
   }
   const cached = runtime({ data: { count: 1, items: [{ id: 'course', kind: 'vod', slug: 'course', title: '기존 강의', tags: [], price: 100 }] } });
   const tree = cached.render('src/features/catalog/product-list.tsx', 'ProductListScreen');
-  assert.ok(find(tree, node => node.props.children === '기존 강의'));
+  assert.ok(find(tree, node => node.type === 'product-card' && node.props.product.title === '기존 강의'));
   assert.equal(find(tree, node => node.type === 'list-loading'), undefined);
 });
 
@@ -748,7 +748,7 @@ test('admin data skeleton appears only after access succeeds and clears when dat
         getEditableCourse: id => { reads.push(['course', id]); return loaded; },
       },
       '@/features/admin-guide': { AdminGuide: 'admin-guide' },
-      './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': {},
+      './course-order-dialog': {}, './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': {},
       './use-course-uploads': { useCourseUploads: () => ({}) },
       './validation': { emptyDocument: blank, validateBasic: () => ({}) },
       './manage-course-skeleton': { ManageCourseSkeleton: 'admin-loading' },
