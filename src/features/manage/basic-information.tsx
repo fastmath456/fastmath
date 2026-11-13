@@ -68,7 +68,7 @@ function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload,
     <div className={styles.assetHeading}><label htmlFor={inputId} className={styles.label}>{label}<span aria-hidden="true" className={styles.required}>*</span></label>{helper && <p className={styles.helper}>{helper}</p>}</div>
     <input ref={input} id={inputId} className={styles.fileInput} type="file" accept=".jpg,.jpeg,.png,.webp" multiple={slot === 'detailImage'} onChange={select} />
     {slot === 'detailImage' ? <ul className={styles.detailImages} aria-label="첨부된 상세이미지"><li className={styles.imageFrame}>{uploadBox}</li>{children}</ul> : uploadBox}
-    {uploading && <p className={styles.status} role="status">업로드 중...</p>}
+    {slot === 'thumbnail' && uploading && <p className={styles.status} role="status">업로드 중...</p>}
     {message && <p className={styles.message} role="alert">{message}</p>}
   </div>;
 }
@@ -103,7 +103,6 @@ export function BasicInformation({ basic, errors, uploading, uploadErrors, onCha
         <span className={styles.assetName}>{asset.name}</span>
       </div>
       {asset.status === 'error' && <button type="button" onClick={() => onRetryDetailImage(asset.id)}>재시도</button>}
-      {asset.status === 'uploading' && <p className={styles.status} role="status">업로드 중</p>}
       {asset.status === 'error' && <p className={styles.message} role="alert">{asset.error}</p>}
     </li>)}
     </AssetUpload>

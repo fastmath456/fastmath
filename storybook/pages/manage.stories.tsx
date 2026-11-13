@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { http, HttpResponse } from 'msw';
+import { expect, userEvent, waitFor } from 'storybook/test';
+import { delay, http, HttpResponse } from 'msw';
 import EditCoursePage from '@/app/manage/courses/[courseId]/edit/page';
 import NewCoursePage from '@/app/manage/courses/new/page';
 import { course, draft } from '../fixtures';
@@ -37,5 +38,24 @@ export const ImageUploads: Story = {
       const file = (await request.formData()).get('file') as File;
       return HttpResponse.json({ asset: { ...draft.document.basic.thumbnail, id: crypto.randomUUID(), name: file.name } });
     }) } },
+  },
+};
+
+export const DetailImageUploading: Story = {
+  ...ImageUploads, name: '상세이미지 업로드 중 문구 숨김',
+  parameters: {
+    ...ImageUploads.parameters,
+    msw: { handlers: { ...ImageUploads.parameters?.msw.handlers, upload: http.post('/api/admin/courses/uploads', async () => {
+      await delay('infinite');
+      return HttpResponse.json({});
+    }) } },
+  },
+  play: async ({ canvas }) => {
+    const input = await canvas.findByLabelText(/클래스 상세이미지/, { selector: 'input' });
+    const blob = await (await fetch('/assets/detail-imgRectangle3.png')).blob();
+    await userEvent.upload(input, new File([blob], '업로드-확인.png', { type: 'image/png' }));
+    await waitFor(() => expect(canvas.getByRole('button', { name: '업로드-확인.png 삭제' })).toBeVisible());
+    await expect(canvas.queryByText('업로드 중...', { exact: true })).not.toBeInTheDocument();
+    await expect(canvas.queryByText('업로드 중', { exact: true })).not.toBeInTheDocument();
   },
 };
