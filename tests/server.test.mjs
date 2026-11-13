@@ -95,7 +95,7 @@ test('progress ignores seeking, excludes preview and deduplicates replay',async(
 });
 test('signed quote detects tampering, manual review freezes access, reject restores it',async()=>{
  const quote=await http('orders/'+order.id+'/refund-quote',{jar:a.jar});assert.equal(quote.status,200);assert.equal(quote.body.usedSeconds,10);assert.equal(quote.body.amount,66000);
- assert.match(quote.body.text,/시청 이력이 있어 관리자 확인 후 환불돼요/,'manual review is announced before the request');
+ assert.match(quote.body.text,/환불은 관리자 확인 후 처리돼요/,'manual review is announced before the request');
  const bad=await http('orders/'+order.id+'/refund',{method:'POST',jar:a.jar,data:{quote:{...quote.body.quote,amount:99000},token:quote.body.token,requestKey:randomUUID()}});assert.equal(bad.status,400);
  const malformed=await http('orders/'+order.id+'/refund',{method:'POST',jar:a.jar,data:{quote:quote.body.quote,token:'é'.repeat(64),requestKey:randomUUID()}});assert.equal(malformed.status,400);
  const key=randomUUID(),request={quote:quote.body.quote,token:quote.body.token,requestKey:key};
@@ -299,8 +299,13 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
   const delayedApproval=reply();
   const q=await code.refundQuote(ctx({}));
   const refund={quote:q.quote,token:q.token,requestKey:randomUUID()};
-  await assert.rejects(code.requestRefund(ctx(refund)),e=>e.code==='database_error');
-  assert.equal((await code.requestRefund(ctx(refund))).status,'completed');
+  // The request only waits for review; the PG is cancelled when an admin approves it.
+  assert.equal((await code.requestRefund(ctx(refund))).status,'review');
+  assert.equal(cancelCalls,0);
+  assert.equal((await db.from('user_roles').upsert({user_id:a.id,role:'admin'})).error,null);
+  const approve=()=>code.reviewRefund(ctx({approve:true,amount:q.quote.amount,reason:'테스트 승인'},a));
+  await assert.rejects(approve(),e=>e.code==='database_error');
+  assert.equal((await approve()).status,'completed');
   assert.equal(cancelCalls,1);
   assert.equal(await (await webhook(delayedApproval)).text(),'OK');
   assert.equal(await (await webhook()).text(),'OK');

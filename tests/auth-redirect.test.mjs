@@ -291,7 +291,7 @@ test('an expired refund request navigates to login instead of refetching the quo
   const context = runtime({ pathname: '/orders/order/refund', data: { count: 0, items: [] }, quote: { title: '강의', text: '환불', quote: {}, token: 'token' } });
   const tree = context.render('src/features/account/orders-screen.tsx', 'OrdersScreen');
   context.flush();
-  find(tree, node => node.type === 'dialog').props.actions.find(action => action.label === '환불').onClick();
+  find(tree, node => node.type === 'dialog').props.actions.find(action => action.label === '환불 신청').onClick();
   await settle();
   expectLogin(context);
   assert.deepEqual(context.refetches, []);
