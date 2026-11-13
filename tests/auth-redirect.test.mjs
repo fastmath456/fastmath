@@ -780,6 +780,60 @@ test('admin data skeleton appears only after access succeeds and clears when dat
 });
 
 
+test('course step navigation retains pending video links; lesson navigation confirms before discarding', async () => {
+  for (const video of [null, { url: 'https://vimeo.com/123', embedUrl: 'https://player.vimeo.com/video/123', durationSeconds: 60 }]) {
+    const initial = { basic: { title: '강의', licenseDays: '60' }, step: 2, selectedLessonId: 'lesson-1', chapters: [{ id: 'chapter', lessons: [
+      { id: 'lesson-1', inputUrl: 'https://vimeo.com/456', video }, { id: 'lesson-2', inputUrl: '', video: null },
+    ] }] };
+    const slots = [], effects = [], urls = [];
+    let cursor = 0;
+    const modules = {
+      react: {
+        useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial; return [slots[index], value => { slots[index] = typeof value === 'function' ? value(slots[index]) : value; }]; },
+        useRef: current => ({ current }), useCallback: callback => callback, useEffect: callback => effects.push(callback),
+      },
+      'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }), Fragment: 'fragment' },
+      'next/image': 'image', 'next/navigation': { useRouter: () => ({}) },
+      '@tanstack/react-query': { useQueryClient: () => ({}) },
+      '@/components/site': { SiteFooter: 'footer', ConfirmationDialog: 'dialog' }, '@/lib/http': http,
+      './api': { checkAccess: async () => {}, getDraft: async () => ({ draft: { id: 'draft', document: initial } }) },
+      '@/features/admin-guide': { AdminGuide: 'admin-guide' }, './course-order-dialog': {},
+      './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': { CurriculumEditor: 'curriculum' },
+      './use-course-uploads': { useCourseUploads: () => ({}) },
+      './validation': { emptyDocument: () => initial, validateBasic: () => ({}) }, './manage-course-skeleton': {},
+    };
+    const { ManageCourseScreen } = load('src/features/manage/manage-course-screen.tsx', modules, {
+      window: { history: { replaceState: (_state, _title, url) => urls.push(url) }, scrollTo() {} }, URLSearchParams,
+    });
+    const render = () => { cursor = 0; return ManageCourseScreen({ draftId: 'draft', stepValue: '2' }); };
+    render(); effects[0](); await settle();
+    let tree = render();
+    find(tree, node => node.type === 'button' && find(node.props.children, child => child.props.children === '기본정보')).props.onClick();
+    tree = render();
+    assert.ok(find(tree, node => node.type === 'basic'));
+    assert.equal(find(tree, node => node.type === 'dialog'), undefined);
+    assert.ok(urls.at(-1).endsWith('step=1'));
+    find(tree, node => node.props.children === '다음으로').props.onClick();
+    tree = render();
+    const curriculum = () => find(render(), node => node.type === 'curriculum').props;
+    assert.equal(curriculum().selectedLessonId, 'lesson-1');
+    assert.equal(curriculum().chapters[0].lessons[0].inputUrl, 'https://vimeo.com/456');
+    assert.equal(find(tree, node => node.type === 'dialog'), undefined);
+    curriculum().onSelectLesson('lesson-2');
+    let dialog = find(render(), node => node.type === 'dialog');
+    assert.equal(dialog.props.actions[0].label, '계속 편집');
+    assert.equal(dialog.props.actions[1].label, '취소 후 이동');
+    assert.ok(find(dialog, node => node.props.children === '저장하지 않은 변경사항이 있습니다.'));
+    dialog.props.onCancel();
+    assert.equal(curriculum().selectedLessonId, 'lesson-1');
+    assert.equal(curriculum().chapters[0].lessons[0].inputUrl, 'https://vimeo.com/456');
+    curriculum().onSelectLesson('lesson-2');
+    dialog = find(render(), node => node.type === 'dialog'); dialog.props.actions[1].onClick();
+    assert.equal(curriculum().selectedLessonId, 'lesson-2');
+    assert.equal(curriculum().chapters[0].lessons[0].inputUrl, video?.url ?? '');
+  }
+});
+
 test('logout sends one request, clears cached account data and loads a fresh login document', async () => {
   const context = runtime({ mutateError: null });
   const screen = context.render('src/features/account/profile-screen.tsx', 'ProfileScreen');

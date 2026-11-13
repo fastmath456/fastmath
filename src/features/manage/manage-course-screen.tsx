@@ -126,7 +126,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
     if (operation.current) return;
     const lesson = selectedIn(document);
     if (!lesson || lesson.inputUrl.trim() === (lesson.video?.url ?? '')) { action(); return; }
-    setConfirm({ label: '영상 링크 변경', text: '변경한 영상 링크가 아직 반영되지 않았습니다.', cancel: '계속 편집', accept: '변경 버리고 이동', onAccept: () => {
+    setConfirm({ label: '영상 링크 변경', text: '저장하지 않은 변경사항이 있습니다.', cancel: '계속 편집', accept: '취소 후 이동', onAccept: () => {
       updateLesson(lesson.id, current => ({ ...current, inputUrl: current.video?.url ?? '', videoError: undefined })); action();
     } });
   }
@@ -273,7 +273,7 @@ export function ManageCourseScreen({ courseId, draftId, stepValue }: Props) {
       <div className={styles.heading}>
         <div className={styles.headingRow}><h1>클래스 등록</h1><AdminGuide guide={document.step === 1 ? 'course-basic' : 'course-curriculum'} admin={phase === 'ready'} paused={busy || verifying || Boolean(confirm || nameDialog || ordering)} /></div>
         <div className={styles.steps} data-guide="course-steps" aria-label="클래스 등록 단계">
-          {document.step === 2 ? <button type="button" className={styles.step} onClick={() => guardPending(() => { setDocument(current => ({ ...current, step: 1 })); replaceUrl(draft, 1); })} disabled={busy || verifying}><span className={styles.chip}>1</span><span>기본정보</span></button> : <span className={`${styles.step} ${styles.current}`} aria-current="step"><span className={styles.chip}>1</span><span>기본정보</span></span>}
+          {document.step === 2 ? <button type="button" className={styles.step} onClick={() => { setDocument(current => ({ ...current, step: 1 })); replaceUrl(draft, 1); }} disabled={busy || verifying}><span className={styles.chip}>1</span><span>기본정보</span></button> : <span className={`${styles.step} ${styles.current}`} aria-current="step"><span className={styles.chip}>1</span><span>기본정보</span></span>}
           <Image unoptimized src="/assets/manage-chevron-right.svg" alt="" width={16} height={16} />
           <span className={`${styles.step} ${document.step === 2 ? styles.current : ''}`} aria-current={document.step === 2 ? 'step' : undefined}><span className={styles.chip}>2</span><span>상세정보</span></span>
         </div>
