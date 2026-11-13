@@ -62,7 +62,8 @@ export function ManageRefundScreen({ orderId }: { orderId: string }) {
   }
   const approve = () => run(async () => {
     const response = await reviewRefund(orderId, true, approved, reason.trim());
-    return response.status === 'completed' ? `${won(approved)} 환불을 완료했어요.` : '승인했어요. 결제사 응답을 확인하는 중이에요.';
+    // A completed refund needs no popup: the refreshed page already shows it as done.
+    return response.status === 'completed' ? '' : '승인했어요. 결제사 응답을 확인하는 중이에요.';
   });
   const reject = () => run(async () => {
     await reviewRefund(orderId, false, data.refundAmount, reason.trim());
@@ -70,7 +71,7 @@ export function ManageRefundScreen({ orderId }: { orderId: string }) {
   });
   const recover = () => run(async () => {
     const response = await recoverRefund(orderId);
-    return response.status === 'completed' ? '결제사 기록을 확인해 환불을 완료했어요.' : '결제사 기록을 확인했어요.';
+    return response.status === 'completed' ? '' : '결제사 기록을 확인했어요.';
   });
 
   const badge = data.status === 'review' || data.status === 'processing'
