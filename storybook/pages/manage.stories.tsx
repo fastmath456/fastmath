@@ -31,7 +31,7 @@ export const ImageUploads: Story = {
     ...EditCourse.parameters,
     msw: { handlers: { editCourse: http.get(`/api/admin/courses/${course.id}`, () => HttpResponse.json({ draft: {
       ...draft, id: '', document: { ...draft.document, basic: { ...draft.document.basic,
-        detailImages: Array.from({ length: 6 }, (_, index) => ({ ...draft.document.basic.detailImages[0], id: `detail-${index}`, name: `상세이미지-${index + 1}.png` })),
+        detailImages: Array.from({ length: 6 }, (_, index) => ({ ...draft.document.basic.detailImages[0], id: `detail-${index}`, name: index === 0 ? 'math1.png' : index === 1 ? '수학1_개념완성_상세이미지_아주긴파일이름.png' : `상세이미지-${index + 1}.png` })),
       } },
     } })), upload: http.post('/api/admin/courses/uploads', async ({ request }) => {
       const file = (await request.formData()).get('file') as File;

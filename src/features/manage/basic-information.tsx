@@ -100,8 +100,8 @@ export function BasicInformation({ basic, errors, uploading, uploadErrors, onCha
       <div className={styles.imageFrame}>
         {asset.url && <Image unoptimized className={styles.filledPreview} src={asset.url} width={164} height={164} alt={asset.name} />}
         <button type="button" className={styles.removeImage} aria-label={`${asset.name} 삭제`} onClick={() => onRemoveDetailImage(asset.id)}><Image unoptimized src="/assets/profile-imgX03.svg" width={16} height={16} alt="" /></button>
+        <span className={styles.assetName}>{asset.name}</span>
       </div>
-      <span className={styles.assetName}>{asset.name}</span>
       {asset.status === 'error' && <button type="button" onClick={() => onRetryDetailImage(asset.id)}>재시도</button>}
       {asset.status === 'uploading' && <p className={styles.status} role="status">업로드 중</p>}
       {asset.status === 'error' && <p className={styles.message} role="alert">{asset.error}</p>}
