@@ -11,7 +11,7 @@ const links = [['/', '홈'], ['/courses', '강의·교재 목록'], ['/classroom
 
 function MenuLinks({ onClose, admin }: { onClose: () => void; admin: boolean }) {
   const pathname = usePathname();
-  return (admin ? [...links, ['/manage/refunds', '환불 관리']] : links).map(([href, label]) => <Link key={href} href={href} aria-current={pathname === href || (href !== '/' && pathname.startsWith(href + '/')) ? 'page' : undefined} onClick={onClose}>{label}</Link>);
+  return (admin ? [...links, ['/manage/courses', '관리자 화면']] : links).map(([href, label]) => <Link key={href} href={href} aria-current={pathname === href || (href !== '/' && pathname.startsWith(href + '/')) ? 'page' : undefined} onClick={onClose}>{label}</Link>);
 }
 
 export function MobileMenu({ profile, profileLoading = false }: { profile?: { name: string; image: string; admin?: boolean }; profileLoading?: boolean }) {

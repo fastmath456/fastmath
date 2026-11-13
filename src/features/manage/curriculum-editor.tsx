@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import Image from 'next/image';
 import type { CourseChapter, CourseLesson } from './types';
 import styles from './curriculum-editor.module.css';
@@ -16,10 +16,18 @@ type CurriculumEditorProps = {
   onDeleteChapter: (chapterId: string) => void;
   onRenameLesson: (chapterId: string, lessonId: string) => void;
   onDeleteLesson: (chapterId: string, lessonId: string) => void;
+  onMoveChapter: (chapterId: string, delta: -1 | 1) => void;
+  onMoveLesson: (chapterId: string, lessonId: string, delta: -1 | 1) => void;
   onChangeUrl: (value: string) => void;
   onVerify: () => void;
   onVideoError: () => void;
 };
+
+// Reordering keeps each row's menu element, so close it or it would stay open on the moved row.
+function move(event: MouseEvent<HTMLButtonElement>, reorder: () => void) {
+  event.currentTarget.closest('details')?.removeAttribute('open');
+  reorder();
+}
 
 function lessonStatus(lesson: CourseLesson, selected: boolean, verifying: boolean) {
   if (lesson.videoError) return { label: '연결 오류', tone: 'error' };
@@ -50,6 +58,8 @@ export function CurriculumEditor({
   onDeleteChapter,
   onRenameLesson,
   onDeleteLesson,
+  onMoveChapter,
+  onMoveLesson,
   onChangeUrl,
   onVerify,
   onVideoError,
@@ -97,7 +107,7 @@ export function CurriculumEditor({
   return (
     <section className={styles.editor} aria-label="커리큘럼 및 영상 업로드">
       <aside data-guide="curriculum" className={styles.curriculum} aria-label="커리큘럼">
-        {chapters.length === 0 ? <p className={styles.emptyCurriculum}>챕터를 추가해주세요.</p> : chapters.map(chapter => (
+        {chapters.length === 0 ? <p className={styles.emptyCurriculum}>챕터를 추가해주세요.</p> : chapters.map((chapter, chapterIndex) => (
           <section className={styles.chapter} key={chapter.id} aria-label={chapter.title}>
             <div className={styles.chapterHeader}>
               <p className={styles.chapterTitle}>{chapter.title}</p>
@@ -108,13 +118,15 @@ export function CurriculumEditor({
                 <details className={styles.manageMenu}>
                   <summary aria-label={`${chapter.title} 관리`}>⋯</summary>
                   <div className={styles.menuItems}>
+                    <button type="button" onClick={event => move(event, () => onMoveChapter(chapter.id, -1))} disabled={verifying || chapterIndex === 0}>위로 이동</button>
+                    <button type="button" onClick={event => move(event, () => onMoveChapter(chapter.id, 1))} disabled={verifying || chapterIndex === chapters.length - 1}>아래로 이동</button>
                     <button type="button" onClick={() => onRenameChapter(chapter.id)}>이름 변경</button>
                     <button type="button" onClick={() => onDeleteChapter(chapter.id)} disabled={verifying}>삭제</button>
                   </div>
                 </details>
               </div>
             </div>
-            {chapter.lessons.length === 0 ? <p className={styles.emptyChapter}>차시를 추가해주세요.</p> : chapter.lessons.map(lesson => {
+            {chapter.lessons.length === 0 ? <p className={styles.emptyChapter}>차시를 추가해주세요.</p> : chapter.lessons.map((lesson, lessonIndex) => {
               const selected = lesson.id === selectedLessonId;
               const status = lessonStatus(lesson, selected, verifying);
               return <div className={styles.lessonRow} key={lesson.id}>
@@ -125,6 +137,8 @@ export function CurriculumEditor({
                 <details className={styles.manageMenu}>
                   <summary aria-label={`${lesson.title} 관리`}>⋯</summary>
                   <div className={styles.menuItems}>
+                    <button type="button" onClick={event => move(event, () => onMoveLesson(chapter.id, lesson.id, -1))} disabled={verifying || lessonIndex === 0}>위로 이동</button>
+                    <button type="button" onClick={event => move(event, () => onMoveLesson(chapter.id, lesson.id, 1))} disabled={verifying || lessonIndex === chapter.lessons.length - 1}>아래로 이동</button>
                     <button type="button" onClick={() => onRenameLesson(chapter.id, lesson.id)}>이름 변경</button>
                     <button type="button" onClick={() => onDeleteLesson(chapter.id, lesson.id)} disabled={verifying}>삭제</button>
                   </div>

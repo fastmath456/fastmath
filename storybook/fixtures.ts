@@ -2,7 +2,7 @@ import type { Order, Orders, Profile, RefundQuote } from '@/features/account';
 import type { ProductDetail, ProductList } from '@/features/catalog';
 import type { Classroom, Viewer } from '@/features/classroom';
 import type { SourceReview } from '@/features/landing';
-import type { AdminRefund, AdminRefundDetail, CourseAsset, CourseDraft } from '@/features/manage';
+import type { AdminCourse, AdminRefund, AdminRefundDetail, CourseAsset, CourseDraft } from '@/features/manage';
 
 export const profile: Profile = {
   name: '홍길동', email: 'student@example.test', birthday: '20050101', phone: '01012345678',
@@ -76,6 +76,14 @@ export const review: SourceReview = {
 };
 
 const refundRow = (item: Omit<AdminRefund, 'email' | 'external'> & Partial<Pick<AdminRefund, 'email' | 'external'>>): AdminRefund => ({ email: 'student@example.test', external: false, ...item });
+export const adminCourses: AdminCourse[] = [
+  { id: 'math-1', status: 'selling', kind: 'vod', title: '수학1 개념 완성', slug: 'math-1', image: '/assets/detail-imgRectangle3.png', price: 99000, licenseDays: 60, lessons: 12, date: '2026-11-12T03:00:00Z', step: 1 },
+  { id: 'stat-1', status: 'selling', kind: 'vod', title: '확률과 통계 핵심정리', slug: 'stat-1', image: '/assets/detail-imgRectangle3.png', price: 89000, licenseDays: 30, lessons: 8, date: '2026-11-11T03:00:00Z', step: 1 },
+  { id: 'note-1', status: 'selling', kind: 'pdf', title: '확통 유형 정리 노트', slug: 'note-1', image: '/assets/detail-imgRectangle3.png', price: 20000, licenseDays: 60, lessons: 0, date: '2026-11-10T03:00:00Z', step: 1 },
+  { id: 'calc-1', status: 'stopped', kind: 'vod', title: '수학1 개념 완성부터 실전 문제 풀이까지 지수 로그 삼각함수 수열 종합 완성 과정', slug: 'calc-1', image: '/assets/detail-imgRectangle3.png', price: 119000, licenseDays: 60, lessons: 2, date: '2026-11-09T03:00:00Z', step: 1 },
+  { id: '11111111-1111-4111-8111-111111111111', status: 'draft', kind: 'vod', title: '', slug: null, image: null, price: null, licenseDays: null, lessons: 0, date: '2026-11-13T03:00:00Z', step: 1 },
+];
+
 export const adminRefunds: AdminRefund[] = [
   refundRow({ orderId: '00000000-0000-4000-8000-000000000101', requestedAt: '2026-11-13T05:02:00Z', status: 'review', name: '홍길동', title: '수학1 개념 완성', kind: 'vod', paidAmount: 99000, refundAmount: 92070, usedSeconds: 2520, totalSeconds: 36000, downloaded: false }),
   refundRow({ orderId: '00000000-0000-4000-8000-000000000102', requestedAt: '2026-11-13T02:40:00Z', status: 'review', external: true, name: '김민지', email: 'minji@example.test', title: '미적분 고난도 풀이', kind: 'vod', paidAmount: 120000, refundAmount: 15000, usedSeconds: 7200, totalSeconds: 36000, downloaded: false }),

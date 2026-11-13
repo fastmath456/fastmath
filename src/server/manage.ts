@@ -135,6 +135,25 @@ async function hydrateDraft(row: DraftRow, ownerId: string) {
   return draft(row,hydrateDocument(document,assets));
 }
 export async function courseAccess(ctx: Context) { await requireAdmin(ctx); return {admin:true}; }
+// Admin course list: every product, selling or not, then this admin's saved drafts of courses not registered yet.
+export async function adminCourses(ctx: Context) {
+  const user=await requireAdmin(ctx);
+  const [products,lessons,drafts]=await Promise.all([
+    db().from('products').select('id,slug,kind,title,price,image,selling,license_days,published_at').order('display_order',{ascending:true,nullsFirst:false}).order('published_at',{ascending:false}).order('id').limit(1000),
+    db().from('lessons').select('product_id').eq('active',true).limit(10000),
+    db().from('course_drafts').select('id,document,saved_at').eq('owner_id',user.id).eq('published',false).is('course_id',null).order('saved_at',{ascending:false}).limit(100),
+  ]); [products,lessons,drafts].forEach(result=>manageError(result.error));
+  const counts=new Map<string,number>(); for(const lesson of lessons.data!) counts.set(lesson.product_id,(counts.get(lesson.product_id)??0)+1);
+  const courses=products.data!.map(p=>({id:p.id,status:p.selling?'selling':'stopped',kind:p.kind,title:p.title,slug:p.slug,image:p.image,price:p.price,licenseDays:p.license_days,lessons:counts.get(p.id)??0,date:p.published_at,step:1}));
+  const saved=drafts.data!.map(row=>{
+    const document=row.document&&typeof row.document==='object'&&!Array.isArray(row.document)?row.document as Record<string,unknown>:{};
+    const basic=document.basic&&typeof document.basic==='object'&&!Array.isArray(document.basic)?document.basic as Record<string,unknown>:{};
+    const price=typeof basic.price==='string'&&/^\d{1,9}$/.test(basic.price)?Number(basic.price):null,days=typeof basic.licenseDays==='string'&&/^\d{1,4}$/.test(basic.licenseDays)?Number(basic.licenseDays):null;
+    const chapters=Array.isArray(document.chapters)?document.chapters as Array<{lessons?:unknown}>:[];
+    return {id:row.id,status:'draft',kind:'vod',title:typeof basic.title==='string'?basic.title:'',slug:null,image:null,price,licenseDays:days,lessons:chapters.reduce((sum,chapter)=>sum+(Array.isArray(chapter?.lessons)?chapter.lessons.length:0),0),date:row.saved_at,step:document.step===2?2:1};
+  });
+  const items=[...courses,...saved]; return {items,count:items.length};
+}
 export async function createCourseDraft(ctx: Context) {
   const user=await requireAdmin(ctx),input=await json(ctx.request);
   const courseId=input.courseId===undefined?null:typeof input.courseId==='string'&&input.courseId.length<=120?input.courseId:null;

@@ -3,6 +3,7 @@ import { expect, userEvent, waitFor } from 'storybook/test';
 import { delay, http, HttpResponse } from 'msw';
 import EditCoursePage from '@/app/manage/courses/[courseId]/edit/page';
 import NewCoursePage from '@/app/manage/courses/new/page';
+import CoursesPage from '@/app/manage/courses/page';
 import RefundsPage from '@/app/manage/refunds/page';
 import RefundPage from '@/app/manage/refunds/[orderId]/page';
 import { adminRefundDetails, course, draft } from '../fixtures';
@@ -11,6 +12,11 @@ import { navigation } from '../navigation';
 const meta = { title: 'Pages/Manage' } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const Courses: Story = {
+  name: '강의 목록', tags: ['route:/manage/courses'], parameters: navigation('/manage/courses'),
+  render: () => <CoursesPage />,
+};
 
 export const NewCourse: Story = {
   name: '클래스 등록', tags: ['route:/manage/courses/new'], parameters: navigation('/manage/courses/new'),

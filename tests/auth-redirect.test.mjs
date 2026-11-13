@@ -748,7 +748,7 @@ test('admin data skeleton appears only after access succeeds and clears when dat
         getEditableCourse: id => { reads.push(['course', id]); return loaded; },
       },
       '@/features/admin-guide': { AdminGuide: 'admin-guide' },
-      './course-order-dialog': {}, './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': {},
+      './course-order-dialog': {}, './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': {}, './curriculum-order': { moveChapter: chapters => chapters, moveLesson: chapters => chapters },
       './use-course-uploads': { useCourseUploads: () => ({}) },
       './validation': { emptyDocument: blank, validateBasic: () => ({}) },
       './manage-course-skeleton': { ManageCourseSkeleton: 'admin-loading' },
@@ -798,7 +798,7 @@ test('course step navigation retains pending video links; lesson navigation conf
       '@/components/site': { SiteFooter: 'footer', ConfirmationDialog: 'dialog' }, '@/lib/http': http,
       './api': { checkAccess: async () => {}, getDraft: async () => ({ draft: { id: 'draft', document: initial } }) },
       '@/features/admin-guide': { AdminGuide: 'admin-guide' }, './course-order-dialog': {},
-      './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': { CurriculumEditor: 'curriculum' },
+      './basic-information': { BasicInformation: 'basic' }, './curriculum-editor': { CurriculumEditor: 'curriculum' }, './curriculum-order': { moveChapter: chapters => chapters, moveLesson: chapters => chapters },
       './use-course-uploads': { useCourseUploads: () => ({}) },
       './validation': { emptyDocument: () => initial, validateBasic: () => ({}) }, './manage-course-skeleton': {},
     };

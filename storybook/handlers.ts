@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { adminRefundDetails, adminRefunds, book, catalog, classroom, course, draft, orders, profile, refundQuote, review, viewer } from './fixtures';
+import { adminRefundDetails, adminRefunds, book, catalog, classroom, course, draft, orders, profile, refundQuote, review, viewer, adminCourses } from './fixtures';
 
 export const apiError = (status: number, code: string) => HttpResponse.json({ error: { code } }, { status });
 
@@ -50,6 +50,7 @@ export const handlers = {
   access: http.get('/api/admin/courses/access', () => HttpResponse.json({ admin: true })),
   draft: http.get(`/api/admin/courses/drafts/${draft.id}`, () => HttpResponse.json({ draft })),
   editCourse: http.get(`/api/admin/courses/${course.id}`, () => HttpResponse.json({ draft: { ...draft, id: '' } })),
+  adminCourses: http.get('/api/admin/courses', () => HttpResponse.json({ items: adminCourses, count: adminCourses.length })),
   adminRefunds: http.get('/api/admin/refunds', () => HttpResponse.json({ items: adminRefunds })),
   adminRefund: http.get('/api/admin/refunds/:orderId', ({ params }) => {
     const refund = Object.values(adminRefundDetails).find(item => item.orderId === params.orderId);
