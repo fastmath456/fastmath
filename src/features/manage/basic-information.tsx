@@ -129,7 +129,7 @@ export function BasicInformation({ basic, errors, uploading, uploadErrors, onCha
     </div>
     <div className={styles.field}>
       <label htmlFor="course-displayOrder" className={styles.label}>정렬 순서<span aria-hidden="true" className={styles.required}>*</span></label>
-      <button id="course-displayOrder" type="button" className={`${styles.input} ${styles.orderInput}`} aria-haspopup="dialog" aria-describedby={errors.displayOrder ? 'course-displayOrder-error' : undefined} onClick={onChooseOrder}>{basic.displayOrder || '정렬 순서를 선택해주세요.'}</button>
+      <button id="course-displayOrder" type="button" className={`${styles.input} ${styles.orderInput}`} aria-haspopup="dialog" aria-describedby={errors.displayOrder ? 'course-displayOrder-error' : undefined} onClick={onChooseOrder}>설정하기</button>
       {errors.displayOrder && <p id="course-displayOrder-error" className={styles.message} role="alert">{errors.displayOrder}</p>}
     </div>
     <div className={styles.field}>
