@@ -5,9 +5,9 @@ import { SiteFooter, SiteHeader } from '@/components/site';
 import type { Profile } from '@/features/account';
 import styles from './refunds.module.css';
 
-const menu = [['/manage/courses', '강의 목록', 'courses'], ['/manage/refunds', '환불 관리', 'refunds']] as const;
+const menu = [['/manage/courses', '강의 목록', 'courses'], ['/manage/reviews', '리뷰 관리', 'reviews'], ['/manage/refunds', '환불 관리', 'refunds']] as const;
 
-export function ManageShell({ profile, profileLoading = false, section, children }: { profile?: Profile; profileLoading?: boolean; section: 'courses' | 'refunds'; children: ReactNode }) {
+export function ManageShell({ profile, profileLoading = false, section, children }: { profile?: Profile; profileLoading?: boolean; section: 'courses' | 'reviews' | 'refunds'; children: ReactNode }) {
   return <><SiteHeader mobileAt1360 profileLoading={profileLoading} profile={profile ? { name: profile.name, image: profile.avatar, admin: profile.admin } : undefined} />
     <main className={styles.layout}>
       <aside className={styles.sidebar}>

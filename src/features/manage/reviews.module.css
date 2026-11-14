@@ -1,0 +1,8 @@
+/* Admin landing-review list: the refund list's table, with its own columns. */
+.header, .row { display: grid; grid-template-columns: 70px 220px 510px 160px 140px; }
+.header { border-radius: 32px; background: var(--gray-50); color: #5e677a; }
+.header > div { min-height: 64px; padding-inline: 16px; display: flex; align-items: center; }
+.row > div { min-height: 88px; padding: 12px 16px; display: flex; align-items: center; }
+.row > .author { display: block; align-content: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; white-space: pre-line; }
+.image { width: 128px; max-height: 64px; overflow: hidden; border-radius: 8px; }

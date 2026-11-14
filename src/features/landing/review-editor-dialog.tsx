@@ -44,7 +44,8 @@ export async function reviewImageError(file: File) {
   }
 }
 
-export function ReviewEditorDialog({ reviews, onClose, onSaved }: { reviews: SourceReview[]; onClose: () => void; onSaved: (review: SourceReview) => void }) {
+/** `initial` picks what opens first: a review to edit, or null to add one. Left out, the first review opens. */
+export function ReviewEditorDialog({ reviews, initial, onClose, onSaved }: { reviews: SourceReview[]; initial?: SourceReview | null; onClose: () => void; onSaved: (review: SourceReview) => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const saving = useRef(false);
@@ -52,7 +53,7 @@ export function ReviewEditorDialog({ reviews, onClose, onSaved }: { reviews: Sou
   const imageCheck = useRef<Promise<void>>(Promise.resolve());
   const imageRef = useRef<{ file: File; url: string } | null>(null);
   const imageErrorRef = useRef<string | null>(null);
-  const [selected, setSelected] = useState<SourceReview | null>(reviews[0] ?? null);
+  const [selected, setSelected] = useState<SourceReview | null>(initial === undefined ? reviews[0] ?? null : initial);
   const [author, setAuthor] = useState(selected?.author ?? '');
   const [text, setText] = useState(selected?.text ?? '');
   const [image, setImage] = useState<{ file: File; url: string } | null>(null);

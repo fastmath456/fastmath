@@ -5,8 +5,9 @@ import EditCoursePage from '@/app/manage/courses/[courseId]/edit/page';
 import NewCoursePage from '@/app/manage/courses/new/page';
 import CoursesPage from '@/app/manage/courses/page';
 import RefundsPage from '@/app/manage/refunds/page';
+import ReviewsPage from '@/app/manage/reviews/page';
 import RefundPage from '@/app/manage/refunds/[orderId]/page';
-import { adminRefundDetails, course, draft } from '../fixtures';
+import { adminRefundDetails, course, draft, review } from '../fixtures';
 import { navigation } from '../navigation';
 
 const meta = { title: 'Pages/Manage' } satisfies Meta;
@@ -66,6 +67,16 @@ export const DetailImageUploading: Story = {
     await expect(canvas.queryByText('업로드 중...', { exact: true })).not.toBeInTheDocument();
     await expect(canvas.queryByText('업로드 중', { exact: true })).not.toBeInTheDocument();
   },
+};
+
+export const Reviews: Story = {
+  name: '리뷰 관리', tags: ['route:/manage/reviews'],
+  parameters: { ...navigation('/manage/reviews'), msw: { handlers: { reviews: http.get('/api/landing/reviews', () => HttpResponse.json({ admin: true, items: [
+    review,
+    { ...review, id: 'sample-review-2', author: '@오이야묵아야', text: '선생님 오늘 시험보고 온 학생입니다 ㅎㅎ 등차 등비 관련 영상들 다 보고 계속 연습했었는데,,, 연습한 보람이 있었어욕ㅠㅠㅠ 학원 끊고 독학으로 했는데 점수가 10점이 올랐습니다. 정말 감사해요ㅜㅜ', images: [{ src: '/assets/landing/review-480-3084.png', width: 362, height: 150 }] },
+    { ...review, id: 'sample-review-3', author: '@user-bz2il2wv5o-아주-긴-작성자-이름', text: '내가 이걸 왜 이제 봤을까....', images: [{ src: '/assets/landing/review-480-3080.png', width: 269, height: 109 }] },
+  ] })) } } },
+  render: () => <ReviewsPage />,
 };
 
 export const Refunds: Story = {
