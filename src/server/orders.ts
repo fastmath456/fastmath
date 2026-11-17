@@ -231,15 +231,25 @@ async function reconcilePayment(config:NicepayConfig, attempt:Attempt, order:Ord
   }
 }
 
+const webhookOk=()=>new NextResponse('OK',{headers:{'Content-Type':'text/html; charset=utf-8'}});
+// NICEPAY only registers a webhook whose TEST call gets 200 "OK", and that call carries no transaction of ours.
+// An event that cannot be tied to one of our payments changes nothing and a resend would not help, so it is acknowledged and logged.
+function ignoredWebhook(reason:string) {
+  console.warn('Payment webhook ignored:',reason);
+  return webhookOk();
+}
 export async function paymentWebhook(ctx:Context) {
-  const config=nicepayConfig(), event=readNicepayPayment(config,await body(ctx.request));
+  const config=nicepayConfig();
+  let event:NicepayPayment;
+  try { event=readNicepayPayment(config,await body(ctx.request)); }
+  catch (error) { if (error instanceof ApiError && error.status===400) return ignoredWebhook(error.field?`${error.code}:${error.field}`:error.code); throw error; }
   const {data:attempt,error}=await adminDb().from('nicepay_attempts').select('*').eq('tid',event.tid).maybeSingle();
   dbError(error);
-  if (!attempt) throw new ApiError(404,'not_found');
+  if (!attempt) return ignoredWebhook('unknown_tid');
   const order=await loadOrder(attempt.order_id);
   if (event.amount!==order.amount) throw new ApiError(409,'payment_mismatch');
   await reconcilePayment(config,attempt,order);
-  return new NextResponse('OK',{headers:{'Content-Type':'text/html; charset=utf-8'}});
+  return webhookOk();
 }
 
 export async function orders(ctx:Context) {

@@ -288,7 +288,10 @@ test('Nicepay: verified approval, timeout cancellation, recovery, and a single r
   assert.equal((await db.from('entitlements').select('*').eq('order_id',o.id)).data.length,0);
   await assert.rejects(webhook(),e=>e.code==='payment_outcome_unknown');
   assert.equal((await db.from('nicepay_attempts').update({claimed_at:new Date(Date.now()-60_000).toISOString()}).eq('id',next.orderId)).error,null);
-  await assert.rejects(webhook({...reply(),amount:1}),e=>e.code==='invalid_payment_signature');
+  // A forged or test event is acknowledged so the PG can register the endpoint, but it grants nothing.
+  assert.equal(await (await webhook({...reply(),amount:1})).text(),'OK');
+  assert.equal(await (await webhook({})).text(),'OK');
+  assert.equal((await db.from('entitlements').select('*').eq('order_id',o.id)).data.length,0);
   assert.equal(await (await webhook()).text(),'OK');
   assert.equal(await (await webhook()).text(),'OK');
   const success=await callback(next);
