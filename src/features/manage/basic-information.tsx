@@ -34,8 +34,9 @@ const fieldDetails: Record<TextField, { label: string; placeholder: string; inpu
   price: { label: '할인가(단위: 원)', placeholder: '강의 할인가를 입력해주세요.', inputMode: 'numeric' },
 };
 
-function messageFor(slot: AssetSlot, errors: BasicErrors, uploadErrors: BasicInformationProps['uploadErrors']) {
-  return uploadErrors[slot] ?? errors[slot === 'material' ? 'materials' : slot === 'detailImage' ? 'detailImages' : slot];
+function messageFor(slot: AssetSlot, errors: BasicErrors, uploadErrors: BasicInformationProps['uploadErrors'], filled = false) {
+  // A "please register" error from an earlier save attempt no longer applies once a file is attached.
+  return uploadErrors[slot] ?? (filled ? undefined : errors[slot === 'material' ? 'materials' : slot === 'detailImage' ? 'detailImages' : slot]);
 }
 
 function AssetUpload({ asset, helper, label, message, slot, uploading, onUpload, onRemove, children }: {
@@ -94,8 +95,8 @@ export function BasicInformation({ basic, errors, uploading, uploadErrors, onCha
   }
 
   return <div className={styles.content}>
-    <AssetUpload asset={basic.thumbnail} label="클래스 대표이미지" message={messageFor('thumbnail', errors, uploadErrors)} slot="thumbnail" uploading={Boolean(uploading.thumbnail)} onUpload={onUpload} onRemove={onRemoveThumbnail} />
-    <AssetUpload asset={null} helper="* 높이 3000px 이하의 사이즈를 권장합니다." label="클래스 상세이미지" message={messageFor('detailImage', errors, uploadErrors)} slot="detailImage" uploading={Boolean(uploading.detailImage)} onUpload={onUpload}>
+    <AssetUpload asset={basic.thumbnail} label="클래스 대표이미지" message={messageFor('thumbnail', errors, uploadErrors, Boolean(basic.thumbnail))} slot="thumbnail" uploading={Boolean(uploading.thumbnail)} onUpload={onUpload} onRemove={onRemoveThumbnail} />
+    <AssetUpload asset={null} helper="* 높이 3000px 이하의 사이즈를 권장합니다." label="클래스 상세이미지" message={messageFor('detailImage', errors, uploadErrors, basic.detailImages.length > 0)} slot="detailImage" uploading={Boolean(uploading.detailImage)} onUpload={onUpload}>
     {basic.detailImages.map(asset => <li key={asset.id} className={styles.detailImage}>
       <div className={styles.imageFrame}>
         {asset.url && <Image unoptimized className={styles.filledPreview} src={asset.url} width={164} height={164} alt={asset.name} />}

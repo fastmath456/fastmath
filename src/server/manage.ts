@@ -243,7 +243,8 @@ export async function courseAssetBytes(ctx: Context) {
   const asset=await db().from('admin_course_assets').select('id,owner_id,path,name,content_type,size_bytes').eq('id',id).maybeSingle(); manageError(asset.error); if(!asset.data) throw new ApiError(404,'not_found');
   if(asset.data.owner_id!==user.id) { const linked=await db().from('product_assets').select('product_id,products!inner(selling)').eq('asset_id',id).eq('products.selling',true).limit(1); manageError(linked.error); if(!linked.data?.length) throw new ApiError(404,'not_found'); }
   const object=await db().storage.from('admin-course-assets').download(asset.data.path); manageError(object.error);
-  return new NextResponse(object.data,{headers:{'Content-Type':asset.data.content_type,'Content-Length':String(asset.data.size_bytes),'Content-Disposition':'inline; filename="'+asset.data.name.replaceAll('"','')+'"'}});
+  // Header values must be Latin-1, so a Korean file name is sent percent-encoded.
+  return new NextResponse(object.data,{headers:{'Content-Type':asset.data.content_type,'Content-Length':String(asset.data.size_bytes),'Content-Disposition':`inline; filename="asset"; filename*=UTF-8''${encodeURIComponent(asset.data.name)}`}});
 }
 export async function publicCourseAsset(ctx: Context) {
   const id=ctx.params.id; if(!uuid.test(id)) throw new ApiError(404,'not_found');
